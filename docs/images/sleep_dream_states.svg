@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760">
+
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L0,6 L9,3 z" fill="#9FB3FF" />
+  </marker>
+  <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+    <stop offset="0%" stop-color="#08111F"/>
+    <stop offset="100%" stop-color="#11172B"/>
+  </linearGradient>
+</defs>
+
+<rect width="1400" height="760" fill="url(#bg)"/>
+<text x="700.0" y="52" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700" fill="#EAF0FF" text-anchor="middle">Sensor Gates and Dream States</text>
+<rect x="90" y="170" width="280" height="130" rx="16" fill="#1C3E56" stroke="#6D7FA8" stroke-width="2"/>
+<text x="230.0" y="208" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">AWAKE</text>
+<text x="230.0" y="242" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#D5DEF7" text-anchor="middle">video ON</text>
+<text x="230.0" y="265" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#D5DEF7" text-anchor="middle">contact ON</text>
+<text x="230.0" y="288" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#D5DEF7" text-anchor="middle">IMU ON</text>
+<rect x="420" y="170" width="280" height="130" rx="16" fill="#49395D" stroke="#6D7FA8" stroke-width="2"/>
+<text x="560.0" y="208" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">BLIND / PARTIAL CUT</text>
+<text x="560.0" y="242" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#D5DEF7" text-anchor="middle">some sensors OFF</text>
+<text x="560.0" y="265" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#D5DEF7" text-anchor="middle">at least one sensor ON</text>
+<text x="560.0" y="288" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#D5DEF7" text-anchor="middle">not sleep</text>
+<rect x="750" y="170" width="280" height="130" rx="16" fill="#4B273E" stroke="#6D7FA8" stroke-width="2"/>
+<text x="890.0" y="208" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">FULL SLEEP</text>
+<text x="890.0" y="242" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#D5DEF7" text-anchor="middle">video OFF</text>
+<text x="890.0" y="265" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#D5DEF7" text-anchor="middle">contact OFF</text>
+<text x="890.0" y="288" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#D5DEF7" text-anchor="middle">IMU OFF</text>
+<rect x="570" y="460" width="280" height="130" rx="16" fill="#5A2D67" stroke="#6D7FA8" stroke-width="2"/>
+<text x="710.0" y="498" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">DREAMER-DECODING</text>
+<text x="710.0" y="532" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#D5DEF7" text-anchor="middle">stable internal slot</text>
+<text x="710.0" y="555" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#D5DEF7" text-anchor="middle">memory -&gt; decoder</text>
+<rect x="900" y="460" width="280" height="130" rx="16" fill="#333B4D" stroke="#6D7FA8" stroke-width="2"/>
+<text x="1040.0" y="498" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">DREAM-EMPTY</text>
+<text x="1040.0" y="532" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#D5DEF7" text-anchor="middle">all sensors OFF</text>
+<text x="1040.0" y="555" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#D5DEF7" text-anchor="middle">no stable object slot</text>
+<line x1="370" y1="235" x2="420" y2="235" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="395.0" y="223.0" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="500" fill="#B9C8FF" text-anchor="middle">disable one/two sensors</text>
+<line x1="700" y1="235" x2="750" y2="235" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="725.0" y="223.0" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="500" fill="#B9C8FF" text-anchor="middle">all sensors OFF</text>
+<line x1="890" y1="300" x2="710" y2="460" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="800.0" y="368.0" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="500" fill="#B9C8FF" text-anchor="middle">slot confidence &gt; threshold</text>
+<line x1="920" y1="300" x2="1020" y2="460" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="970.0" y="368.0" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="500" fill="#B9C8FF" text-anchor="middle">no stable slot</text>
+<line x1="750" y1="205" x2="700" y2="205" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="725.0" y="193.0" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="500" fill="#B9C8FF" text-anchor="middle">IMU/contact/video ON</text>
+<text x="700" y="675" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600" fill="#F0D0FF" text-anchor="middle">Full sleep is exactly: not video and not contact and not IMU. Turning IMU back ON exits dream mode.</text>
+</svg>

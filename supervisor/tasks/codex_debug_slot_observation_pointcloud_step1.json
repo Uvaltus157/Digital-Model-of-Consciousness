@@ -1,0 +1,121 @@
+{
+  "id": "debug_slot_observation_pointcloud_step1",
+  "mode": "codex_debug_and_verify",
+  "repository": "Conscious-World-Model-System",
+  "branch": "work_2",
+  "repo_root": "/home/user/_project_d/GitHub/Conscious-World-Model-System",
+  "diagnostic_log": "/home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log",
+  "goal": "Verify and repair the first bridge toward 3DGS/4D: per-slot RGB-D observation buffers and lightweight point-cloud reconstruction.",
+  "target_behavior": {
+    "slot_0": {
+      "target": "tetrahedron",
+      "must_have": [
+        "frame_count > 0",
+        "points_total > 0",
+        "target_name=tetrahedron"
+      ]
+    },
+    "slot_1": {
+      "target": "cube",
+      "must_have": [
+        "frame_count > 0",
+        "points_total > 0",
+        "target_name=cube"
+      ]
+    },
+    "do_not_mix_slots": true
+  },
+  "required_files": [
+    "runtime/slot_observation_reconstruction.py",
+    "runtime/object_imagery_runtime.py",
+    "runtime/tetra_dynamic_slot_diagnostic.py"
+  ],
+  "required_code_objects": [
+    "SlotObservation",
+    "SlotObservationBuffer",
+    "SlotPointCloudReconstructor",
+    "_ensure_slot_observation_reconstruction",
+    "_slot_observation_reconstruction_step"
+  ],
+  "required_events": [
+    {
+      "event": "slot_observation_buffer",
+      "fields": [
+        "slot_id",
+        "target_name",
+        "frame_count",
+        "depth_valid",
+        "live_step"
+      ]
+    },
+    {
+      "event": "slot_pointcloud_reconstruction",
+      "fields": [
+        "slot_id",
+        "target_name",
+        "depth_valid",
+        "points_added",
+        "points_total",
+        "frame_count",
+        "formed_conf",
+        "z_dynamic_norm"
+      ]
+    },
+    {
+      "event": "SUCCESS_SLOT_OBSERVATION_POINTCLOUD_STEP1",
+      "fields": [
+        "slot_0_target",
+        "slot_0_frame_count",
+        "slot_0_points_total",
+        "slot_1_target",
+        "slot_1_frame_count",
+        "slot_1_points_total",
+        "slot_0_overwritten",
+        "slot_1_allocated",
+        "reason"
+      ]
+    }
+  ],
+  "must_verify": [
+    "runtime/slot_observation_reconstruction.py exists",
+    "SlotObservationBuffer stores observations separately per slot_id",
+    "SlotPointCloudReconstructor accumulates points separately per slot_id",
+    "object_imagery_runtime calls reconstruction step after dynamic slot writes",
+    "diagnostic log contains slot_observation_buffer events",
+    "diagnostic log contains slot_pointcloud_reconstruction events",
+    "slot-0/tetrahedron frame_count > 0",
+    "slot-0/tetrahedron points_total > 0",
+    "slot-1/cube frame_count > 0",
+    "slot-1/cube points_total > 0",
+    "slot-0 is not overwritten by cube observations",
+    "slot-1 is not mixed with tetrahedron observations",
+    "SUCCESS_SLOT_OBSERVATION_POINTCLOUD_STEP1 is written only after proof"
+  ],
+  "forbidden": [
+    "implement full 3DGS optimizer in this step",
+    "replace LongDynamicObjectMemory",
+    "bypass object slots",
+    "mix tetrahedron and cube observations",
+    "fake points_total",
+    "hard-code success",
+    "print git diff",
+    "print full file contents",
+    "print long changed-file summaries"
+  ],
+  "output_policy": {
+    "format": "[STAGE] <stage_id> status=<status> comment=<short explanation>",
+    "do_not_print": [
+      "git diff",
+      "patch text",
+      "changed file lists",
+      "full file contents"
+    ],
+    "comment_style": "short human explanation of what Codex is doing"
+  },
+  "success_marker": "event=SUCCESS_SLOT_OBSERVATION_POINTCLOUD_STEP1",
+  "grep_commands": [
+    "grep \"event=slot_observation_buffer\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log | tail -n 30",
+    "grep \"event=slot_pointcloud_reconstruction\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log | tail -n 30",
+    "grep \"SUCCESS_SLOT_OBSERVATION_POINTCLOUD_STEP1\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log"
+  ]
+}

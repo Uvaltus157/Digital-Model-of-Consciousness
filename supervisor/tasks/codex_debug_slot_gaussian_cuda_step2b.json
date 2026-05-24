@@ -1,0 +1,198 @@
+{
+  "id": "debug_slot_gaussian_cuda_preview_step2b",
+  "mode": "codex_debug_and_verify",
+  "repository": "Conscious-World-Model-System",
+  "branch": "work_2",
+  "repo_root": "/home/user/_project_d/GitHub/Conscious-World-Model-System",
+  "diagnostic_log": "/home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log",
+  "goal": "Verify and repair Step 2B: configurable torch_lowres/cuda_3dgs/auto Gaussian renderer backend with safe CUDA fallback and preview metrics.",
+  "depends_on": [
+    "Step 1: slot observation buffer + pointcloud",
+    "Step 2A: low-res torch Gaussian renderer"
+  ],
+  "backend_config": {
+    "config_path": "object_image.slot_gaussian_renderer_backend",
+    "allowed_values": [
+      "torch_lowres",
+      "cuda_3dgs",
+      "auto"
+    ],
+    "fallback_path": "object_image.slot_gaussian_cuda_allow_fallback",
+    "fallback_default": true
+  },
+  "required_files": [
+    "runtime/slot_gaussian_cuda_adapter.py",
+    "runtime/slot_gaussian_reconstruction.py",
+    "runtime/object_imagery_runtime.py",
+    "runtime/tetra_dynamic_slot_diagnostic.py",
+    "runtime/config.py",
+    "conf/runner.yaml"
+  ],
+  "required_code_objects": [
+    "SlotGaussianCUDAAdapter",
+    "CUDABackendStatus",
+    "SlotGaussianReconstructor",
+    "_ensure_slot_gaussian_reconstruction",
+    "_slot_gaussian_reconstruction_step",
+    "_maybe_log_slot_gaussian_step2b_success"
+  ],
+  "required_config_fields": [
+    "slot_gaussian_renderer_backend",
+    "slot_gaussian_cuda_allow_fallback",
+    "slot_gaussian_image_size",
+    "slot_gaussian_max_gaussians",
+    "slot_gaussian_max_render_gaussians",
+    "slot_gaussian_lr",
+    "slot_gaussian_train_steps_per_update",
+    "slot_gaussian_depth_weight",
+    "slot_gaussian_preview_every_steps"
+  ],
+  "required_runtime_strings_in_object_imagery": [
+    "slot_gaussian_renderer_backend",
+    "slot_gaussian_cuda_allow_fallback",
+    "slot_gaussian_preview_fps",
+    "slot_gaussian_backend_is_cuda",
+    "slot_gaussian_fallback_used"
+  ],
+  "required_events": [
+    {
+      "event": "slot_gaussian_cuda_backend",
+      "fields": [
+        "requested_backend",
+        "active_backend",
+        "cuda_available",
+        "rasterizer_available",
+        "fallback_used",
+        "fps",
+        "import_error"
+      ]
+    },
+    {
+      "event": "slot_gaussian_preview_frame",
+      "fields": [
+        "slot_id",
+        "target_name",
+        "backend",
+        "render_valid",
+        "gaussian_count",
+        "updates",
+        "preview_fps",
+        "fallback_used"
+      ]
+    },
+    {
+      "event": "SUCCESS_SLOT_GAUSSIAN_CUDA_PREVIEW_STEP2B",
+      "fields": [
+        "slot_0_target",
+        "slot_0_gaussian_count",
+        "slot_0_recon_loss",
+        "slot_0_updates",
+        "slot_0_backend",
+        "slot_0_preview_fps",
+        "slot_1_target",
+        "slot_1_gaussian_count",
+        "slot_1_recon_loss",
+        "slot_1_updates",
+        "slot_1_backend",
+        "slot_1_preview_fps",
+        "fallback_used",
+        "slot_0_overwritten",
+        "slot_1_allocated",
+        "reason"
+      ]
+    }
+  ],
+  "must_verify": [
+    "runtime/slot_gaussian_cuda_adapter.py exists",
+    "SlotGaussianCUDAAdapter detects CUDA/rasterizer availability",
+    "SlotGaussianCUDAAdapter falls back to torch_lowres without crashing",
+    "runtime/slot_gaussian_reconstruction.py accepts renderer_backend and allow_fallback",
+    "object_imagery_runtime reads object_image.slot_gaussian_renderer_backend",
+    "runtime/config.py has Step 2B config fields",
+    "conf/runner.yaml has Step 2B object_image config keys",
+    "diagnostic log contains slot_gaussian_cuda_backend",
+    "diagnostic log contains slot_gaussian_preview_frame",
+    "slot-0/tetrahedron has gaussian_count > 0, updates > 0, preview_fps > 0",
+    "slot-1/cube has gaussian_count > 0, updates > 0, preview_fps > 0",
+    "fallback works if CUDA rasterizer is not installed",
+    "slot-0 is not overwritten by cube",
+    "SUCCESS_SLOT_GAUSSIAN_CUDA_PREVIEW_STEP2B is written only after proof"
+  ],
+  "config_modes_to_test": [
+    {
+      "mode": "torch_lowres",
+      "expected": [
+        "active_backend=torch_lowres",
+        "runtime does not crash",
+        "slot_gaussian_preview_frame appears"
+      ]
+    },
+    {
+      "mode": "auto",
+      "expected": [
+        "cuda if available",
+        "otherwise torch_lowres fallback",
+        "runtime does not crash"
+      ]
+    },
+    {
+      "mode": "cuda_3dgs",
+      "fallback": true,
+      "expected": [
+        "cuda if rasterizer available",
+        "otherwise torch_lowres fallback",
+        "runtime does not crash"
+      ]
+    }
+  ],
+  "forbidden": [
+    "break Step 2A",
+    "require CUDA to be installed",
+    "crash when gsplat is missing",
+    "crash when diff_gaussian_rasterization is missing",
+    "implement neural predictor Step 2C",
+    "replace LongDynamicObjectMemory",
+    "bypass object slots",
+    "mix tetrahedron and cube Gaussian states",
+    "train cube in slot-0",
+    "fake updates",
+    "fake loss",
+    "fake gaussian_count",
+    "fake preview_fps",
+    "hard-code success",
+    "print git diff",
+    "print full file contents",
+    "print long changed-file summaries"
+  ],
+  "inner_object_metrics": [
+    "slot_gaussian_count",
+    "slot_gaussian_updates",
+    "slot_gaussian_rgb_loss",
+    "slot_gaussian_depth_loss",
+    "slot_gaussian_total_loss",
+    "slot_gaussian_preview_fps",
+    "slot_gaussian_backend_is_cuda",
+    "slot_gaussian_fallback_used"
+  ],
+  "output_policy": {
+    "format": "[STAGE] <stage_id> status=<status> comment=<short explanation>",
+    "do_not_print": [
+      "git diff",
+      "patch text",
+      "changed file lists",
+      "full file contents"
+    ],
+    "comment_style": "short human explanation of what Codex is doing"
+  },
+  "success_marker": "event=SUCCESS_SLOT_GAUSSIAN_CUDA_PREVIEW_STEP2B",
+  "grep_commands": [
+    "grep \"event=slot_gaussian_cuda_backend\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log | tail -n 30",
+    "grep \"event=slot_gaussian_preview_frame\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log | tail -n 30",
+    "grep \"SUCCESS_SLOT_GAUSSIAN_CUDA_PREVIEW_STEP2B\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log"
+  ],
+  "known_failure_to_check": {
+    "error": "AssertionError: runtime/object_imagery_runtime.py missing: ['slot_gaussian_renderer_backend']",
+    "cause": "Existing Step 2A _ensure_slot_gaussian_reconstruction method was not replaced by Step 2B backend-aware version.",
+    "repair": "Replace existing _ensure_slot_gaussian_reconstruction with method that reads slot_gaussian_renderer_backend and slot_gaussian_cuda_allow_fallback."
+  }
+}

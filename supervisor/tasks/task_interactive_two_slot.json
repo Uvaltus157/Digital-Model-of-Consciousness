@@ -1,0 +1,34 @@
+{
+  "id": "interactive_two_slot_codex_supervisor",
+  "mode": "interactive_repl_over_codex_exec",
+  "repository": "Conscious-World-Model-System",
+  "branch": "work_2",
+  "entrypoint": "python supervisor/run_codex_interactive_two_slot_supervisor.py",
+  "diagnostic_log": "/home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log",
+  "supervisor_log": "/home/user/_project/temp/logs/interactive_two_slot_supervisor.log",
+  "transcript": "/home/user/_project/temp/logs/interactive_two_slot_transcript.md",
+  "commands": {
+    ":demo": "Demonstrate/explain current two-slot result from logs.",
+    ":status": "Read logs and summarize current status.",
+    ":ask <question>": "Ask a question without forcing edits.",
+    ":fix <request>": "Ask Codex to make a targeted repair and verify.",
+    ":log": "Print log paths.",
+    ":quit": "Exit interactive supervisor."
+  },
+  "output_policy": {
+    "format": "[STAGE] <stage_id> status=<status> comment=<short human explanation>",
+    "do_not_print": [
+      "git diff",
+      "patch text",
+      "changed file lists",
+      "long code-change summaries"
+    ],
+    "style": "short commented stages plus direct answers to user questions"
+  },
+  "target_behavior": {
+    "slot_0": "tetrahedron",
+    "slot_1": "cube",
+    "new_dynamic_object": "next free protected slot",
+    "known_object": "reuse existing slot"
+  }
+}

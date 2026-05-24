@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="820" viewBox="0 0 1400 820">
+
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L0,6 L9,3 z" fill="#9FB3FF" />
+  </marker>
+  <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+    <stop offset="0%" stop-color="#08111F"/>
+    <stop offset="100%" stop-color="#11172B"/>
+  </linearGradient>
+</defs>
+
+<rect width="1400" height="820" fill="url(#bg)"/>
+<text x="700.0" y="52" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700" fill="#EAF0FF" text-anchor="middle">Conscious World Model System — Runtime Architecture</text>
+<rect x="60" y="120" width="250" height="120" rx="16" fill="#14213D" stroke="#6D7FA8" stroke-width="2"/>
+<text x="185.0" y="158" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">MuJoCo World</text>
+<text x="185.0" y="192" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">physics • scene • contacts</text>
+<rect x="60" y="330" width="250" height="130" rx="16" fill="#173B4F" stroke="#6D7FA8" stroke-width="2"/>
+<text x="185.0" y="368" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">Sensors</text>
+<text x="185.0" y="402" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">stereo RGB/depth</text>
+<text x="185.0" y="426" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">contact/tactile</text>
+<text x="185.0" y="450" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">IMU/vestibular</text>
+<rect x="390" y="130" width="260" height="120" rx="16" fill="#1A2F58" stroke="#6D7FA8" stroke-width="2"/>
+<text x="520.0" y="168" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">life_step()</text>
+<text x="520.0" y="202" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">observe • act • replay</text>
+<text x="520.0" y="226" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">viewer sync • pult polling</text>
+<rect x="390" y="340" width="260" height="120" rx="16" fill="#2B2A55" stroke="#6D7FA8" stroke-width="2"/>
+<text x="520.0" y="378" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">World Model</text>
+<text x="520.0" y="412" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">latent state • policy</text>
+<text x="520.0" y="436" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">values • predictions</text>
+<rect x="730" y="130" width="260" height="130" rx="16" fill="#3A2858" stroke="#6D7FA8" stroke-width="2"/>
+<text x="860.0" y="168" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">Object Imagery</text>
+<text x="860.0" y="202" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">10 object slots</text>
+<text x="860.0" y="226" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">slot memory • decoder</text>
+<text x="860.0" y="250" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">inner RGB/depth/mask</text>
+<rect x="730" y="360" width="260" height="110" rx="16" fill="#4D2949" stroke="#6D7FA8" stroke-width="2"/>
+<text x="860.0" y="398" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">Dream / Sleep Gate</text>
+<text x="860.0" y="432" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">full sleep -&gt; dream_step</text>
+<text x="860.0" y="456" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">partial cut -&gt; awake</text>
+<rect x="1080" y="130" width="260" height="130" rx="16" fill="#223C65" stroke="#6D7FA8" stroke-width="2"/>
+<text x="1210.0" y="168" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">Visualizers</text>
+<text x="1210.0" y="202" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">MuJoCo viewer</text>
+<text x="1210.0" y="226" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">inner world</text>
+<text x="1210.0" y="250" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">object slots • Open3D</text>
+<rect x="1080" y="360" width="260" height="110" rx="16" fill="#2E4A3E" stroke="#6D7FA8" stroke-width="2"/>
+<text x="1210.0" y="398" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">External Control</text>
+<text x="1210.0" y="432" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">IPC / JSON pult</text>
+<text x="1210.0" y="456" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">sensor toggles</text>
+<text x="1210.0" y="480" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">manual actions</text>
+<rect x="520" y="610" width="360" height="120" rx="16" fill="#3B3220" stroke="#6D7FA8" stroke-width="2"/>
+<text x="700.0" y="648" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">Parallel Training Thread</text>
+<text x="700.0" y="682" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">train_loop() consumes replay</text>
+<text x="700.0" y="706" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">train_once() -&gt; optimizer.step()</text>
+<text x="700.0" y="730" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="400" fill="#C8D5F8" text-anchor="middle">skipped in full sleep</text>
+<line x1="310" y1="180" x2="390" y2="190" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="185" y1="250" x2="185" y2="330" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="310" y1="395" x2="390" y2="400" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="650" y1="190" x2="730" y2="195" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="650" y1="400" x2="730" y2="405" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="990" y1="195" x2="1080" y2="195" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="990" y1="410" x2="1080" y2="410" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="1210" y1="360" x2="1210" y2="260" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="520" y1="460" x2="650" y2="610" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="880" y1="610" x2="1080" y2="465" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="520" y1="610" x2="520" y2="460" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="390" y1="250" x2="300" y2="330" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="700" y="780" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="500" fill="#B9C8FF" text-anchor="middle">Main thread keeps the agent alive; training runs in parallel and is disabled during full sleep.</text>
+</svg>

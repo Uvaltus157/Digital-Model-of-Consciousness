@@ -1,0 +1,186 @@
+{
+  "id": "debug_slot_gaussian_3dgs_step2a",
+  "mode": "codex_debug_and_verify",
+  "repository": "Conscious-World-Model-System",
+  "branch": "work_2",
+  "repo_root": "/home/user/_project_d/GitHub/Conscious-World-Model-System",
+  "diagnostic_log": "/home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log",
+  "goal": "Verify and repair Step 2A: per-slot low-res differentiable Gaussian 3DGS reconstruction from Step-1 point clouds and RGB-D observations.",
+  "depends_on": [
+    "runtime/slot_observation_reconstruction.py",
+    "SUCCESS_SLOT_OBSERVATION_POINTCLOUD_STEP1 or equivalent proof that slot pointclouds exist"
+  ],
+  "step_boundary": {
+    "step_2a_should_do": [
+      "SlotGaussianState with learnable Gaussian parameters",
+      "SimpleGaussianRenderer low-res differentiable splat rendering",
+      "SlotGaussianReconstructor with slot_id -> Gaussian state",
+      "initialize Gaussians from point cloud",
+      "train using RGB/depth reconstruction loss",
+      "log gaussian init/train/render events",
+      "write SUCCESS_SLOT_GAUSSIAN_3DGS_STEP2 after slot-0 and slot-1 train"
+    ],
+    "step_2a_should_not_do": [
+      "SlotGaussianModel(nn.Module)",
+      "SlotGaussianPredictorNet",
+      "z_dynamic_object-conditioned neural predictor",
+      "CUDA rasterizer",
+      "4D deformation field"
+    ],
+    "future_step_2b": [
+      "Neural SlotGaussianModel(nn.Module)",
+      "SlotGaussianPredictorNet(nn.Module)",
+      "z_dynamic_object-conditioned Gaussian parameter prediction"
+    ],
+    "future_step_2c": [
+      "CUDA 3DGS rasterizer",
+      "fast preview"
+    ]
+  },
+  "target_behavior": {
+    "slot_0": {
+      "target": "tetrahedron",
+      "must_have": [
+        "gaussian_count > 0",
+        "updates > 0",
+        "total_loss > 0",
+        "target_name=tetrahedron"
+      ]
+    },
+    "slot_1": {
+      "target": "cube",
+      "must_have": [
+        "gaussian_count > 0",
+        "updates > 0",
+        "total_loss > 0",
+        "target_name=cube"
+      ]
+    },
+    "do_not_mix_slots": true
+  },
+  "required_files": [
+    "runtime/slot_observation_reconstruction.py",
+    "runtime/slot_gaussian_reconstruction.py",
+    "runtime/object_imagery_runtime.py",
+    "runtime/tetra_dynamic_slot_diagnostic.py"
+  ],
+  "required_code_objects": [
+    "SlotGaussianState",
+    "SimpleGaussianRenderer",
+    "SlotGaussianReconstructor",
+    "_ensure_slot_gaussian_reconstruction",
+    "_slot_gaussian_reconstruction_step",
+    "_maybe_log_slot_gaussian_step2_success"
+  ],
+  "required_events": [
+    {
+      "event": "slot_gaussian_init",
+      "fields": [
+        "slot_id",
+        "target_name",
+        "gaussian_count",
+        "source_points"
+      ]
+    },
+    {
+      "event": "slot_gaussian_train",
+      "fields": [
+        "slot_id",
+        "target_name",
+        "initialized",
+        "gaussian_count",
+        "updates",
+        "rgb_loss",
+        "depth_loss",
+        "total_loss",
+        "render_valid"
+      ]
+    },
+    {
+      "event": "slot_gaussian_render",
+      "fields": [
+        "slot_id",
+        "target_name",
+        "gaussian_count",
+        "updates",
+        "render_valid",
+        "rgb_loss",
+        "depth_loss"
+      ]
+    },
+    {
+      "event": "SUCCESS_SLOT_GAUSSIAN_3DGS_STEP2",
+      "fields": [
+        "slot_0_target",
+        "slot_0_gaussian_count",
+        "slot_0_recon_loss",
+        "slot_0_updates",
+        "slot_1_target",
+        "slot_1_gaussian_count",
+        "slot_1_recon_loss",
+        "slot_1_updates",
+        "slot_0_overwritten",
+        "slot_1_allocated",
+        "reason"
+      ]
+    }
+  ],
+  "must_verify": [
+    "Step 1 pointcloud module exists",
+    "Step 1 pointcloud events are present or can be produced",
+    "runtime/slot_gaussian_reconstruction.py exists",
+    "SlotGaussianState stores learnable xyz/log_scale/opacity/color",
+    "SimpleGaussianRenderer renders low-res rgb/depth",
+    "SlotGaussianReconstructor stores separate state per slot_id",
+    "object_imagery_runtime calls gaussian reconstruction after pointcloud reconstruction",
+    "diagnostic log contains slot_gaussian_init",
+    "diagnostic log contains slot_gaussian_train",
+    "diagnostic log contains slot_gaussian_render",
+    "slot-0/tetrahedron gaussian_count > 0",
+    "slot-0/tetrahedron updates > 0",
+    "slot-1/cube gaussian_count > 0",
+    "slot-1/cube updates > 0",
+    "slot-0 is not overwritten by cube",
+    "SUCCESS_SLOT_GAUSSIAN_3DGS_STEP2 is written only after proof"
+  ],
+  "forbidden": [
+    "implement Step 2B",
+    "add SlotGaussianPredictorNet for this task",
+    "require SlotGaussianModel(nn.Module) for this task",
+    "implement CUDA rasterization",
+    "implement 4D deformation",
+    "replace LongDynamicObjectMemory",
+    "bypass object slots",
+    "mix tetrahedron and cube Gaussian states",
+    "train cube in slot-0",
+    "fake updates",
+    "fake loss",
+    "fake gaussian_count",
+    "hard-code success",
+    "print git diff",
+    "print full file contents",
+    "print long changed-file summaries"
+  ],
+  "inner_object_metrics": [
+    "slot_gaussian_count",
+    "slot_gaussian_updates",
+    "slot_gaussian_rgb_loss",
+    "slot_gaussian_depth_loss",
+    "slot_gaussian_total_loss"
+  ],
+  "output_policy": {
+    "format": "[STAGE] <stage_id> status=<status> comment=<short explanation>",
+    "do_not_print": [
+      "git diff",
+      "patch text",
+      "changed file lists",
+      "full file contents"
+    ],
+    "comment_style": "short human explanation of what Codex is doing"
+  },
+  "success_marker": "event=SUCCESS_SLOT_GAUSSIAN_3DGS_STEP2",
+  "grep_commands": [
+    "grep \"event=slot_gaussian\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log | tail -n 60",
+    "grep \"SUCCESS_SLOT_GAUSSIAN_3DGS_STEP2\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log"
+  ]
+}

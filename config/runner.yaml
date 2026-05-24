@@ -1,0 +1,501 @@
+hydra:
+  searchpath:
+    - file://${oc.env:PROJECT_ROOT}/src/modules/m02_event_dream_replay/config
+    - file://${oc.env:PROJECT_ROOT}/src/modules/m03_self_action_causality/config
+    - file://${oc.env:PROJECT_ROOT}/src/modules/m08_debug_visual_control/config
+    - file://${oc.env:PROJECT_ROOT}/src/modules/m15_counterfactual_imagination_planning/config
+  run:
+    dir: .
+  output_subdir: null
+  job:
+    chdir: false
+
+defaults:
+  - event_memory_full
+  - inner_real_action
+  - adaptive_scenario_controller
+  - control_panel
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+  - _self_
+
+mode: train # train run
+
+inner_speech_loss_weight: 0.25
+
+# ------------------------------------------------------------
+# Model dimensions used by ConsciousDreamerV2.3
+# ------------------------------------------------------------
+action_dim: 24
+embodied_dim: 15
+hand_motor_dim: 44
+tactile_dim: 42
+body_state_dim: 83
+
+sleep_sensors:
+  enabled: true
+  startup_state: sleep # config active sleep blind body_only 
+  video_sensor_enabled: true
+  contact_sensor_enabled: true
+  imu_sensor_enabled: true
+
+
+# ------------------------------------------------------------
+# Runtime
+# ------------------------------------------------------------
+runtime:
+  device: cuda
+  seed: 42
+  out_dir: /home/user/_project/temp/logs
+
+tetra_dynamic_slot_diagnostic:
+  enabled: true
+  file_name: tetra_dynamic_slot_diagnostic.log
+  reset_on_start: true
+
+# ------------------------------------------------------------
+# MuJoCo world / cameras / body control
+# ------------------------------------------------------------
+mujoco_world:
+  width: 192
+  height: 128
+  hfov_deg: 78.0
+  baseline: 0.30
+  human_mesh_path: assets/human.obj
+
+  start_pos:
+    - -3.0
+    - -3.0
+    - 2.2
+  start_yaw_deg: 42.0
+  start_pitch_deg: -18.0
+
+  mj_substeps: 2
+
+  base:
+    move_gain: 0.035
+    lift_gain: 0.025
+    yaw_gain_deg: 2.2
+    pitch_gain_deg: 1.4
+    pitch_limit_deg: 65.0
+
+# ------------------------------------------------------------
+# Main MuJoCo viewer and status printing
+# ------------------------------------------------------------
+viewer:
+  allow_mujoco_window: false
+  print_status_every_sec: 1.0
+  mujoco_threaded: false
+  mujoco_sync_fps: 8.0
+  mujoco_sync_every_steps: 2
+
+# ------------------------------------------------------------
+# Inner world visualizer
+# ------------------------------------------------------------
+inner_world:
+  enabled: true
+  width: 1800
+  height: 1100
+  show_every_steps: 1
+
+  save_frames: false
+  save_every_steps: 100
+  out_dir: inner_world_frames
+
+# ------------------------------------------------------------
+# Life loop
+# ------------------------------------------------------------
+life:
+  fps: 15
+  max_steps: 1000000
+  report_every_steps: 25
+  checkpoint_every_steps: 500
+
+# ------------------------------------------------------------
+# Online training loop
+# ------------------------------------------------------------
+train:
+  enabled: true
+  inner_speech_teacher_file: "english_inner_speech_teacher.py"
+  english_inner_speech_teacher_enabled: true
+  russian_inner_speech_teacher_enabled: false
+  lr: 0.00015
+  weight_decay: 0.00001
+  gradient_clip: 5.0
+  train_sleep_sec: 0.01
+
+  # If your TrainLoopConfig has these fields, they will be used.
+  # If not, the v5_8 config filter will ignore unsupported fields.
+  stop_train_quality: 0.03
+  stabilization_patience: 200
+
+# ------------------------------------------------------------
+# Replay buffer
+# ------------------------------------------------------------
+replay:
+  capacity: 50000
+  batch_size: 8
+  min_ready: 128
+  recent_bias: 0.75
+
+# ------------------------------------------------------------
+# Novelty detector
+# ------------------------------------------------------------
+novelty:
+  enabled: true
+  threshold: 0.18
+  cooldown_steps: 100
+  ema_decay: 0.985
+
+
+camera_preview:
+  enabled: true
+  window_name: "input sensors visualizer"
+  scale: 1.25
+  show_depth: true
+  show_actions_window: false
+  show_every_steps: 1
+  delay_ms: 1
+
+
+external_control:
+  enabled: true
+  state_file: "/tmp/conscious_viewer_control.json"
+  poll_every_steps: 1
+
+control_startup:
+  mujoco_next_run: false
+  object_image: false
+  training: false
+
+
+ipc_control:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8765
+  poll_every_steps: 1
+
+
+latent_semantic_map:
+  enabled: true
+  window_name: "latent semantic map"
+  width: 1780
+  height: 980
+  max_history: 320
+  show_every_steps: 1
+  delay_ms: 1
+  thumbnail_size: 82
+  max_thumbnails: 6
+  point_radius: 4
+  draw_grid: true
+  follow_inner_world_toggle: false
+
+checkpoint_load:
+  # Load checkpoint state on startup.
+  enabled_load: true
+
+  # Save checkpoints periodically, on shutdown, and from the control panel.
+  enabled_save: false
+
+  # Load this checkpoint on startup.
+  load_path: "./checkpoint/last.pt"
+
+  # Save new checkpoints here.
+  save_path: "./checkpoint/last_s.pt"
+
+  strict: false
+  load_optimizer: true
+  load_counters: true
+
+emotional_drive:
+  enabled: true
+  reward_weight: 1.0
+  inject_into_env_reward: true
+  log_every_steps: 25
+  ema_decay: 0.985
+  reward_scale: 0.15
+  w_gap_fill: 1.25
+  w_coherence_gain: 0.75
+  w_object_conf_gain: 0.75
+  w_multimodal_alignment: 0.55
+  w_contact_pleasure: 0.35
+  w_curiosity: 0.25
+  w_inner_speech_conf: 0.35
+  w_instability: 0.40
+  w_uncertainty_increase: 1.10
+  w_coherence_loss: 0.85
+  w_object_conf_loss: 0.75
+  w_speech_conf_loss: 0.55
+  w_alignment_loss: 0.70
+  w_chaotic_touch: 0.45
+
+exploration:
+  enabled: true
+  warmup_steps: 1500
+  min_embodied_norm: 0.03
+  min_hand_norm: 0.03
+  base_amp: 0.65
+  hand_amp: 0.18
+  cycle_action_when_stuck: true
+  action_cycle_period: 45
+  low_novelty_threshold: 0.015
+  stuck_boost: 1.75
+
+dynamic_agent_rig:
+  enabled: true
+  body_name: "agent_rig"
+  freejoint_name: "agent_rig_free"
+
+  max_linear_speed: 0.35
+  max_vertical_speed: 0.45
+  max_angular_speed: 0.6
+
+  linear_kv: 10.0
+  angular_kv: 6.0
+  max_force: 800.0
+  max_torque: 70.0
+
+  min_z: 0.55
+  max_z: 2.2
+  ground_push_k: 100.0
+  local_frame_linear: true
+  gravity_compensation: true
+  hover_enabled: true
+  hover_height: 1.65
+  dynamic_hover_target: true
+  min_hover_height: 0.75
+  max_hover_height: 3.0
+  vertical_command_gain: 0.55
+  hover_kp: 260.0
+  hover_kd: 55.0
+  emergency_lift_enabled: true
+  emergency_z: 0.85
+  emergency_vz: 1.2
+  upright_enabled: true
+  upright_kp: 8.0
+  upright_kd: 2.0
+  contact_angular_damping_enabled: true
+  contact_roll_pitch_damping: 6.0
+  contact_yaw_damping: 2.0
+  contact_spin_limit: 2.0
+  contact_spin_deadzone: 0.25
+  disable_pitch_roll_commands: true
+  contact_active_angular_damping: 65.0
+  contact_active_yaw_damping: 18.0
+  contact_active_upright_kp: 45.0
+  contact_active_upright_kd: 16.0
+  contact_torque_limit: 55.0
+
+
+bird_body:
+  enabled: true
+  leg_smoothing: 0.05
+
+
+leg_control:
+  enabled: true
+  leg_motor_dim: 18
+  hidden_dim: 128
+  smoothing: 0.05
+
+action_outputs:
+  enabled: true
+  window_name: "action outputs visualizer"
+  width: 1780
+  height: 820
+  show_every_steps: 2
+  delay_ms: 1
+  scale: 1.0
+
+object_image:
+  enabled: true
+  window_name: "inner_object_visualizer"
+  width: 1420
+  height: 1260
+  show_every_steps: 2
+  latent_dim: 128
+  hidden_dim: 256
+  image_size: 64
+  tactile_dim: 50
+  decoder_loss_enabled: true
+  decoder_loss_weight: 0.20
+  decoder_rgb_weight: 1.00
+  decoder_depth_weight: 0.75
+  decoder_mask_weight: 0.50
+  decoder_conf_weight: 0.10
+  decoder_use_geometry_objectness: true
+  point_count: 128
+  voxel_res: 16
+  num_slots: 10
+  max_object_proposals: 10
+  dream_latent_dynamics: true
+  dream_strength: 0.025
+  dream_cycle_slots: false   # in dream switch slots(watch defferent dreams)
+  dream_slot_cycle_steps: 90
+  dream_empty_confidence_threshold: 0.05
+  use_object_state_proposals: false
+  image_region_proposals: true
+  proposal_grid_rows: 2
+  proposal_grid_cols: 5
+  proposal_min_activity: 0.0
+  include_ground_proposal: false
+
+  # Step 2B: Gaussian renderer backend / preview
+  # torch_lowres | cuda_3dgs | auto
+  slot_gaussian_renderer_backend: auto
+  slot_gaussian_cuda_allow_fallback: true
+  slot_gaussian_image_size: 64
+  slot_gaussian_max_gaussians: 768
+  slot_gaussian_max_render_gaussians: 256
+  slot_gaussian_lr: 0.003
+  slot_gaussian_train_steps_per_update: 1
+  slot_gaussian_depth_weight: 0.35
+  slot_gaussian_preview_every_steps: 1
+
+  # Step 3A: 4D timeline over Gaussian states
+  slot_4d_timeline_enabled: true
+  slot_4d_timeline_max_frames: 256
+  slot_4d_sample_points: 128
+
+  # Step 3B: neural 4D deformation field
+  slot_4d_deformation_enabled: true
+  slot_4d_deformation_hidden_dim: 96
+  slot_4d_deformation_lr: 0.002
+  slot_4d_deformation_train_steps_per_update: 1
+  slot_4d_deformation_min_frames: 2
+  slot_4d_deformation_delta_reg_weight: 0.0001
+
+  # Step 3C: deformation-aware 4D playback preview
+  slot_4d_playback_enabled: true
+  slot_4d_playback_period_steps: 120
+  slot_4d_playback_strength: 1.0
+
+  # Step 3F: separate Open3D Slot Viewer export
+  slot_4d_open3d_export_enabled: true
+  slot_4d_open3d_export_path: /home/user/_project/temp/checkpoint/slot_viewer/slot_4d_open3d_latest.npz
+  slot_4d_open3d_sample_points: 4096
+  slot_4d_open3d_min_interval_sec: 0.05
+  # Step 3H: JSON-RPC live stream for Inner Object Open3D
+  slot_4d_open3d_transport: jsonrpc
+  slot_4d_jsonrpc_enabled: true
+  slot_4d_jsonrpc_host: 127.0.0.1
+  slot_4d_jsonrpc_port: 8771
+  slot_4d_jsonrpc_sample_points: 4096
+  # Step 4D/4E: persistent object memory / recall diagnostics
+  slot_object_memory_enabled: true
+  slot_object_memory_root: /home/user/_project/temp/checkpoint/slot_memory
+  slot_object_memory_match_threshold: 0.30
+
+object_image_open3d:
+  enabled: true
+  window_name: "inner object Open3D"
+  width: 960
+  height: 820
+  update_every_steps: 2
+  point_size: 5.0
+  voxel_threshold: 0.60
+  max_voxel_points: 1200
+  show_voxels: true
+  use_internal_color: true
+  max_slots: 10
+  slot_spacing: 2.6
+  export_dir: "exports/inner_object_3d"
+  snapshot_conf_threshold: 0.56
+  min_steps_between_snapshots: 24
+
+manual_action_override:
+  enabled: true
+  window_name: "manual body action override"
+  max_linear: 2.0
+  max_angular: 1.5
+  width: 760
+  height: 480
+  show_every_steps: 1
+
+action_trace:
+  enabled: false
+  print_every_steps: 15
+  force_when_manual: false
+  force_gain: 1.0
+
+vestibular:
+  enabled: true
+  add_to_body_state: true
+  print_every_steps: 30
+  balance_reward_weight: 0.04
+  balance_gyro_penalty: 0.015
+  balance_diff_penalty: 0.010
+  balance_loss_weight: 0.03
+
+mocap_contacts:
+  enabled: true
+  central_rig: "mocap"
+  preserve_contacts: true
+  notes: "agent_rig/cameras are mocap-stabilized; arms/legs/objects keep contacts"
+
+mocap_flight_bounds:
+  enabled: true
+  min_z: 0.1
+  max_z: 10.0
+
+self_core:
+  enabled: true
+  self_dim: 128
+  hidden_dim: 256
+  workspace_dim: 256
+  object_latent_dim: 128
+  loss_weight: 0.02
+  print_every_steps: 30
+
+agent_head:
+  enabled: true
+  control_indices:
+    body_roll: 11
+    head_yaw: 12
+    head_pitch: 13
+    head_roll: 14
+  notes: "embodied_dim is 15: old body/arms preserved, body roll at 11, head controls at 12:15"
+
+module_debug:
+  enabled: true
+  window_name: "module debug"
+  width: 1560
+  height: 980
+  show_every_steps: 2
+  
+  module_modes:
+    world_model: train
+ # train passive
+    object_imagery: train
+    core_model: passive
+    action_heads: passive
+    leg_control: passive
+    self_core: passive
+    inner_speech: passive
+    long_dynamic_memory: train
+
+
+module_status_ipc:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8766
+
+  # ------------------------------------------------------------
+  # Long dynamic object memory
+  # ------------------------------------------------------------
+  # Static frames must not write object slots directly.
+  # Slots are updated only from LongDynamicObjectMemory output.
+  long_dynamic_memory_hidden_dim: 128
+  long_dynamic_memory_context_dim: 6
+  long_dynamic_memory_ema_alpha: 0.08
+  long_dynamic_memory_residual_scale: 0.35
+  long_dynamic_memory_min_steps: 6
+  long_dynamic_memory_stable_steps: 3
+  long_dynamic_memory_confidence_threshold: 0.05
+  long_dynamic_memory_require_dynamic_input: true
+  long_dynamic_write_event_slots: true
+  long_dynamic_memory_dz_threshold: 0.0012
+  long_dynamic_memory_min_active_steps: 3
+  long_dynamic_memory_loss_enabled: true
+  long_dynamic_memory_loss_weight: 0.01
+  long_dynamic_memory_depth_motion_threshold: 0.0008

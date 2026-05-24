@@ -1,0 +1,187 @@
+{
+  "id": "debug_slot_4d_timeline_step3a",
+  "mode": "codex_debug_and_verify",
+  "repository": "Conscious-World-Model-System",
+  "branch": "work_2",
+  "repo_root": "/home/user/_project_d/GitHub/Conscious-World-Model-System",
+  "diagnostic_log": "/home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log",
+  "goal": "Verify and repair Step 3A: per-slot 4D Gaussian timeline over existing Step 2A/2B Gaussian states.",
+  "depends_on": [
+    "Step 1: slot observation buffer + pointcloud",
+    "Step 2A/2B: per-slot Gaussian reconstruction",
+    "object_imagery_runtime calls _slot_gaussian_reconstruction_step"
+  ],
+  "step_boundary": {
+    "step_3a_should_do": [
+      "create Slot4DFrame",
+      "create Slot4DTimelineBuffer",
+      "create Slot4DReconstructor",
+      "store compact per-slot Gaussian snapshots over time",
+      "log slot_4d_frame and slot_4d_timeline",
+      "write SUCCESS_SLOT_4D_TIMELINE_STEP3A after slot-0 and slot-1 have timelines"
+    ],
+    "step_3a_should_not_do": [
+      "deformation field",
+      "neural 4D predictor",
+      "timeline playback UI",
+      "replace Gaussian reconstructor",
+      "replace LongDynamicObjectMemory"
+    ],
+    "future_step_3b": [
+      "Slot4DDeformationModel",
+      "time embedding",
+      "base_gaussians + time_code -> delta_xyz/delta_scale/delta_opacity"
+    ]
+  },
+  "required_files": [
+    "runtime/slot_4d_reconstruction.py",
+    "runtime/object_imagery_runtime.py",
+    "runtime/tetra_dynamic_slot_diagnostic.py",
+    "runtime/config.py",
+    "conf/runner.yaml"
+  ],
+  "required_code_objects": [
+    "Slot4DFrame",
+    "Slot4DTimelineBuffer",
+    "Slot4DReconstructor",
+    "_ensure_slot_4d_reconstruction",
+    "_slot_4d_timeline_step",
+    "_maybe_log_slot_4d_timeline_success"
+  ],
+  "required_config_fields": [
+    "slot_4d_timeline_enabled",
+    "slot_4d_timeline_max_frames",
+    "slot_4d_sample_points"
+  ],
+  "required_object_runtime_sequence": [
+    "_slot_observation_reconstruction_step(target_slot, target_name_for_recon, source)",
+    "_slot_gaussian_reconstruction_step(target_slot, target_name_for_recon, source)",
+    "_slot_4d_timeline_step(target_slot, target_name_for_recon, source)"
+  ],
+  "required_events": [
+    {
+      "event": "slot_4d_frame",
+      "fields": [
+        "slot_id",
+        "target_name",
+        "live_step",
+        "frame_count",
+        "gaussian_count",
+        "updates",
+        "recon_loss",
+        "formed_conf",
+        "z_dynamic_norm",
+        "motion_norm",
+        "backend",
+        "valid"
+      ]
+    },
+    {
+      "event": "slot_4d_timeline",
+      "fields": [
+        "slot_id",
+        "target_name",
+        "timeline_frames",
+        "temporal_span",
+        "gaussian_count",
+        "updates",
+        "motion_norm",
+        "mean_delta_x",
+        "mean_delta_y",
+        "mean_delta_z",
+        "backend",
+        "valid"
+      ]
+    },
+    {
+      "event": "SUCCESS_SLOT_4D_TIMELINE_STEP3A",
+      "fields": [
+        "slot_0_target",
+        "slot_0_timeline_frames",
+        "slot_0_gaussian_count",
+        "slot_0_temporal_span",
+        "slot_1_target",
+        "slot_1_timeline_frames",
+        "slot_1_gaussian_count",
+        "slot_1_temporal_span",
+        "slot_0_overwritten",
+        "slot_1_allocated",
+        "reason"
+      ]
+    }
+  ],
+  "target_behavior": {
+    "slot_0": {
+      "target": "tetrahedron",
+      "must_have": [
+        "timeline_frames > 0",
+        "gaussian_count > 0",
+        "target_name=tetrahedron"
+      ]
+    },
+    "slot_1": {
+      "target": "cube",
+      "must_have": [
+        "timeline_frames > 0",
+        "gaussian_count > 0",
+        "target_name=cube"
+      ]
+    },
+    "do_not_mix_slots": true
+  },
+  "must_verify": [
+    "runtime/slot_4d_reconstruction.py exists",
+    "Slot4DFrame exists",
+    "Slot4DTimelineBuffer stores separate histories per slot_id",
+    "Slot4DReconstructor reads gaussian_reconstructor.states[slot_id]",
+    "object_imagery_runtime calls _slot_4d_timeline_step after _slot_gaussian_reconstruction_step",
+    "runtime/config.py has slot_4d_timeline_enabled",
+    "conf/runner.yaml has slot_4d_timeline_enabled",
+    "diagnostic log contains slot_4d_frame",
+    "diagnostic log contains slot_4d_timeline",
+    "slot-0/tetrahedron timeline_frames > 0",
+    "slot-0/tetrahedron gaussian_count > 0",
+    "slot-1/cube timeline_frames > 0",
+    "slot-1/cube gaussian_count > 0",
+    "slot-0 is not overwritten by cube",
+    "SUCCESS_SLOT_4D_TIMELINE_STEP3A is written only after proof"
+  ],
+  "forbidden": [
+    "implement Step 3B deformation field",
+    "implement neural 4D predictor",
+    "replace Gaussian reconstructor",
+    "replace LongDynamicObjectMemory",
+    "bypass object slots",
+    "mix tetrahedron and cube timelines",
+    "write cube frames into slot-0",
+    "fake timeline_frames",
+    "fake gaussian_count",
+    "fake motion_norm",
+    "hard-code success",
+    "print git diff",
+    "print full file contents",
+    "print long changed-file summaries"
+  ],
+  "inner_object_metrics": [
+    "slot_4d_timeline_frames",
+    "slot_4d_temporal_span",
+    "slot_4d_motion_norm",
+    "slot_4d_gaussian_count"
+  ],
+  "output_policy": {
+    "format": "[STAGE] <stage_id> status=<status> comment=<short explanation>",
+    "do_not_print": [
+      "git diff",
+      "patch text",
+      "changed file lists",
+      "full file contents"
+    ],
+    "comment_style": "short human explanation of what Codex is doing"
+  },
+  "success_marker": "event=SUCCESS_SLOT_4D_TIMELINE_STEP3A",
+  "grep_commands": [
+    "grep \"event=slot_4d_frame\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log | tail -n 40",
+    "grep \"event=slot_4d_timeline\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log | tail -n 40",
+    "grep \"SUCCESS_SLOT_4D_TIMELINE_STEP3A\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log"
+  ]
+}

@@ -1,0 +1,146 @@
+# Full event / inner coded world include
+#
+# In config/runner.yaml:
+#
+# defaults:
+#   - event_memory_full
+#   - _self_
+
+event_memory:
+  enabled: true
+
+  # Level 1: latent transition -> event tokens
+  max_events: 512
+  delta_threshold: 0.015
+  action_threshold: 0.010
+  contact_threshold: 0.010
+  record_in_sleep: true
+  keep_z_snapshots: true
+
+  # Level 1.5: slot vocabulary / dynamic passport address
+  use_slot_vocabulary: true
+  slot_token_prefix: "OBJ"
+
+  # Level 2: event tokens -> roles -> semantic sentence
+  compose_semantic_sentences: true
+  sentence_language: "code"
+
+  # Level 3: sentence stream -> episodes / biography
+  use_sentence_memory: true
+  max_sentences: 512
+  max_episodes: 64
+  episode_gap_steps: 25
+  new_episode_on_slot_change: false
+
+  # Level 4: episode -> deterministic replay trajectory
+  use_scenario_decoder: true
+  scenario_max_replay_steps: 32
+  scenario_interpolate_steps: 3
+  scenario_loop: true
+  scenario_decode_in_sleep: true
+
+  # Level 5: neural event decoder
+  neural_event_decoder_enabled: true
+  neural_event_decoder_hidden_dim: 256
+  neural_event_decoder_loss_weight: 0.05
+  neural_event_decoder_max_delta: 0.35
+
+inner_scenario_mind:
+  enabled: true
+  max_candidates: 4
+  rollout_steps: 6
+  use_neural_decoder: true
+  use_deterministic_decoder: true
+  select_by: "score"
+  score_confidence_weight: 1.0
+  score_change_weight: 0.35
+  score_contact_weight: 0.25
+  score_stability_weight: 0.50
+  score_uncertainty_penalty: 0.40
+
+event_code_visualizer:
+  enabled: true
+  window_name: "event code / slot vocabulary"
+  width: 1500
+  height: 980
+  show_every_steps: 1
+  delay_ms: 1
+  max_slots: 10
+  max_events: 14
+
+inner_action_decoder:
+  enabled: true
+  hidden_dim: 256
+  max_intent_norm: 0.25
+  confidence_threshold: 0.10
+
+  # Safe default: action intention is visualized/logged but does not override policy.
+  blend_to_policy: false
+  blend_alpha: 0.10
+
+inner_outcome_evaluator:
+  enabled: true
+  success_error_threshold: 0.12
+  ema_decay: 0.97
+  reward_scale: 0.10
+  store_prev_prediction: true
+
+inner_trust_gate:
+  enabled: true
+
+  # Trust thresholds before internal intention can influence real policy.
+  min_success_ema: 0.55
+  max_error_ema: 0.18
+  min_action_confidence: 0.25
+
+  # Safe default: compute trust only, do not apply to real policy.
+  allow_policy_blend: false
+  apply_to_policy: false
+  max_alpha: 0.08
+  warmup_steps: 500
+
+# Real-action mode is enabled by src/modules/m03_self_action_causality/config/inner_real_action.yaml
+
+inner_real_action_trace:
+  enabled: true
+  write_jsonl: true
+  write_every_steps: 10
+  path: ""   # empty -> out_dir / inner_real_action_trace.jsonl
+
+dynamic_object_passport:
+  enabled: true
+  max_passports: 32
+  token_prefix: "OBJ"
+
+  # Passport matching / creation
+  similarity_threshold: 0.72
+  confidence_ema_decay: 0.94
+  signature_ema_decay: 0.97
+  min_dynamic_score: 0.010
+  min_confidence_to_create: 0.02
+  create_scene_passport: true
+
+  # Reproduction:
+  # first-order inner world: passport -> passport_inner_world_z
+  # second-order view: passport_inner_world_z -> ObjectImaginationHead2D/Object3DHead
+  replay_enabled: true
+  replay_in_sleep: true
+  decode_to_second_order: true
+  decode_also_when_active: false
+
+passport_debug_visualizer:
+  enabled: true
+  window_name: "passport debug: live vs replay"
+  width: 1560
+  height: 980
+  delay_ms: 1
+  show_every_steps: 1
+
+static_dynamic_code_visualizer:
+  enabled: true
+  window_name: "static/dynamic code heatmaps"
+  width: 1500
+  height: 900
+  delay_ms: 1
+  show_every_steps: 1
+  heatmap_height: 120

@@ -1,0 +1,535 @@
+<mujoco model="agent">
+  
+  <!--default>
+    <geom friction="1.2 0.08 0.02" solimp="0.9 0.95 0.001" solref="0.012 1"/>
+    <joint damping="0.5"/>
+    <default class="collision">     
+      <geom contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02" />    
+    </default>
+  </default-->
+
+  <worldbody>
+    <body name="agent_rig" mocap="true" pos="0 0 2.0">
+      <!--freejoint name="agent_rig_free"/-->
+      <geom name="agent_rig_collision" type="box" size="0.18 0.12 0.10" mass="1.0" contype="1" conaffinity="1" condim="3" rgba="0.2 0.4 1.0 0.12" class="no_visual"/>
+      <geom name="rig_core" type="box" pos="0 0 0" size="0.10 0.08 0.06" rgba="0.82 0.82 0.95 1" contype="0" conaffinity="0"/>
+  
+      <body name="agent_head" pos="0 0 0.2">
+        <joint name="head_yaw"   type="hinge" axis="0 0 1" range="-45 45" damping="6.0" armature="0.10" frictionloss="0.05"/>
+        <joint name="head_pitch" type="hinge" axis="0 1 0" range="-70 50" damping="6.0" armature="0.10" frictionloss="0.05"/>
+        <joint name="head_roll"  type="hinge" axis="1 0 0" range="-70 70" damping="6.0" armature="0.10" frictionloss="0.05"/>
+        
+        <camera name="cam_left" pos="0 -0.15 0.2" xyaxes="0 -1 0 0 0 1" fovy="56.725318"/>
+        <camera name="cam_right" pos="0 0.15 0.2" xyaxes="0 -1 0 0 0 1" fovy="56.725318"/>
+        <geom name="obj_cam_left"  pos="0 -0.15 0.2" type="sphere" size="0.05"/>
+        <geom name="obj_cam_right" pos="0  0.15 0.2" type="sphere" size="0.05"/>
+        <geom name="luch_l" type="box" pos="1 -0.15 0.2" size="1 0.001 0.001" material="green" class="visual"/>
+        <geom name="luch_r" type="box" pos="1  0.15 0.2" size="1 0.001 0.001" material="yellow" class="visual"/>
+
+        <!-- Paired vestibular IMU sites: left/right inner-ear analog -->
+        <site name="vestibular_left_imu_site"  pos="0.0 0.1600 0.1000" size="0.0180" type="sphere" rgba="0.1 0.8 1.0 1"/>
+        <site name="vestibular_right_imu_site" pos="0.0 -0.1600 0.1000" size="0.0180" type="sphere" rgba="1.0 0.5 0.1 1"/>
+      </body>
+
+      <body name="agent_torso" pos="0 0 -0.06">
+        <geom name="agent_torso_geom" type="box" size="0.20 0.13 0.18" mass="2.0" contype="1" conaffinity="1" condim="3" rgba="0.25 0.34 0.48 0.35" group="4"/>
+        <geom name="agent_shoulder_bar" type="capsule" fromto="0 -0.19 0.08 0 0.19 0.08" size="0.025" mass="0.20" contype="1" conaffinity="1" condim="3" rgba="0.25 0.34 0.48 0.45"/>
+        <site name="left_arm_mount_site" pos="0 -0.20 0.08" size="0.018" rgba="0.2 0.7 1 1"/>
+        <site name="right_arm_mount_site" pos="0 0.20 0.08" size="0.018" rgba="0.2 0.7 1 1"/>
+
+        <body name="left_hip_mount" pos="0 -0.1200 -0.2000">
+          <joint name="left_hip_yaw" type="hinge" axis="0 0 1" range="-45 45" damping="6.0" armature="0.08" frictionloss="0.05"/>
+          <joint name="left_hip_pitch" type="hinge" axis="0 1 0" range="-70 50" damping="7.0" armature="0.10" frictionloss="0.06"/>
+          <!--geom name="left_hip_mount_geom" type="sphere" size="0.035" mass="0.42" contype="1" conaffinity="1" condim="3" rgba="0.55 0.45 0.28 1.0"/-->
+        
+          <body name="left_thigh" pos="0 0 -0.04">
+            <geom name="left_thigh_geom" type="capsule" fromto="0 0 0 0 0 -0.3800" size="0.035" mass="0.42" contype="1" conaffinity="1" condim="3" rgba="0.55 0.45 0.28 1.0"/>
+        
+            <body name="left_shin" pos="0 0 -0.3800">
+              <joint name="left_knee" type="hinge" axis="0 1 0" range="-105 -15" damping="7.0" armature="0.10" frictionloss="0.06"/>
+              <geom name="left_shin_geom" type="capsule" fromto="0 0 0 0.035 0 -0.3400" size="0.03" mass="0.42" contype="1" conaffinity="1" condim="3" rgba="0.55 0.45 0.28 1.0"/>
+        
+              <body name="left_foot" pos="0.035 0 -0.3400">
+                <joint name="left_ankle_pitch" type="hinge" axis="0 1 0" range="-45 55" damping="5.0" armature="0.07" frictionloss="0.04"/>
+                <joint name="left_ankle_roll" type="hinge" axis="1 0 0" range="-25 25" damping="4.0" armature="0.05" frictionloss="0.035"/>
+                <geom name="left_foot_geom" type="capsule" fromto="0 0 0 0.2000 0 -0.025" size="0.03" mass="0.13" contype="1" conaffinity="1" condim="3" rgba="0.55 0.45 0.28 1.0"/>
+        
+                <body name="left_toe_front_inner" pos="0.2000 -0.0350 -0.025">
+                  <joint name="left_toe_front_inner_joint" type="hinge" axis="0 1 0" range="-20 65" damping="2.5" armature="0.035" frictionloss="0.02"/>
+                  <geom name="left_toe_front_inner_geom" type="capsule" fromto="0 0 0 0.145 -0.0350 -0.015" size="0.017" mass="0.045" contype="1" conaffinity="1" condim="3" rgba="0.70 0.58 0.34 1.0"/>
+                  <site name="left_toe_front_inner_tip" pos="0.145 -0.0350 -0.015" size="0.035" type="sphere" rgba="1 0.8 0.2 1"/>
+                </body>
+        
+                <body name="left_toe_front_mid" pos="0.2000 0 -0.025">
+                  <joint name="left_toe_front_mid_joint" type="hinge" axis="0 1 0" range="-20 65" damping="2.5" armature="0.035" frictionloss="0.02"/>
+                  <geom name="left_toe_front_mid_geom" type="capsule" fromto="0 0 0 0.165 0 -0.015" size="0.017" mass="0.045" contype="1" conaffinity="1" condim="3" rgba="0.70 0.58 0.34 1.0"/>
+                  <site name="left_toe_front_mid_tip" pos="0.165 0 -0.015" size="0.035" type="sphere" rgba="1 0.8 0.2 1"/>
+                </body>
+        
+                <body name="left_toe_front_outer" pos="0.2000 0.0350 -0.025">
+                  <joint name="left_toe_front_outer_joint" type="hinge" axis="0 1 0" range="-20 65" damping="2.5" armature="0.035" frictionloss="0.02"/>
+                  <geom name="left_toe_front_outer_geom" type="capsule" fromto="0 0 0 0.145 0.0350 -0.015" size="0.017" mass="0.045" contype="1" conaffinity="1" condim="3" rgba="0.70 0.58 0.34 1.0"/>
+                  <site name="left_toe_front_outer_tip" pos="0.145 0.0350 -0.015" size="0.035" type="sphere" rgba="1 0.8 0.2 1"/>
+                </body>
+        
+                <body name="left_toe_rear" pos="0 0 -0.020">
+                  <joint name="left_toe_rear_joint" type="hinge" axis="0 1 0" range="-45 45" damping="2.5" armature="0.035" frictionloss="0.02"/>
+                  <geom name="left_toe_rear_geom" type="capsule" fromto="0 0 0 -0.130 0 -0.012" size="0.017" mass="0.045" contype="1" conaffinity="1" condim="3" rgba="0.70 0.58 0.34 1.0"/>
+                  <site name="left_toe_rear_tip" pos="-0.130 0 -0.012" size="0.035" type="sphere" rgba="1 0.8 0.2 1"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+        
+        
+        <body name="right_hip_mount" pos="0 0.1200 -0.2000">
+          <joint name="right_hip_yaw"   type="hinge" axis="0 0 1" range="-45 45" damping="6.0" armature="0.08" frictionloss="0.05"/>
+          <joint name="right_hip_pitch" type="hinge" axis="0 1 0" range="-70 50" damping="7.0" armature="0.10" frictionloss="0.06"/>
+          <!--geom name="right_hip_mount_geom" type="sphere" size="0.035" mass="0.42" contype="1" conaffinity="1" condim="3" rgba="0.55 0.45 0.28 1.0"/-->
+        
+          <body name="right_thigh" pos="0 0 -0.04">
+            <geom name="right_thigh_geom" type="capsule" fromto="0 0 0 0 0 -0.3800" size="0.035" mass="0.42" contype="1" conaffinity="1" condim="3" rgba="0.55 0.45 0.28 1.0"/>
+        
+            <body name="right_shin" pos="0 0 -0.3800">
+              <joint name="right_knee" type="hinge" axis="0 1 0" range="-105 -15" damping="7.0" armature="0.10" frictionloss="0.06"/>
+              <geom name="right_shin_geom" type="capsule" fromto="0 0 0 0.035 0 -0.3400" size="0.03" mass="0.42" contype="1" conaffinity="1" condim="3" rgba="0.55 0.45 0.28 1.0"/>
+        
+              <body name="right_foot" pos="0.035 0 -0.3400">
+                <joint name="right_ankle_pitch" type="hinge" axis="0 1 0" range="-45 55" damping="5.0" armature="0.07" frictionloss="0.04"/>
+                <joint name="right_ankle_roll" type="hinge" axis="1 0 0" range="-25 25" damping="4.0" armature="0.05" frictionloss="0.035"/>
+                <geom name="right_foot_geom" type="capsule" fromto="0 0 0 0.2000 0 -0.025" size="0.03" mass="0.13" contype="1" conaffinity="1" condim="3" rgba="0.55 0.45 0.28 1.0"/>
+        
+                <body name="right_toe_front_inner" pos="0.2000 0.0350 -0.025">
+                  <joint name="right_toe_front_inner_joint" type="hinge" axis="0 1 0" range="-20 65" damping="2.5" armature="0.035" frictionloss="0.02"/>
+                  <geom name="right_toe_front_inner_geom" type="capsule" fromto="0 0 0 0.145 0.0350 -0.015" size="0.017" mass="0.045" contype="1" conaffinity="1" condim="3" rgba="0.70 0.58 0.34 1.0"/>
+                  <site name="right_toe_front_inner_tip" pos="0.145 0.0350 -0.015" size="0.035" type="sphere" rgba="1 0.8 0.2 1"/>
+                </body>
+        
+                <body name="right_toe_front_mid" pos="0.2000 0 -0.025">
+                  <joint name="right_toe_front_mid_joint" type="hinge" axis="0 1 0" range="-20 65" damping="2.5" armature="0.035" frictionloss="0.02"/>
+                  <geom name="right_toe_front_mid_geom" type="capsule" fromto="0 0 0 0.165 0 -0.015" size="0.017" mass="0.045" contype="1" conaffinity="1" condim="3" rgba="0.70 0.58 0.34 1.0"/>
+                  <site name="right_toe_front_mid_tip" pos="0.165 0 -0.015" size="0.035" type="sphere" rgba="1 0.8 0.2 1"/>
+                </body>
+        
+                <body name="right_toe_front_outer" pos="0.2000 -0.0350 -0.025">
+                  <joint name="right_toe_front_outer_joint" type="hinge" axis="0 1 0" range="-20 65" damping="2.5" armature="0.035" frictionloss="0.02"/>
+                  <geom name="right_toe_front_outer_geom" type="capsule" fromto="0 0 0 0.145 -0.0350 -0.015" size="0.017" mass="0.045" contype="1" conaffinity="1" condim="3" rgba="0.70 0.58 0.34 1.0"/>
+                  <site name="right_toe_front_outer_tip" pos="0.145 -0.0350 -0.015" size="0.035" type="sphere" rgba="1 0.8 0.2 1"/>
+                </body>
+        
+                <body name="right_toe_rear" pos="0 0 -0.020">
+                  <joint name="right_toe_rear_joint" type="hinge" axis="0 1 0" range="-45 45" damping="2.5" armature="0.035" frictionloss="0.02"/>
+                  <geom name="right_toe_rear_geom" type="capsule" fromto="0 0 0 -0.130 0 -0.012" size="0.017" mass="0.045" contype="1" conaffinity="1" condim="3" rgba="0.70 0.58 0.34 1.0"/>
+                  <site name="right_toe_rear_tip" pos="-0.130 0 -0.012" size="0.035" type="sphere" rgba="1 0.8 0.2 1"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <body name="left_shoulder" pos="0.0 0.24 -0.02">
+        <joint name="left_shoulder_yaw" type="hinge" axis="0 0 1"
+               range="-85 85" damping="1.5" armature="0.02"/>
+        <joint name="left_shoulder_pitch" type="hinge" axis="0 1 0"
+               range="-70 70" damping="1.5" armature="0.02"/>
+
+        <geom name="left_upper_arm_visual" type="capsule"
+              fromto="0 0 0 0 0 -0.42" size="0.045"
+              mass="0.25" rgba="1 0.45 0.45 1"
+              contype="1" conaffinity="1"/>
+
+        <body name="left_elbow" pos="0 0 -0.42">
+          <joint name="left_elbow_hinge" type="hinge" axis="0 -1 0"
+                 range="5 145" damping="1.2" armature="0.015"/>
+          <geom name="left_forearm_visual" type="capsule"
+                fromto="0 0 0 0 0 -0.40" size="0.04"
+                mass="0.20" rgba="1 0.65 0.65 1"
+                contype="1" conaffinity="1"/>
+
+          <body name="left_hand_base" pos="0 0 -0.40">
+            <joint name="left_palm_roll" type="hinge" axis="1 0 0" range="-35 35" damping="0.7" armature="0.006"/>
+            <joint name="left_palm_pitch" type="hinge" axis="0 1 0" range="-35 35" damping="0.7" armature="0.006"/>
+            <geom name="left_palm" type="ellipsoid" pos="0.018 0 -0.020" size="0.105 0.066 0.028" mass="0.110" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+            <geom name="left_palm_heel" type="ellipsoid" pos="-0.035 0 -0.012" size="0.050 0.058 0.024" mass="0.030" rgba="0.98 0.30 0.30 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+            <geom name="left_palm_knuckle_pad" type="ellipsoid" pos="0.074 0 -0.026" size="0.040 0.055 0.018" mass="0.022" rgba="1.0 0.42 0.42 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+            <geom name="left_palm_thumb_pad" type="ellipsoid" pos="0.030 -0.050 -0.020" size="0.044 0.024 0.022" mass="0.018" rgba="1.0 0.40 0.40 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+            <site name="left_hand_site" pos="0.045 0 -0.015" size="0.02" rgba="1.0 0.35 0.35 1"/>
+            <site name="left_palm_center_site" pos="0.030 0 -0.040" size="0.02" rgba="1.0 0.35 0.35 1"/>
+
+            <body name="left_thumb_mcp_body" pos="0.035 -0.070 -0.010">
+              <joint name="left_thumb_mcp" type="hinge" axis="0 1 0" range="-20 90" damping="0.55" armature="0.003"/>
+              <joint name="left_thumb_mcp_yaw" type="hinge" axis="0 0 1" range="-10 10" damping="0.55" armature="0.003"/>
+              <geom name="left_thumb_proximal" type="capsule" fromto="0 0 0 0.070 -0.030 -0.039" size="0.020" mass="0.025" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+              <site name="left_thumb_mcp_site" pos="0 0 0" size="0.005" rgba="1.0 0.35 0.35 1"/>
+              <body name="left_thumb_pip_body" pos="0.070 -0.030 -0.039">
+                <joint name="left_thumb_pip" type="hinge" axis="0 1 0" range="0 100" damping="0.45" armature="0.002"/>
+                <geom name="left_thumb_middle" type="capsule" fromto="0 0 0 0.055 -0.015 -0.030" size="0.018" mass="0.020" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                <site name="left_thumb_pip_site" pos="0 0 0" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                <body name="left_thumb_dip_body" pos="0.055 -0.015 -0.030">
+                  <joint name="left_thumb_dip" type="hinge" axis="0 1 0" range="0 80" damping="0.35" armature="0.001"/>
+                  <geom name="left_thumb_distal" type="capsule" fromto="0 0 0 0.045 0 -0.022" size="0.016" mass="0.015" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                  <site name="left_thumb_dip_site" pos="0 0 0" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                  <site name="left_thumb_tip_site" pos="0.045 0 -0.022" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                </body>
+              </body>
+            </body>
+
+            <body name="left_index_mcp_body" pos="0.060 -0.040 -0.035">
+              <joint name="left_index_mcp" type="hinge" axis="0 1 0" range="-20 90" damping="0.55" armature="0.003"/>
+              <joint name="left_index_mcp_yaw" type="hinge" axis="0 0 1" range="-10 10" damping="0.55" armature="0.003"/>
+              <geom name="left_index_proximal" type="capsule" fromto="0 0 0 0.080 0 -0.028" size="0.018" mass="0.025" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+              <site name="left_index_mcp_site" pos="0 0 0" size="0.005" rgba="1.0 0.35 0.35 1"/>
+              <body name="left_index_pip_body" pos="0.080 0 -0.028">
+                <joint name="left_index_pip" type="hinge" axis="0 1 0" range="0 100" damping="0.45" armature="0.002"/>
+                <geom name="left_index_middle" type="capsule" fromto="0 0 0 0.060 0 -0.021" size="0.016" mass="0.020" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                <site name="left_index_pip_site" pos="0 0 0" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                <body name="left_index_dip_body" pos="0.060 0 -0.021">
+                  <joint name="left_index_dip" type="hinge" axis="0 1 0" range="0 80" damping="0.35" armature="0.001"/>
+                  <geom name="left_index_distal" type="capsule" fromto="0 0 0 0.045 0 -0.016" size="0.014" mass="0.015" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                  <site name="left_index_dip_site" pos="0 0 0" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                  <site name="left_index_tip_site" pos="0.045 0 -0.016" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                </body>
+              </body>
+            </body>
+
+            <body name="left_middle_mcp_body" pos="0.065 -0.010 -0.038">
+              <joint name="left_middle_mcp" type="hinge" axis="0 1 0" range="-20 90" damping="0.55" armature="0.003"/>
+              <joint name="left_middle_mcp_yaw" type="hinge" axis="0 0 1" range="-10 10" damping="0.55" armature="0.003"/>
+              <geom name="left_middle_proximal" type="capsule" fromto="0 0 0 0.085 0 -0.030" size="0.018" mass="0.025" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+              <site name="left_middle_mcp_site" pos="0 0 0" size="0.005" rgba="1.0 0.35 0.35 1"/>
+              <body name="left_middle_pip_body" pos="0.085 0 -0.030">
+                <joint name="left_middle_pip" type="hinge" axis="0 1 0" range="0 100" damping="0.45" armature="0.002"/>
+                <geom name="left_middle_middle" type="capsule" fromto="0 0 0 0.065 0 -0.023" size="0.016" mass="0.020" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                <site name="left_middle_pip_site" pos="0 0 0" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                <body name="left_middle_dip_body" pos="0.065 0 -0.023">
+                  <joint name="left_middle_dip" type="hinge" axis="0 1 0" range="0 80" damping="0.35" armature="0.001"/>
+                  <geom name="left_middle_distal" type="capsule" fromto="0 0 0 0.050 0 -0.017" size="0.014" mass="0.015" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                  <site name="left_middle_dip_site" pos="0 0 0" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                  <site name="left_middle_tip_site" pos="0.050 0 -0.017" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                </body>
+              </body>
+            </body>
+
+            <body name="left_ring_mcp_body" pos="0.058 0.020 -0.036">
+              <joint name="left_ring_mcp" type="hinge" axis="0 1 0" range="-20 90" damping="0.55" armature="0.003"/>
+              <joint name="left_ring_mcp_yaw" type="hinge" axis="0 0 1" range="-10 10" damping="0.55" armature="0.003"/>
+              <geom name="left_ring_proximal" type="capsule" fromto="0 0 0 0.076 0 -0.027" size="0.018" mass="0.025" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+              <site name="left_ring_mcp_site" pos="0 0 0" size="0.005" rgba="1.0 0.35 0.35 1"/>
+              <body name="left_ring_pip_body" pos="0.076 0 -0.027">
+                <joint name="left_ring_pip" type="hinge" axis="0 1 0" range="0 100" damping="0.45" armature="0.002"/>
+                <geom name="left_ring_middle" type="capsule" fromto="0 0 0 0.058 0 -0.020" size="0.016" mass="0.020" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                <site name="left_ring_pip_site" pos="0 0 0" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                <body name="left_ring_dip_body" pos="0.058 0 -0.020">
+                  <joint name="left_ring_dip" type="hinge" axis="0 1 0" range="0 80" damping="0.35" armature="0.001"/>
+                  <geom name="left_ring_distal" type="capsule" fromto="0 0 0 0.043 0 -0.015" size="0.014" mass="0.015" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                  <site name="left_ring_dip_site" pos="0 0 0" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                  <site name="left_ring_tip_site" pos="0.043 0 -0.015" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                </body>
+              </body>
+            </body>
+
+            <body name="left_little_mcp_body" pos="0.045 0.050 -0.030">
+              <joint name="left_little_mcp" type="hinge" axis="0 1 0" range="-20 90" damping="0.55" armature="0.003"/>
+              <joint name="left_little_mcp_yaw" type="hinge" axis="0 0 1" range="-10 10" damping="0.55" armature="0.003"/>
+              <geom name="left_little_proximal" type="capsule" fromto="0 0 0 0.062 0 -0.022" size="0.018" mass="0.025" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+              <site name="left_little_mcp_site" pos="0 0 0" size="0.005" rgba="1.0 0.35 0.35 1"/>
+              <body name="left_little_pip_body" pos="0.062 0 -0.022">
+                <joint name="left_little_pip" type="hinge" axis="0 1 0" range="0 100" damping="0.45" armature="0.002"/>
+                <geom name="left_little_middle" type="capsule" fromto="0 0 0 0.050 0 -0.017" size="0.016" mass="0.020" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                <site name="left_little_pip_site" pos="0 0 0" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                <body name="left_little_dip_body" pos="0.050 0 -0.017">
+                  <joint name="left_little_dip" type="hinge" axis="0 1 0" range="0 80" damping="0.35" armature="0.001"/>
+                  <geom name="left_little_distal" type="capsule" fromto="0 0 0 0.038 0 -0.013" size="0.014" mass="0.015" rgba="1.0 0.35 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                  <site name="left_little_dip_site" pos="0 0 0" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                  <site name="left_little_tip_site" pos="0.038 0 -0.013" size="0.02" rgba="1.0 0.35 0.35 1"/>
+                </body>
+              </body>
+            </body>
+          </body>
+
+        </body>
+      </body>
+
+      <body name="right_shoulder" pos="0.0 -0.24 -0.02">
+        <joint name="right_shoulder_yaw" type="hinge" axis="0 0 1"
+               range="-85 85" damping="1.5" armature="0.02"/>
+        <joint name="right_shoulder_pitch" type="hinge" axis="0 1 0"
+               range="-70 70" damping="1.5" armature="0.02"/>
+
+        <geom name="right_upper_arm_visual" type="capsule"
+              fromto="0 0 0 0 0 -0.42" size="0.045"
+              mass="0.25" rgba="0.45 1 0.45 1"
+              contype="1" conaffinity="1"/>
+
+        <body name="right_elbow" pos="0 0 -0.42">
+          <joint name="right_elbow_hinge" type="hinge" axis="0 -1 0"
+                 range="5 145" damping="1.2" armature="0.015"/>
+          <geom name="right_forearm_visual" type="capsule"
+                fromto="0 0 0 0 0 -0.40" size="0.04"
+                mass="0.20" rgba="0.65 1 0.65 1"
+                contype="1" conaffinity="1"/>
+
+
+          <body name="right_hand_base" pos="0 0 -0.40">
+            <joint name="right_palm_roll" type="hinge" axis="1 0 0" range="-35 35" damping="0.7" armature="0.006"/>
+            <joint name="right_palm_pitch" type="hinge" axis="0 1 0" range="-35 35" damping="0.7" armature="0.006"/>
+            <geom name="right_palm" type="ellipsoid" pos="0.018 0 -0.020" size="0.105 0.066 0.028" mass="0.110" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+            <geom name="right_palm_heel" type="ellipsoid" pos="-0.035 0 -0.012" size="0.050 0.058 0.024" mass="0.030" rgba="0.30 0.98 0.30 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+            <geom name="right_palm_knuckle_pad" type="ellipsoid" pos="0.074 0 -0.026" size="0.040 0.055 0.018" mass="0.022" rgba="0.42 1.0 0.42 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+            <geom name="right_palm_thumb_pad" type="ellipsoid" pos="0.030 0.050 -0.020" size="0.044 0.024 0.022" mass="0.018" rgba="0.40 1.0 0.40 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+            <site name="right_hand_site" pos="0.045 0 -0.015" size="0.02" rgba="0.35 1.0 0.35 1"/>
+            <site name="right_palm_center_site" pos="0.030 0 -0.040" size="0.02" rgba="0.35 1.0 0.35 1"/>
+
+            <body name="right_thumb_mcp_body" pos="0.035 0.070 -0.010">
+              <joint name="right_thumb_mcp" type="hinge" axis="0 1 0" range="-20 90" damping="0.55" armature="0.003"/>
+              <joint name="right_thumb_mcp_yaw" type="hinge" axis="0 0 1" range="-10 10" damping="0.55" armature="0.003"/>
+              <geom name="right_thumb_proximal" type="capsule" fromto="0 0 0 0.070 0.030 -0.039" size="0.020" mass="0.025" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+              <site name="right_thumb_mcp_site" pos="0 0 0" size="0.005" rgba="0.35 1.0 0.35 1"/>
+              <body name="right_thumb_pip_body" pos="0.070 0.030 -0.039">
+                <joint name="right_thumb_pip" type="hinge" axis="0 1 0" range="0 100" damping="0.45" armature="0.002"/>
+                <geom name="right_thumb_middle" type="capsule" fromto="0 0 0 0.055 0.015 -0.030" size="0.018" mass="0.020" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                <site name="right_thumb_pip_site" pos="0 0 0" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                <body name="right_thumb_dip_body" pos="0.055 0.015 -0.030">
+                  <joint name="right_thumb_dip" type="hinge" axis="0 1 0" range="0 80" damping="0.35" armature="0.001"/>
+                  <geom name="right_thumb_distal" type="capsule" fromto="0 0 0 0.045 0 -0.022" size="0.016" mass="0.015" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                  <site name="right_thumb_dip_site" pos="0 0 0" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                  <site name="right_thumb_tip_site" pos="0.045 0 -0.022" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                </body>
+              </body>
+            </body>
+
+            <body name="right_index_mcp_body" pos="0.045 0.050 -0.030">
+              <joint name="right_index_mcp" type="hinge" axis="0 1 0" range="-20 90" damping="0.55" armature="0.003"/>
+              <joint name="right_index_mcp_yaw" type="hinge" axis="0 0 1" range="-10 10" damping="0.55" armature="0.003"/>
+              <geom name="right_index_proximal" type="capsule" fromto="0 0 0 0.080 0 -0.028" size="0.018" mass="0.025" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+              <site name="right_index_mcp_site" pos="0 0 0" size="0.005" rgba="0.35 1.0 0.35 1"/>
+              <body name="right_index_pip_body" pos="0.080 0 -0.028">
+                <joint name="right_index_pip" type="hinge" axis="0 1 0" range="0 100" damping="0.45" armature="0.002"/>
+                <geom name="right_index_middle" type="capsule" fromto="0 0 0 0.060 0 -0.021" size="0.016" mass="0.020" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                <site name="right_index_pip_site" pos="0 0 0" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                <body name="right_index_dip_body" pos="0.060 0 -0.021">
+                  <joint name="right_index_dip" type="hinge" axis="0 1 0" range="0 80" damping="0.35" armature="0.001"/>
+                  <geom name="right_index_distal" type="capsule" fromto="0 0 0 0.045 0 -0.016" size="0.014" mass="0.015" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                  <site name="right_index_dip_site" pos="0 0 0" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                  <site name="right_index_tip_site" pos="0.045 0 -0.016" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                </body>
+              </body>
+            </body>
+
+            <body name="right_middle_mcp_body" pos="0.058 0.020 -0.036">
+              <joint name="right_middle_mcp" type="hinge" axis="0 1 0" range="-20 90" damping="0.55" armature="0.003"/>
+              <joint name="right_middle_mcp_yaw" type="hinge" axis="0 0 1" range="-10 10" damping="0.55" armature="0.003"/>
+              <geom name="right_middle_proximal" type="capsule" fromto="0 0 0 0.085 0 -0.030" size="0.018" mass="0.025" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+              <site name="right_middle_mcp_site" pos="0 0 0" size="0.005" rgba="0.35 1.0 0.35 1"/>
+              <body name="right_middle_pip_body" pos="0.085 0 -0.030">
+                <joint name="right_middle_pip" type="hinge" axis="0 1 0" range="0 100" damping="0.45" armature="0.002"/>
+                <geom name="right_middle_middle" type="capsule" fromto="0 0 0 0.065 0 -0.023" size="0.016" mass="0.020" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                <site name="right_middle_pip_site" pos="0 0 0" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                <body name="right_middle_dip_body" pos="0.065 0 -0.023">
+                  <joint name="right_middle_dip" type="hinge" axis="0 1 0" range="0 80" damping="0.35" armature="0.001"/>
+                  <geom name="right_middle_distal" type="capsule" fromto="0 0 0 0.050 0 -0.017" size="0.014" mass="0.015" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                  <site name="right_middle_dip_site" pos="0 0 0" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                  <site name="right_middle_tip_site" pos="0.050 0 -0.017" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                </body>
+              </body>
+            </body>
+
+            <body name="right_ring_mcp_body" pos="0.065 -0.010 -0.038">
+              <joint name="right_ring_mcp" type="hinge" axis="0 1 0" range="-20 90" damping="0.55" armature="0.003"/>
+              <joint name="right_ring_mcp_yaw" type="hinge" axis="0 0 1" range="-10 10" damping="0.55" armature="0.003"/>
+              <geom name="right_ring_proximal" type="capsule" fromto="0 0 0 0.076 0 -0.027" size="0.018" mass="0.025" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+              <site name="right_ring_mcp_site" pos="0 0 0" size="0.005" rgba="0.35 1.0 0.35 1"/>
+              <body name="right_ring_pip_body" pos="0.076 0 -0.027">
+                <joint name="right_ring_pip" type="hinge" axis="0 1 0" range="0 100" damping="0.45" armature="0.002"/>
+                <geom name="right_ring_middle" type="capsule" fromto="0 0 0 0.058 0 -0.020" size="0.016" mass="0.020" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                <site name="right_ring_pip_site" pos="0 0 0" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                <body name="right_ring_dip_body" pos="0.058 0 -0.020">
+                  <joint name="right_ring_dip" type="hinge" axis="0 1 0" range="0 80" damping="0.35" armature="0.001"/>
+                  <geom name="right_ring_distal" type="capsule" fromto="0 0 0 0.043 0 -0.015" size="0.014" mass="0.015" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                  <site name="right_ring_dip_site" pos="0 0 0" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                  <site name="right_ring_tip_site" pos="0.043 0 -0.015" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                </body>
+              </body>
+            </body>
+
+            <body name="right_little_mcp_body" pos="0.060 -0.040 -0.035">
+              <joint name="right_little_mcp" type="hinge" axis="0 1 0" range="-20 90" damping="0.55" armature="0.003"/>
+              <joint name="right_little_mcp_yaw" type="hinge" axis="0 0 1" range="-10 10" damping="0.55" armature="0.003"/>
+              <geom name="right_little_proximal" type="capsule" fromto="0 0 0 0.062 0 -0.022" size="0.018" mass="0.025" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+              <site name="right_little_mcp_site" pos="0 0 0" size="0.005" rgba="0.35 1.0 0.35 1"/>
+              <body name="right_little_pip_body" pos="0.062 0 -0.022">
+                <joint name="right_little_pip" type="hinge" axis="0 1 0" range="0 100" damping="0.45" armature="0.002"/>
+                <geom name="right_little_middle" type="capsule" fromto="0 0 0 0.050 0 -0.017" size="0.016" mass="0.020" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                <site name="right_little_pip_site" pos="0 0 0" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                <body name="right_little_dip_body" pos="0.050 0 -0.017">
+                  <joint name="right_little_dip" type="hinge" axis="0 1 0" range="0 80" damping="0.35" armature="0.001"/>
+                  <geom name="right_little_distal" type="capsule" fromto="0 0 0 0.038 0 -0.013" size="0.014" mass="0.015" rgba="0.35 1.0 0.35 1" contype="1" conaffinity="1" condim="3" margin="0.0015" solref="0.012 1" solimp="0.9 0.96 0.001" friction="1.2 0.08 0.02"/>
+                  <site name="right_little_dip_site" pos="0 0 0" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                  <site name="right_little_tip_site" pos="0.038 0 -0.013" size="0.02" rgba="0.35 1.0 0.35 1"/>
+                </body>
+              </body>
+            </body>
+          </body>
+
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <sensor>
+    <touch name="left_palm_touch" site="left_palm_center_site"/>
+    <touch name="left_thumb_mcp_touch" site="left_thumb_mcp_site"/>
+    <touch name="left_thumb_pip_touch" site="left_thumb_pip_site"/>
+    <touch name="left_thumb_dip_touch" site="left_thumb_dip_site"/>
+    <touch name="left_thumb_tip_touch" site="left_thumb_tip_site"/>
+    <touch name="left_index_mcp_touch" site="left_index_mcp_site"/>
+    <touch name="left_index_pip_touch" site="left_index_pip_site"/>
+    <touch name="left_index_dip_touch" site="left_index_dip_site"/>
+    <touch name="left_index_tip_touch" site="left_index_tip_site"/>
+    <touch name="left_middle_mcp_touch" site="left_middle_mcp_site"/>
+    <touch name="left_middle_pip_touch" site="left_middle_pip_site"/>
+    <touch name="left_middle_dip_touch" site="left_middle_dip_site"/>
+    <touch name="left_middle_tip_touch" site="left_middle_tip_site"/>
+    <touch name="left_ring_mcp_touch" site="left_ring_mcp_site"/>
+    <touch name="left_ring_pip_touch" site="left_ring_pip_site"/>
+    <touch name="left_ring_dip_touch" site="left_ring_dip_site"/>
+    <touch name="left_ring_tip_touch" site="left_ring_tip_site"/>
+    <touch name="left_little_mcp_touch" site="left_little_mcp_site"/>
+    <touch name="left_little_pip_touch" site="left_little_pip_site"/>
+    <touch name="left_little_dip_touch" site="left_little_dip_site"/>
+    <touch name="left_little_tip_touch" site="left_little_tip_site"/>
+    <touch name="right_palm_touch" site="right_palm_center_site"/>
+    <touch name="right_thumb_mcp_touch" site="right_thumb_mcp_site"/>
+    <touch name="right_thumb_pip_touch" site="right_thumb_pip_site"/>
+    <touch name="right_thumb_dip_touch" site="right_thumb_dip_site"/>
+    <touch name="right_thumb_tip_touch" site="right_thumb_tip_site"/>
+    <touch name="right_index_mcp_touch" site="right_index_mcp_site"/>
+    <touch name="right_index_pip_touch" site="right_index_pip_site"/>
+    <touch name="right_index_dip_touch" site="right_index_dip_site"/>
+    <touch name="right_index_tip_touch" site="right_index_tip_site"/>
+    <touch name="right_middle_mcp_touch" site="right_middle_mcp_site"/>
+    <touch name="right_middle_pip_touch" site="right_middle_pip_site"/>
+    <touch name="right_middle_dip_touch" site="right_middle_dip_site"/>
+    <touch name="right_middle_tip_touch" site="right_middle_tip_site"/>
+    <touch name="right_ring_mcp_touch" site="right_ring_mcp_site"/>
+    <touch name="right_ring_pip_touch" site="right_ring_pip_site"/>
+    <touch name="right_ring_dip_touch" site="right_ring_dip_site"/>
+    <touch name="right_ring_tip_touch" site="right_ring_tip_site"/>
+    <touch name="right_little_mcp_touch" site="right_little_mcp_site"/>
+    <touch name="right_little_pip_touch" site="right_little_pip_site"/>
+    <touch name="right_little_dip_touch" site="right_little_dip_site"/>
+    <touch name="right_little_tip_touch" site="right_little_tip_site"/>
+    <touch name="touch_left_toe_front_inner_tip"  site="left_toe_front_inner_tip"/>
+    <touch name="touch_left_toe_front_mid_tip"    site="left_toe_front_mid_tip"/>
+    <touch name="touch_left_toe_front_outer_tip"  site="left_toe_front_outer_tip"/>
+    <touch name="touch_left_toe_rear_tip"         site="left_toe_rear_tip"/>
+    <touch name="touch_right_toe_front_inner_tip" site="right_toe_front_inner_tip"/>
+    <touch name="touch_right_toe_front_mid_tip"   site="right_toe_front_mid_tip"/>
+    <touch name="touch_right_toe_front_outer_tip" site="right_toe_front_outer_tip"/>
+    <touch name="touch_right_toe_rear_tip"        site="right_toe_rear_tip"/>
+    <gyro name="vestibular_left_gyro" site="vestibular_left_imu_site"/>
+    <accelerometer name="vestibular_left_accel" site="vestibular_left_imu_site"/>
+    <gyro name="vestibular_right_gyro" site="vestibular_right_imu_site"/>
+    <accelerometer name="vestibular_right_accel" site="vestibular_right_imu_site"/>
+  </sensor>
+
+  <actuator>
+    <position name="act_head_yaw"   joint="head_yaw"   kp="60" ctrlrange="-1.48353 1.48353" forcerange="-12 12"/>
+    <position name="act_head_pitch" joint="head_pitch" kp="60" ctrlrange="-1.22173 1.22173" forcerange="-12 12"/>
+    <position name="act_head_roll"  joint="head_roll"  kp="60" ctrlrange="-1.22173 1.22173" forcerange="-12 12"/>
+    
+    <position name="act_left_shoulder_yaw" joint="left_shoulder_yaw" kp="60" ctrlrange="-1.48353 1.48353" forcerange="-120 120"/>
+    <position name="act_left_shoulder_pitch" joint="left_shoulder_pitch" kp="60" ctrlrange="-1.22173 1.22173" forcerange="-120 120"/>
+    <position name="act_left_elbow" joint="left_elbow_hinge" kp="55" ctrlrange="0.0872665 2.53073" forcerange="-100 100"/>
+
+    <position name="act_right_shoulder_yaw" joint="right_shoulder_yaw" kp="60" ctrlrange="-1.48353 1.48353" forcerange="-120 120"/>
+    <position name="act_right_shoulder_pitch" joint="right_shoulder_pitch" kp="60" ctrlrange="-1.22173 1.22173" forcerange="-120 120"/>
+    <position name="act_right_elbow" joint="right_elbow_hinge" kp="55" ctrlrange="0.0872665 2.53073" forcerange="-100 100"/>
+
+    <position name="act_left_palm_roll" joint="left_palm_roll" kp="80" ctrlrange="-0.610865 0.610865" forcerange="-50 50"/>
+    <position name="act_left_palm_pitch" joint="left_palm_pitch" kp="80" ctrlrange="-0.610865 0.610865" forcerange="-50 50"/>
+    <position name="act_left_thumb_mcp" joint="left_thumb_mcp" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_left_thumb_mcp_yaw" joint="left_thumb_mcp_yaw" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_left_thumb_pip" joint="left_thumb_pip" kp="38" ctrlrange="0 1.74533" forcerange="-22 22"/>
+    <position name="act_left_thumb_dip" joint="left_thumb_dip" kp="30" ctrlrange="0 1.39626" forcerange="-18 18"/>
+    <position name="act_left_index_mcp" joint="left_index_mcp" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_left_index_mcp_yaw" joint="left_index_mcp_yaw" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_left_index_pip" joint="left_index_pip" kp="38" ctrlrange="0 1.74533" forcerange="-22 22"/>
+    <position name="act_left_index_dip" joint="left_index_dip" kp="30" ctrlrange="0 1.39626" forcerange="-18 18"/>
+    <position name="act_left_middle_mcp" joint="left_middle_mcp" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_left_middle_mcp_yaw" joint="left_middle_mcp_yaw" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_left_middle_pip" joint="left_middle_pip" kp="38" ctrlrange="0 1.74533" forcerange="-22 22"/>
+    <position name="act_left_middle_dip" joint="left_middle_dip" kp="30" ctrlrange="0 1.39626" forcerange="-18 18"/>
+    <position name="act_left_ring_mcp" joint="left_ring_mcp" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_left_ring_mcp_yaw" joint="left_ring_mcp_yaw" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_left_ring_pip" joint="left_ring_pip" kp="38" ctrlrange="0 1.74533" forcerange="-22 22"/>
+    <position name="act_left_ring_dip" joint="left_ring_dip" kp="30" ctrlrange="0 1.39626" forcerange="-18 18"/>
+    <position name="act_left_little_mcp" joint="left_little_mcp" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_left_little_mcp_yaw" joint="left_little_mcp_yaw" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_left_little_pip" joint="left_little_pip" kp="38" ctrlrange="0 1.74533" forcerange="-22 22"/>
+    <position name="act_left_little_dip" joint="left_little_dip" kp="30" ctrlrange="0 1.39626" forcerange="-18 18"/>
+    
+    <position name="act_right_palm_roll" joint="right_palm_roll" kp="80" ctrlrange="-0.610865 0.610865" forcerange="-50 50"/>
+    <position name="act_right_palm_pitch" joint="right_palm_pitch" kp="80" ctrlrange="-0.610865 0.610865" forcerange="-50 50"/>
+    <position name="act_right_thumb_mcp" joint="right_thumb_mcp" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_right_thumb_mcp_yaw" joint="right_thumb_mcp_yaw" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_right_thumb_pip" joint="right_thumb_pip" kp="38" ctrlrange="0 1.74533" forcerange="-22 22"/>
+    <position name="act_right_thumb_dip" joint="right_thumb_dip" kp="30" ctrlrange="0 1.39626" forcerange="-18 18"/>
+    <position name="act_right_index_mcp" joint="right_index_mcp" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_right_index_mcp_yaw" joint="right_index_mcp_yaw" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_right_index_pip" joint="right_index_pip" kp="38" ctrlrange="0 1.74533" forcerange="-22 22"/>
+    <position name="act_right_index_dip" joint="right_index_dip" kp="30" ctrlrange="0 1.39626" forcerange="-18 18"/>
+    <position name="act_right_middle_mcp" joint="right_middle_mcp" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_right_middle_mcp_yaw" joint="right_middle_mcp_yaw" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_right_middle_pip" joint="right_middle_pip" kp="38" ctrlrange="0 1.74533" forcerange="-22 22"/>
+    <position name="act_right_middle_dip" joint="right_middle_dip" kp="30" ctrlrange="0 1.39626" forcerange="-18 18"/>
+    <position name="act_right_ring_mcp" joint="right_ring_mcp" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_right_ring_mcp_yaw" joint="right_ring_mcp_yaw" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_right_ring_pip" joint="right_ring_pip" kp="38" ctrlrange="0 1.74533" forcerange="-22 22"/>
+    <position name="act_right_ring_dip" joint="right_ring_dip" kp="30" ctrlrange="0 1.39626" forcerange="-18 18"/>
+    <position name="act_right_little_mcp" joint="right_little_mcp" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_right_little_mcp_yaw" joint="right_little_mcp_yaw" kp="45" ctrlrange="-0.349066 1.5708" forcerange="-25 25"/>
+    <position name="act_right_little_pip" joint="right_little_pip" kp="38" ctrlrange="0 1.74533" forcerange="-22 22"/>
+    <position name="act_right_little_dip" joint="right_little_dip" kp="30" ctrlrange="0 1.39626" forcerange="-18 18"/>
+    
+    <position name="act_left_hip_yaw"                   joint="left_hip_yaw"                kp="45" ctrlrange="-1 1"/>
+    <position name="act_left_hip_pitch"                 joint="left_hip_pitch"              kp="60" ctrlrange="-1 1"/>
+    <position name="act_left_knee"                      joint="left_knee"                   kp="45" ctrlrange="-1 1"/>
+    <position name="act_left_ankle_pitch"               joint="left_ankle_pitch"            kp="45" ctrlrange="-1 1"/>
+    <position name="act_left_ankle_roll"                joint="left_ankle_roll"             kp="45" ctrlrange="-1 1"/>
+    <position name="act_left_toe_front_inner_joint"     joint="left_toe_front_inner_joint"  kp="45" ctrlrange="-1 1"/>
+    <position name="act_left_toe_front_mid_joint"       joint="left_toe_front_mid_joint"    kp="45" ctrlrange="-1 1"/>
+    <position name="act_left_toe_front_outer_joint"     joint="left_toe_front_outer_joint"  kp="45" ctrlrange="-1 1"/>
+    <position name="act_left_toe_rear_joint"            joint="left_toe_rear_joint"         kp="45" ctrlrange="-1 1"/>
+    <position name="act_right_hip_yaw"                  joint="right_hip_yaw"               kp="45" ctrlrange="-1 1"/>
+    <position name="act_right_hip_pitch"                joint="right_hip_pitch"             kp="60" ctrlrange="-1 1"/>
+    <position name="act_right_knee"                     joint="right_knee"                  kp="45" ctrlrange="-1 1"/>
+    <position name="act_right_ankle_pitch"              joint="right_ankle_pitch"           kp="45" ctrlrange="-1 1"/>
+    <position name="act_right_ankle_roll"               joint="right_ankle_roll"            kp="45" ctrlrange="-1 1"/>
+    <position name="act_right_toe_front_inner_joint"    joint="right_toe_front_inner_joint" kp="45" ctrlrange="-1 1"/>
+    <position name="act_right_toe_front_mid_joint"      joint="right_toe_front_mid_joint"   kp="45" ctrlrange="-1 1"/>
+    <position name="act_right_toe_front_outer_joint"    joint="right_toe_front_outer_joint" kp="45" ctrlrange="-1 1"/>
+    <position name="act_right_toe_rear_joint"           joint="right_toe_rear_joint"        kp="45" ctrlrange="-1 1"/>
+    
+    <!--motor name="act_left_hip_yaw"                   joint="left_hip_yaw"                gear="3.5" ctrlrange="-1 1"/>
+    <motor name="act_left_hip_pitch"                 joint="left_hip_pitch"              gear="4.5" ctrlrange="-1 1"/>
+    <motor name="act_left_knee"                      joint="left_knee"                   gear="5.0" ctrlrange="-1 1"/>
+    <motor name="act_left_ankle_pitch"               joint="left_ankle_pitch"            gear="3.0" ctrlrange="-1 1"/>
+    <motor name="act_left_ankle_roll"                joint="left_ankle_roll"             gear="2.5" ctrlrange="-1 1"/>
+    <motor name="act_left_toe_front_inner_joint"     joint="left_toe_front_inner_joint"  gear="0.8" ctrlrange="-1 1"/>
+    <motor name="act_left_toe_front_mid_joint"       joint="left_toe_front_mid_joint"    gear="0.8" ctrlrange="-1 1"/>
+    <motor name="act_left_toe_front_outer_joint"     joint="left_toe_front_outer_joint"  gear="0.8" ctrlrange="-1 1"/>
+    <motor name="act_left_toe_rear_joint"            joint="left_toe_rear_joint"         gear="0.8" ctrlrange="-1 1"/>
+    <motor name="act_right_hip_yaw"                  joint="right_hip_yaw"               gear="3.5" ctrlrange="-1 1"/>
+    <motor name="act_right_hip_pitch"                joint="right_hip_pitch"             gear="4.5" ctrlrange="-1 1"/>
+    <motor name="act_right_knee"                     joint="right_knee"                  gear="5.0" ctrlrange="-1 1"/>
+    <motor name="act_right_ankle_pitch"              joint="right_ankle_pitch"           gear="3.0" ctrlrange="-1 1"/>
+    <motor name="act_right_ankle_roll"               joint="right_ankle_roll"            gear="2.5" ctrlrange="-1 1"/>
+    <motor name="act_right_toe_front_inner_joint"    joint="right_toe_front_inner_joint" gear="0.8" ctrlrange="-1 1"/>
+    <motor name="act_right_toe_front_mid_joint"      joint="right_toe_front_mid_joint"   gear="0.8" ctrlrange="-1 1"/>
+    <motor name="act_right_toe_front_outer_joint"    joint="right_toe_front_outer_joint" gear="0.8" ctrlrange="-1 1"/>
+    <motor name="act_right_toe_rear_joint"           joint="right_toe_rear_joint"        gear="0.8" ctrlrange="-1 1"/-->
+  </actuator>
+</mujoco>

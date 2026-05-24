@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="820" viewBox="0 0 1400 820">
+
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L0,6 L9,3 z" fill="#9FB3FF" />
+  </marker>
+  <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+    <stop offset="0%" stop-color="#08111F"/>
+    <stop offset="100%" stop-color="#11172B"/>
+  </linearGradient>
+</defs>
+
+<rect width="1400" height="820" fill="url(#bg)"/>
+<text x="700.0" y="52" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700" fill="#EAF0FF" text-anchor="middle">10-Slot Object Memory Visualization</text>
+<text x="700.0" y="88" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="500" fill="#B9C8FF" text-anchor="middle">Each slot tracks confidence, binding, similarity, update strength, age, and latent norm.</text>
+<rect x="160" y="150" width="250" height="110" rx="14" fill="#284C35" stroke="#80F078" stroke-width="3"/>
+<text x="178" y="176" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#EAF0FF" text-anchor="start">slot 0  ACTIVE</text>
+<text x="180" y="200" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">c</text>
+<rect x="202" y="192" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="192" width="136.0" height="7" fill="#80F078" rx="3"/>
+<text x="180" y="214" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">b</text>
+<rect x="202" y="206" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="206" width="118.99999999999999" height="7" fill="#FFC35A" rx="3"/>
+<text x="180" y="228" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">s</text>
+<rect x="202" y="220" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="220" width="153.0" height="7" fill="#86B8FF" rx="3"/>
+<text x="180" y="242" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">u</text>
+<rect x="202" y="234" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="234" width="34.0" height="7" fill="#E678FF" rx="3"/>
+<text x="178" y="250" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="500" fill="#C8D5F8" text-anchor="start">age=10  z=0.80</text>
+<rect x="160" y="295" width="250" height="110" rx="14" fill="#19324B" stroke="#6D7FA8" stroke-width="2"/>
+<text x="178" y="321" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#EAF0FF" text-anchor="start">slot 1</text>
+<text x="180" y="345" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">c</text>
+<rect x="202" y="337" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="337" width="20.4" height="7" fill="#80F078" rx="3"/>
+<text x="180" y="359" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">b</text>
+<rect x="202" y="351" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="351" width="59.49999999999999" height="7" fill="#FFC35A" rx="3"/>
+<text x="180" y="373" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">s</text>
+<rect x="202" y="365" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="365" width="85.0" height="7" fill="#86B8FF" rx="3"/>
+<text x="180" y="387" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">u</text>
+<rect x="202" y="379" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="379" width="13.6" height="7" fill="#E678FF" rx="3"/>
+<text x="178" y="395" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="500" fill="#C8D5F8" text-anchor="start">age=13  z=0.90</text>
+<rect x="160" y="440" width="250" height="110" rx="14" fill="#284C35" stroke="#FF78E6" stroke-width="3"/>
+<text x="178" y="466" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#EAF0FF" text-anchor="start">slot 2  KEY</text>
+<text x="180" y="490" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">c</text>
+<rect x="202" y="482" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="482" width="76.5" height="7" fill="#80F078" rx="3"/>
+<text x="180" y="504" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">b</text>
+<rect x="202" y="496" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="496" width="59.49999999999999" height="7" fill="#FFC35A" rx="3"/>
+<text x="180" y="518" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">s</text>
+<rect x="202" y="510" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="510" width="85.0" height="7" fill="#86B8FF" rx="3"/>
+<text x="180" y="532" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">u</text>
+<rect x="202" y="524" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="524" width="13.6" height="7" fill="#E678FF" rx="3"/>
+<text x="178" y="540" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="500" fill="#C8D5F8" text-anchor="start">age=16  z=1.00</text>
+<rect x="160" y="585" width="250" height="110" rx="14" fill="#19324B" stroke="#6D7FA8" stroke-width="2"/>
+<text x="178" y="611" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#EAF0FF" text-anchor="start">slot 3</text>
+<text x="180" y="635" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">c</text>
+<rect x="202" y="627" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="627" width="20.4" height="7" fill="#80F078" rx="3"/>
+<text x="180" y="649" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">b</text>
+<rect x="202" y="641" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="641" width="59.49999999999999" height="7" fill="#FFC35A" rx="3"/>
+<text x="180" y="663" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">s</text>
+<rect x="202" y="655" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="655" width="85.0" height="7" fill="#86B8FF" rx="3"/>
+<text x="180" y="677" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">u</text>
+<rect x="202" y="669" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="669" width="13.6" height="7" fill="#E678FF" rx="3"/>
+<text x="178" y="685" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="500" fill="#C8D5F8" text-anchor="start">age=19  z=1.10</text>
+<rect x="160" y="730" width="250" height="110" rx="14" fill="#19324B" stroke="#6D7FA8" stroke-width="2"/>
+<text x="178" y="756" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#EAF0FF" text-anchor="start">slot 4</text>
+<text x="180" y="780" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">c</text>
+<rect x="202" y="772" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="772" width="20.4" height="7" fill="#80F078" rx="3"/>
+<text x="180" y="794" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">b</text>
+<rect x="202" y="786" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="786" width="59.49999999999999" height="7" fill="#FFC35A" rx="3"/>
+<text x="180" y="808" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">s</text>
+<rect x="202" y="800" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="800" width="85.0" height="7" fill="#86B8FF" rx="3"/>
+<text x="180" y="822" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">u</text>
+<rect x="202" y="814" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="202" y="814" width="13.6" height="7" fill="#E678FF" rx="3"/>
+<text x="178" y="830" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="500" fill="#C8D5F8" text-anchor="start">age=22  z=1.20</text>
+<rect x="730" y="150" width="250" height="110" rx="14" fill="#19324B" stroke="#6D7FA8" stroke-width="2"/>
+<text x="748" y="176" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#EAF0FF" text-anchor="start">slot 5</text>
+<text x="750" y="200" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">c</text>
+<rect x="772" y="192" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="192" width="20.4" height="7" fill="#80F078" rx="3"/>
+<text x="750" y="214" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">b</text>
+<rect x="772" y="206" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="206" width="59.49999999999999" height="7" fill="#FFC35A" rx="3"/>
+<text x="750" y="228" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">s</text>
+<rect x="772" y="220" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="220" width="85.0" height="7" fill="#86B8FF" rx="3"/>
+<text x="750" y="242" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">u</text>
+<rect x="772" y="234" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="234" width="13.6" height="7" fill="#E678FF" rx="3"/>
+<text x="748" y="250" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="500" fill="#C8D5F8" text-anchor="start">age=25  z=1.30</text>
+<rect x="730" y="295" width="250" height="110" rx="14" fill="#19324B" stroke="#6D7FA8" stroke-width="2"/>
+<text x="748" y="321" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#EAF0FF" text-anchor="start">slot 6</text>
+<text x="750" y="345" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">c</text>
+<rect x="772" y="337" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="337" width="20.4" height="7" fill="#80F078" rx="3"/>
+<text x="750" y="359" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">b</text>
+<rect x="772" y="351" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="351" width="59.49999999999999" height="7" fill="#FFC35A" rx="3"/>
+<text x="750" y="373" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">s</text>
+<rect x="772" y="365" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="365" width="85.0" height="7" fill="#86B8FF" rx="3"/>
+<text x="750" y="387" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">u</text>
+<rect x="772" y="379" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="379" width="13.6" height="7" fill="#E678FF" rx="3"/>
+<text x="748" y="395" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="500" fill="#C8D5F8" text-anchor="start">age=28  z=1.40</text>
+<rect x="730" y="440" width="250" height="110" rx="14" fill="#19324B" stroke="#6D7FA8" stroke-width="2"/>
+<text x="748" y="466" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#EAF0FF" text-anchor="start">slot 7</text>
+<text x="750" y="490" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">c</text>
+<rect x="772" y="482" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="482" width="20.4" height="7" fill="#80F078" rx="3"/>
+<text x="750" y="504" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">b</text>
+<rect x="772" y="496" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="496" width="59.49999999999999" height="7" fill="#FFC35A" rx="3"/>
+<text x="750" y="518" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">s</text>
+<rect x="772" y="510" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="510" width="85.0" height="7" fill="#86B8FF" rx="3"/>
+<text x="750" y="532" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">u</text>
+<rect x="772" y="524" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="524" width="13.6" height="7" fill="#E678FF" rx="3"/>
+<text x="748" y="540" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="500" fill="#C8D5F8" text-anchor="start">age=31  z=1.50</text>
+<rect x="730" y="585" width="250" height="110" rx="14" fill="#19324B" stroke="#6D7FA8" stroke-width="2"/>
+<text x="748" y="611" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#EAF0FF" text-anchor="start">slot 8</text>
+<text x="750" y="635" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">c</text>
+<rect x="772" y="627" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="627" width="20.4" height="7" fill="#80F078" rx="3"/>
+<text x="750" y="649" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">b</text>
+<rect x="772" y="641" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="641" width="59.49999999999999" height="7" fill="#FFC35A" rx="3"/>
+<text x="750" y="663" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">s</text>
+<rect x="772" y="655" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="655" width="85.0" height="7" fill="#86B8FF" rx="3"/>
+<text x="750" y="677" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">u</text>
+<rect x="772" y="669" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="669" width="13.6" height="7" fill="#E678FF" rx="3"/>
+<text x="748" y="685" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="500" fill="#C8D5F8" text-anchor="start">age=34  z=1.60</text>
+<rect x="730" y="730" width="250" height="110" rx="14" fill="#19324B" stroke="#6D7FA8" stroke-width="2"/>
+<text x="748" y="756" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#EAF0FF" text-anchor="start">slot 9</text>
+<text x="750" y="780" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">c</text>
+<rect x="772" y="772" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="772" width="20.4" height="7" fill="#80F078" rx="3"/>
+<text x="750" y="794" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">b</text>
+<rect x="772" y="786" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="786" width="59.49999999999999" height="7" fill="#FFC35A" rx="3"/>
+<text x="750" y="808" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">s</text>
+<rect x="772" y="800" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="800" width="85.0" height="7" fill="#86B8FF" rx="3"/>
+<text x="750" y="822" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#C9D6F5" text-anchor="start">u</text>
+<rect x="772" y="814" width="170" height="7" fill="#273449" rx="3"/>
+<rect x="772" y="814" width="13.6" height="7" fill="#E678FF" rx="3"/>
+<text x="748" y="830" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="500" fill="#C8D5F8" text-anchor="start">age=37  z=1.70</text>
+<rect x="1000" y="210" width="260" height="170" rx="16" fill="#4B2D5C" stroke="#E678FF" stroke-width="2"/>
+<text x="1130" y="248" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#EAF0FF" text-anchor="middle">Dream slot keys</text>
+<text x="1130" y="288" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="500" fill="#F0D0FF" text-anchor="middle">0..9 select slot</text>
+<text x="1130" y="326" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="400" fill="#D6DDFB" text-anchor="middle">ACTIVE = current decode</text>
+<text x="1130" y="354" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="400" fill="#D6DDFB" text-anchor="middle">KEY = requested dream slot</text>
+<line x1="950" y1="300" x2="1000" y2="295" stroke="#9FB3FF" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="700" y="770" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600" fill="#B9C8FF" text-anchor="middle">The visualizer uses two columns so all 10 object slots remain visible.</text>
+</svg>

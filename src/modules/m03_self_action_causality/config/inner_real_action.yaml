@@ -1,0 +1,35 @@
+# Inner coded world real-action overlay
+#
+# Include after event_memory_full:
+#
+# defaults:
+#   - event_memory_full
+#   - inner_real_action
+#   - _self_
+#
+# This enables actual low-alpha policy influence from inner_action_decoder,
+# but only after InnerTrustGate passes safety thresholds.
+
+inner_action_decoder:
+  enabled: true
+  hidden_dim: 256
+  max_intent_norm: 0.18
+  confidence_threshold: 0.20
+
+  # Keep disabled here; real application is owned by InnerTrustGate.
+  blend_to_policy: false
+  blend_alpha: 0.0
+
+inner_trust_gate:
+  enabled: true
+
+  # Trust thresholds before internal intention can influence real policy.
+  min_success_ema: 0.50
+  max_error_ema: 0.16
+  min_action_confidence: 0.20
+
+  # Real action is now allowed, but with a very low alpha.
+  allow_policy_blend: true
+  apply_to_policy: true
+  max_alpha: 0.03
+  warmup_steps: 250

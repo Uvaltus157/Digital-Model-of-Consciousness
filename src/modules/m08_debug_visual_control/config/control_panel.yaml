@@ -1,0 +1,21 @@
+
+window:
+  min_width: 820
+  min_height: 960
+  width: 820
+  height: 960
+
+control_startup:
+  mujoco_next_run: false
+  inner_world: false
+  cameras: false
+  depth: false
+  actions: false
+  manual_actions: false
+  object_image: false
+  event_code_visualizer: false
+  object_image_open3d: false
+  static_dynamic_code: false
+  latent_semantic: false
+  module_debug: false
+  training: false

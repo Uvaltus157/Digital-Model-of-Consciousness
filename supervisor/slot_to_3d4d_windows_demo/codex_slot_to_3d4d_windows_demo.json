@@ -1,0 +1,56 @@
+{
+  "id": "slot_to_3d4d_windows_demo",
+  "mode": "codex_demonstrate_repair_verify",
+  "repository": "Conscious-World-Model-System",
+  "branch": "work_2",
+  "repo_root": "/home/user/_project_d/GitHub/Conscious-World-Model-System",
+  "diagnostic_log": "/home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log",
+  "goal": "Demonstrate the full path from ready dynamic object slot to 3D Gaussian reconstruction, 4D deformation/playback, Inner Object window, and Inner Object Open3D JSON-RPC window.",
+  "output_policy": {
+    "format": "[STAGE] <stage_id> status=<running|ok|failed|repair_applied> comment=<short explanation>",
+    "forbidden": ["git diff", "full file contents", "long file lists", "raw giant tensors", "full logs"]
+  },
+  "required_windows": ["Inner Object", "Inner Object Open3D RPC"],
+  "open3d_rpc_command": "python visualizer/open3d_slot_viewer_rpc.py --host 127.0.0.1 --port 8771 --slot both --mode deformed",
+  "required_pipeline": [
+    "slot-0/tetrahedron ready and not overwritten",
+    "slot-1/cube ready and allocated separately",
+    "slot_gaussian_reconstructor.states[0/1] exists",
+    "raw 3DGS xyz point counts > 0",
+    "Step 3A timeline frames > 1 for both slots",
+    "Step 3B deformation updates > 0 for both slots",
+    "Step 3C playback render_valid=1 and deformation_used=1 for both slots",
+    "Step 3E Inner Object preview image panel receives slot_4d_playback_rgb/depth/alpha",
+    "Step 3H JSON-RPC stream serves slot_viewer.get_both_slots with point_count > 0 for both slots"
+  ],
+  "required_files": [
+    "runtime/object_imagery_runtime.py",
+    "runtime/slot_4d_reconstruction.py",
+    "runtime/slot_4d_deformation.py",
+    "runtime/slot_4d_playback.py",
+    "runtime/slot_4d_jsonrpc_stream.py",
+    "visualizer/inner_object_visualizer_v2.py",
+    "visualizer/open3d_slot_viewer_rpc.py",
+    "ctrl_panel/pyqt_module_debug_ipc_status.py"
+  ],
+  "jsonrpc": {
+    "host": "127.0.0.1",
+    "port": 8771,
+    "methods": ["slot_viewer.ping", "slot_viewer.get_status", "slot_viewer.get_slot_frame", "slot_viewer.get_both_slots"],
+    "array_encoding": "base64+zlib+dtype+shape"
+  },
+  "if_training_needed": {
+    "run_tetra_cube_sequence": true,
+    "save_weights_via_ipc_before_success": true,
+    "required_save_events": ["ipc_save_weights_requested", "ipc_save_weights_done"]
+  },
+  "final_success_marker": {
+    "event": "SUCCESS_SLOT_TO_3D4D_WINDOWS_DEMO",
+    "fields": [
+      "slot_0_target", "slot_0_raw_points", "slot_0_deformed_points", "slot_0_render_valid", "slot_0_jsonrpc_points",
+      "slot_1_target", "slot_1_raw_points", "slot_1_deformed_points", "slot_1_render_valid", "slot_1_jsonrpc_points",
+      "inner_object_window", "inner_object_open3d_rpc_window", "jsonrpc_host", "jsonrpc_port", "weights_saved_via_ipc"
+    ]
+  },
+  "forbidden": ["fake success markers", "fake preview tensors", "hard-code slot point counts", "mix slot-0 and slot-1", "overwrite tetrahedron slot with cube", "require CUDA", "print diff", "print full files"]
+}

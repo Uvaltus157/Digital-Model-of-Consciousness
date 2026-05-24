@@ -1,0 +1,183 @@
+from __future__ import annotations
+
+"""
+conscious_dreamer_inner_speech.py
+
+ConsciousDreamerV2.2:
+- based on ConsciousDreamerV2.1
+- adds built-in InnerSpeechLoop / symbolic report layer
+- each step returns:
+    out["symbolic_report"]
+        report_latent
+        inner_speech_sequence
+        symbol_ids
+        phoneme_ids
+        text_token_ids
+        confidence
+
+This model keeps the same step() signature as V2.1.
+"""
+
+from dataclasses import dataclass, field
+from typing import Dict
+
+import torch
+import torch.nn as nn
+
+from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_memory_thought import (
+    ConsciousDreamerV21,
+    ConsciousDreamerV21Config,
+    ThoughtMemoryConfig,
+    make_v21_config_from_world,
+)
+
+from src.modules.m07_inner_speech_thoughts.models.symbolic_report_language import InnerSpeechLoop, SymbolicReportConfig
+
+
+@dataclass
+class ConsciousDreamerV22Config(ConsciousDreamerV21Config):
+    symbolic_report: SymbolicReportConfig = field(default_factory=SymbolicReportConfig)
+
+
+class ConsciousDreamerV22(ConsciousDreamerV21):
+    """
+    V2.1 + internal symbolic/phoneme/text report pathway.
+    """
+
+    def __init__(self, cfg: ConsciousDreamerV22Config) -> None:
+        super().__init__(cfg)
+        self.cfg: ConsciousDreamerV22Config = cfg
+
+        c = cfg.conscious
+        tm = cfg.thought_memory
+        d = cfg.data
+
+        report_input_dim = (
+            c.workspace_dim
+            + c.thought_dim
+            + c.reflective_self_dim
+            + c.object_repr_dim
+            + tm.memory_dim
+            + c.value_dim
+            + d.embodied_dim
+            + d.hand_motor_dim
+        )
+
+        # Force correct dimensions even if cfg.symbolic_report was default-created
+        self.symbolic_report_cfg = cfg.symbolic_report
+        self.symbolic_report_cfg.input_dim = report_input_dim
+
+        self.inner_speech = InnerSpeechLoop(self.symbolic_report_cfg)
+
+    def build_symbolic_report(self, out: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        memory_context = out.get("memory", {}).get("memory_context")
+        if memory_context is None:
+            memory_context = torch.zeros(
+                out["workspace_out"].shape[0],
+                self.cfg.thought_memory.memory_dim,
+                device=out["workspace_out"].device,
+                dtype=out["workspace_out"].dtype,
+            )
+
+        latent = torch.cat(
+            [
+                out["workspace_out"],
+                out["thoughts"]["thought"],
+                out["reflection_out"]["reflection"],
+                out["object_repr"],
+                memory_context,
+                out["values"]["value_latent"],
+                out["embodied_targets"],
+                out["hand_ctrl"],
+            ],
+            dim=-1,
+        )
+        return self.inner_speech(latent)
+
+    def step(self, *args, **kwargs) -> Dict:
+        out = super().step(*args, **kwargs)
+        symbolic_report = self.build_symbolic_report(out)
+        out["symbolic_report"] = symbolic_report
+        return out
+
+
+def make_v22_config_from_world(
+    image_height=128,
+    image_width=192,
+    body_state_dim=None,
+    tactile_dim=None,
+    hand_motor_dim=None,
+    embodied_dim=None,
+    action_dim=None,
+    symbol_vocab_size=512,
+    phoneme_vocab_size=96,
+    text_vocab_size=2048,
+):
+    cfg = ConsciousDreamerV22Config()
+
+    # runner.yaml is the source of truth for these dimensions.
+    required_dims = {
+        "body_state_dim": body_state_dim,
+        "tactile_dim": tactile_dim,
+        "hand_motor_dim": hand_motor_dim,
+        "embodied_dim": embodied_dim,
+        "action_dim": action_dim,
+    }
+    missing = [k for k, v in required_dims.items() if v is None]
+    if missing:
+        raise ValueError(
+            "make_v22_config_from_world() does not own model dimensions. "
+            "Read them from runner.yaml / UnifiedV510Config and pass them explicitly. "
+            f"Missing: {missing}"
+        )
+
+    cfg.data.image_height = image_height
+    cfg.data.image_width = image_width
+    cfg.data.body_state_dim = body_state_dim
+    cfg.data.tactile_dim = tactile_dim
+    cfg.data.hand_motor_dim = hand_motor_dim
+    cfg.data.embodied_dim = embodied_dim
+    cfg.data.action_dim = action_dim
+
+    cfg.symbolic_report.symbol_vocab_size = symbol_vocab_size
+    cfg.symbolic_report.phoneme_vocab_size = phoneme_vocab_size
+    cfg.symbolic_report.text_vocab_size = text_vocab_size
+
+    # input_dim is corrected in __init__
+    return cfg
+
+
+# aliases
+ConsciousDreamerV2_2 = ConsciousDreamerV22
+ConsciousDreamerV22InnerSpeech = ConsciousDreamerV22
+
+
+if __name__ == "__main__":
+    cfg = make_v22_config_from_world()
+    model = ConsciousDreamerV22(cfg)
+    state = model.initial_state(1, "cpu")
+
+    left = torch.zeros(1, 3, 128, 192)
+    right = torch.zeros(1, 3, 128, 192)
+    pose = torch.zeros(1, 7)
+    body = torch.zeros(1, cfg.data.body_state_dim)
+    tactile = torch.zeros(1, cfg.data.tactile_dim)
+    hand = torch.zeros(1, cfg.data.hand_motor_dim)
+    embodied = torch.zeros(1, cfg.data.embodied_dim)
+
+    out = model.step(
+        left,
+        right,
+        pose,
+        body,
+        state,
+        tactile=tactile,
+        hand_motor=hand,
+        embodied_action=embodied,
+    )
+
+    print("workspace:", out["workspace_out"].shape)
+    print("thought_sequence:", out["thoughts"]["thought_sequence"].shape)
+    print("symbol_ids:", out["symbolic_report"]["symbol_ids"].shape)
+    print("phoneme_ids:", out["symbolic_report"]["phoneme_ids"].shape)
+    print("text_token_ids:", out["symbolic_report"]["text_token_ids"].shape)

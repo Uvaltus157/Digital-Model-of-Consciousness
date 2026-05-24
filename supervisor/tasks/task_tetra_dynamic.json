@@ -1,0 +1,67 @@
+{
+  "id": "00_full_autonomous_tetra_dynamic_slot_supervision",
+  "mode": "codex_runs_everything",
+  "repository": "Conscious-World-Model-System",
+  "branch": "work_2",
+  "goal": "Codex CLI must autonomously run, analyze, repair, and rerun the full tetrahedron dynamic slot pipeline from the beginning until SUCCESS_DYNAMIC_TETRA_SLOT_FORMED is proven.",
+  "entrypoint": "python supervisor/run_codex_full_autonomous_supervisor.py",
+  "supervisor_dir": "supervisor",
+  "temp_log_dir": "/home/user/_project/temp/logs",
+  "diagnostic_log": "/home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log",
+  "supervisor_log": "/home/user/_project/temp/logs/supervisor_run.log",
+  "success_marker": "event=SUCCESS_DYNAMIC_TETRA_SLOT_FORMED",
+  "must_verify": [
+    "runner starts and live_step ticks",
+    "Inspect floating object enters phase=inspect",
+    "full sensor sleep disables optimizer training",
+    "static video input does not form dynamic slot",
+    "rotating tetrahedron produces motion/depth evidence",
+    "streak grows",
+    "dyn_eff grows",
+    "formed_conf grows and stabilizes",
+    "slot write uses z_dynamic_object",
+    "module checkboxes freeze training and card metrics"
+  ],
+  "forbidden": [
+    "write main diagnostic log only to repo-local logs/",
+    "fake success marker",
+    "hard-code formed_conf success",
+    "rewrite architecture",
+    "bypass LongDynamicObjectMemory",
+    "print changed file diffs or long file-change summaries during normal progress output"
+  ],
+  "reporting_policy": {
+    "normal_output": "stage_only",
+    "stage_format": "[STAGE] <stage_id> status=<status> detail=<short_detail>",
+    "do_not_print": [
+      "changed file lists",
+      "diffs",
+      "long code modification summaries"
+    ],
+    "final_output": [
+      "final stage status",
+      "diagnostic log path",
+      "final streak/dyn_eff/formed_conf/z_dynamic_norm",
+      "must_verify OK/FAILED lines",
+      "whether SUCCESS_DYNAMIC_TETRA_SLOT_FORMED was written"
+    ]
+  },
+  "stages": [
+    "repo_discovery",
+    "diagnostic_setup",
+    "runner_start",
+    "wait_live_step",
+    "enter_inspect",
+    "sleep_check",
+    "static_input_check",
+    "dynamic_input_check",
+    "long_dynamic_memory_check",
+    "slot_write_check",
+    "module_checkbox_check",
+    "repair_needed",
+    "repair_applied",
+    "rerun",
+    "success",
+    "blocked"
+  ]
+}

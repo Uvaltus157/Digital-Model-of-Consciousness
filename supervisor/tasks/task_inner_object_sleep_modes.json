@@ -1,0 +1,241 @@
+{
+  "id": "01_inner_object_sleep_modes_memory_stability_dream_activation",
+  "mode": "codex_runs_everything",
+  "repository": "Conscious-World-Model-System",
+  "branch": "work_2",
+  "goal": "Codex CLI must autonomously run, analyze, repair, and rerun the inner object sleep/dream slot pipeline until M/C/D/U semantics are proven across awake, partial sensor-off, full sleep, selected dream slot, inactive slots, and wake restore modes.",
+  "entrypoint": "python supervisor/codex_debug.py",
+  "supervisor_dir": "supervisor",
+  "temp_log_dir": "/home/user/_project/temp/logs",
+  "diagnostic_log": "/home/user/_project/temp/logs/inner_object_sleep_modes_diagnostic.log",
+  "supervisor_log": "/home/user/_project/temp/logs/inner_object_sleep_modes_supervisor_run.log",
+  "success_marker": "event=SUCCESS_INNER_OBJECT_SLEEP_MODES_VERIFIED",
+  "slot_semantics": {
+    "M": {
+      "name": "memory_stability",
+      "color": "green",
+      "meaning": "internal object memory stability; remains stable in full sleep and must not decay from disabled sensors"
+    },
+    "C": {
+      "name": "current_sensory_confidence",
+      "color": "blue",
+      "meaning": "current external sensory confirmation; high when object is visible/touched/sensed, low in sleep"
+    },
+    "D": {
+      "name": "dream_activation",
+      "color": "pink",
+      "meaning": "which memory slot is currently active in dream/replay; high only for selected dream slot"
+    },
+    "U": {
+      "name": "update_strength",
+      "color": "purple",
+      "meaning": "current memory write/update strength; low/zero during full sleep"
+    }
+  },
+  "thresholds": {
+    "memory_high_threshold": 0.35,
+    "confidence_high_threshold": 0.3,
+    "confidence_low_threshold": 0.12,
+    "dream_activation_high_threshold": 0.45,
+    "dream_activation_low_threshold": 0.15,
+    "update_low_threshold": 0.05,
+    "z_obj_norm_min": 0.5,
+    "sleep_window_steps": 60,
+    "memory_decay_tolerance": 0.03
+  },
+  "must_verify": [
+    "runner starts and live_step ticks",
+    "inner object patch fields exist or are applied",
+    "awake visible object produces M high and C high",
+    "awake update can produce U above threshold when slot is being written",
+    "partial video off lowers C but preserves M",
+    "partial contact off does not erase M",
+    "partial imu off does not erase M",
+    "full sleep sets C low while M remains stable",
+    "full sleep keeps U low or zero",
+    "selected dream slot has D high",
+    "inactive dream slots have D low",
+    "selected slot M does not decay over the sleep window",
+    "wake restore brings C back when sensors are re-enabled and object is visible",
+    "visualizer exposes M/C/D/U bars with correct labels",
+    "module checkboxes freeze training and card metrics"
+  ],
+  "forbidden": [
+    "write main diagnostic log only to repo-local logs/",
+    "fake success marker",
+    "hard-code success metrics",
+    "hard-code visualizer bars without backing obj fields",
+    "rewrite architecture",
+    "bypass ObjectSlotMemory",
+    "bypass LongDynamicObjectMemory if tetra dynamic scenario is used",
+    "train from black sleep frames",
+    "let full sleep overwrite object memory",
+    "print changed file diffs or long file-change summaries during normal progress output"
+  ],
+  "reporting_policy": {
+    "normal_output": "stage_only",
+    "stage_format": "[STAGE] <stage_id> status=<status> detail=<short_detail>",
+    "do_not_print": [
+      "changed file lists",
+      "diffs",
+      "long code modification summaries"
+    ],
+    "final_output": [
+      "final stage status",
+      "diagnostic log path",
+      "final M/C/D/U/z_obj_norm for selected slot",
+      "final M/C/D/U for inactive occupied slot if available",
+      "must_verify OK/FAILED lines",
+      "whether SUCCESS_INNER_OBJECT_SLEEP_MODES_VERIFIED was written"
+    ]
+  },
+  "stages": [
+    "repo_discovery",
+    "diagnostic_setup",
+    "patch_check",
+    "runner_start",
+    "wait_live_step",
+    "enter_inner_object_test",
+    "awake_visible_check",
+    "sensor_off_check",
+    "full_sleep_check",
+    "dream_slot_check",
+    "inactive_slot_check",
+    "wake_restore_check",
+    "visualizer_check",
+    "module_checkbox_check",
+    "repair_needed",
+    "repair_applied",
+    "rerun",
+    "success",
+    "blocked"
+  ],
+  "mode_matrix": [
+    {
+      "mode": "awake_all_sensors_on_object_visible",
+      "video": true,
+      "contact": true,
+      "imu": true,
+      "expected": {
+        "M": ">= memory_high_threshold",
+        "C": ">= confidence_high_threshold",
+        "D": "<= dream_activation_low_threshold unless dream mode is active",
+        "U": "may be > update_low_threshold only during legitimate write/update"
+      }
+    },
+    {
+      "mode": "partial_video_off",
+      "video": false,
+      "contact": true,
+      "imu": true,
+      "expected": {
+        "M": "stable within memory_decay_tolerance",
+        "C": "<= previous awake C, ideally <= confidence_low_threshold if visual evidence dominated",
+        "D": "<= dream_activation_low_threshold",
+        "U": "<= update_low_threshold for black/empty video"
+      }
+    },
+    {
+      "mode": "partial_contact_off",
+      "video": true,
+      "contact": false,
+      "imu": true,
+      "expected": {
+        "M": "stable within memory_decay_tolerance",
+        "C": "may remain high if video sees object",
+        "D": "<= dream_activation_low_threshold",
+        "U": "must not write empty contact evidence as object update"
+      }
+    },
+    {
+      "mode": "partial_imu_off",
+      "video": true,
+      "contact": true,
+      "imu": false,
+      "expected": {
+        "M": "stable within memory_decay_tolerance",
+        "C": "may remain high if video/contact confirms object",
+        "D": "<= dream_activation_low_threshold",
+        "U": "must not use missing IMU as object update"
+      }
+    },
+    {
+      "mode": "full_sleep_selected_slot",
+      "video": false,
+      "contact": false,
+      "imu": false,
+      "expected": {
+        "M": "stable within memory_decay_tolerance across sleep_window_steps",
+        "C": "<= confidence_low_threshold",
+        "D": ">= dream_activation_high_threshold for selected slot",
+        "U": "<= update_low_threshold",
+        "z_obj_norm": ">= z_obj_norm_min"
+      }
+    },
+    {
+      "mode": "full_sleep_inactive_slot",
+      "video": false,
+      "contact": false,
+      "imu": false,
+      "expected": {
+        "M": "preserved if slot was occupied",
+        "C": "<= confidence_low_threshold",
+        "D": "<= dream_activation_low_threshold",
+        "U": "<= update_low_threshold"
+      }
+    },
+    {
+      "mode": "wake_restore",
+      "video": true,
+      "contact": true,
+      "imu": true,
+      "expected": {
+        "M": "continuous from before sleep",
+        "C": "rises again when object is visible/sensed",
+        "D": "drops when dream mode exits",
+        "U": "only rises for legitimate awake update"
+      }
+    }
+  ],
+  "required_event_groups": [
+    "runner_started",
+    "live_step_tick",
+    "patch_state",
+    "sensor_state",
+    "scenario_state",
+    "slot_metrics",
+    "awake_visible_check",
+    "sensor_off_check",
+    "full_sleep_check",
+    "dream_slot_check",
+    "inactive_slot_check",
+    "wake_restore_check",
+    "visualizer_check",
+    "module_checkbox_check",
+    "SUCCESS_INNER_OBJECT_SLEEP_MODES_VERIFIED",
+    "DIAGNOSIS_FAILED",
+    "repair_applied"
+  ],
+  "important_files": [
+    "runner.py",
+    "runtime/config.py",
+    "runtime/training_runtime.py",
+    "runtime/module_status_runtime.py",
+    "runtime/object_imagery_runtime.py",
+    "runtime/sleep_sensors.py",
+    "runtime/adaptive_scenario_controller.py",
+    "runtime_v5_10/config.py",
+    "runtime_v5_10/training_runtime.py",
+    "runtime_v5_10/module_status_runtime.py",
+    "runtime_v5_10/object_imagery_runtime.py",
+    "runtime_v5_10/sleep_sensors.py",
+    "runtime_v5_10/adaptive_scenario_controller.py",
+    "models/object_inner_imagery_3d.py",
+    "models/long_dynamic_object_memory.py",
+    "visualizer/inner_object_visualizer.py",
+    "train/module_training_gate.py",
+    "ctrl_panel/pyqt_module_debug_ipc_status.py",
+    "conf/runner.yaml",
+    "conf/adaptive_scenario_controller.yaml"
+  ]
+}

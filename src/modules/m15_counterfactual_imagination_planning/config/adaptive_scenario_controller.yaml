@@ -1,0 +1,422 @@
+# ------------------------------------------------------------
+# Adaptive Scenario Controller
+# ------------------------------------------------------------
+# Included by config/runner.yaml.
+#
+# This file has its own section, like the rest of runner.yaml:
+#
+#   adaptive_scenario_controller:
+#     fly_to_cube_...
+#
+# src/modules/m15_counterfactual_imagination_planning/adaptive_scenario_controller.py will read this section first,
+# and fall back to root-level keys for compatibility with older patches.
+
+adaptive_scenario_controller:
+  enabled: true
+
+  # ------------------------------------------------------------
+  # Fly to suspended tetrahedron + inspect faces
+  # ------------------------------------------------------------
+  fly_to_tetrahedron_standoff_distance: 2.00
+  fly_to_tetrahedron_agent_z_offset: 0.0
+  fly_to_tetrahedron_face_steps: 30
+  fly_to_tetrahedron_gaze_switch_steps: 220
+  fly_to_tetrahedron_spin_rad_per_step: 0.2   # the rotation speed of the tetrahedron itself
+  fly_to_tetrahedron_head_yaw_gain: 1.35
+  fly_to_tetrahedron_head_pitch_gain: 1.25
+  fly_to_tetrahedron_cube_spin_rad_per_step: 0.080   # cube rotation speed
+  fly_to_tetrahedron_cube_tumble_rad_per_step: 0.065 # the speed of the cube's tumbling
+  fly_to_tetrahedron_cube_flight_rad_per_step: 0.045 # the speed of the cube's movement along the flight path
+  fly_to_tetrahedron_cube_flight_radius_x: 0.75
+  fly_to_tetrahedron_cube_flight_radius_y: 0.55
+  fly_to_tetrahedron_cube_flight_radius_z: 0.28
+  fly_to_tetrahedron_depth_focus_half_range: 0.85
+  fly_to_tetrahedron_max_direct_xy_step: 0.050
+  fly_to_tetrahedron_max_direct_z_step: 0.050
+  fly_to_tetrahedron_arrive_radius: 0.10
+  fly_to_tetrahedron_max_body_pitch_deg: 40.0
+  fly_to_tetrahedron_timeout_steps: 0
+
+  # ------------------------------------------------------------
+  # Current scenario: PyQt Agent Actions Imit -> Fly to cube + palpate
+  # ------------------------------------------------------------
+  # Behavior:
+  #   approach -> align -> reach -> palpate
+  #
+  # The body/rig stops on a standoff ring around the cube.
+  # Only arms/fingers reach forward and palpate.
+
+  # ------------------------------------------------------------
+  # Fly-to-cube body standoff / reach distance
+  # ------------------------------------------------------------
+
+  # Initial distance from cube where the body/rig should hover.
+  fly_to_cube_arm_reach_distance: 1.35
+
+  # Adaptive reach bounds.
+  # If hands cannot reach, the controller may reduce reach distance,
+  # but it will not go closer than:
+  #   max(body_keepout + body_keepout_buffer, min_arm_reach_distance)
+  fly_to_cube_min_arm_reach_distance: 0.82
+  fly_to_cube_max_arm_reach_distance: 1.55
+
+  # Hard body keepout radius around cube.
+  # If body gets closer than this, controller commands backward correction.
+  fly_to_cube_body_keepout: 0.78
+  fly_to_cube_body_keepout_buffer: 0.04
+
+  # Legacy hand-site distance fallback.
+  fly_to_cube_hand_reach_goal: 0.32
+
+  # MuJoCo geometry distance from closest fingertip tip_site to obj_box face.
+  # The scenario shrinks body standoff while this gap is open and no direct
+  # hand/cube contact exists.
+  fly_to_cube_fingertip_face_goal: 0.025
+  fly_to_cube_fingertip_face_near: 0.060
+  fly_to_cube_body_adapt_to_fingertip_gap: false
+  fly_to_cube_reach_distance_adapt_start_steps: 20
+  fly_to_cube_reach_distance_adapt_rate: 0.0040
+  fly_to_cube_reach_surface_offset: 0.015
+  fly_to_cube_reach_target_z_above_center: 0.28
+
+  # ------------------------------------------------------------
+  # Hover height / leg clearance
+  # ------------------------------------------------------------
+
+  # Higher values prevent bird legs/feet from touching ground during palpation.
+  fly_to_cube_leg_clearance: 0.70
+  fly_to_cube_hover_above_cube: 0.78
+  fly_to_cube_max_hover_z: 1.45
+
+  # ------------------------------------------------------------
+  # Vertical hover PID
+  # ------------------------------------------------------------
+
+  # PID keeps the rig from sagging into the ground.
+  fly_to_cube_pid_dt_per_step: 0.02
+  fly_to_cube_z_pid_kp: 2.40
+  fly_to_cube_z_pid_ki: 0.18
+  fly_to_cube_z_pid_kd: 0.42
+  fly_to_cube_z_pid_integral_limit: 1.00
+  fly_to_cube_z_pid_max_vz: 0.72
+  fly_to_cube_z_pid_max_direct_step: 0.085
+
+  # ------------------------------------------------------------
+  # Direct mocap/camera nudge limits
+  # ------------------------------------------------------------
+
+  # Strong enough to arrive, but not so strong that body pushes cube.
+  fly_to_cube_max_direct_xy_step: 0.045
+  fly_to_cube_max_direct_z_step: 0.085
+
+  # ------------------------------------------------------------
+  # Arm direction / scenario timing
+  # ------------------------------------------------------------
+
+  # If arms go backward in the current MuJoCo rig, flip this sign.
+  # Current work_2 default after testing: -1.0
+  fly_to_cube_arm_side_sign: -1.0
+  fly_to_cube_reach_shoulder_yaw_abs: 0.04
+  fly_to_cube_reach_shoulder_pitch: -0.70
+  fly_to_cube_reach_elbow: -0.85
+  fly_to_cube_reach_palm_pitch: 0.65
+  fly_to_cube_palpate_palm_pitch: 0.63
+  fly_to_cube_reach_palm_pitch_min: 0.58
+  fly_to_cube_reach_palm_pitch_max: 0.72
+  fly_to_cube_reach_left_palm_roll: 0.48
+  fly_to_cube_reach_right_palm_roll: 0.52
+  fly_to_cube_reach_finger_base: 0.06
+  fly_to_cube_palpate_finger_base: 0.16
+  fly_to_cube_distance_minimizer_step: 0.045
+  fly_to_cube_distance_improve_epsilon: 0.003
+  fly_to_cube_distance_minimizer_stall_steps: 3
+
+  # Safety timeout in life steps.
+  fly_to_cube_timeout_steps: 2400
+  fly_to_cube_align_z_tolerance: 0.16
+  fly_to_cube_align_hold_steps: 8
+
+  # ------------------------------------------------------------
+  # Hand / arm PID contact controller
+  # ------------------------------------------------------------
+  # The body holds the standoff ring. These values make arms extend until
+  # tactile contact appears in obs/world.latest_tactile, then fingers keep
+  # palpating continuously.
+  fly_to_cube_hand_target_touch_sum: 0.055
+  fly_to_cube_hand_touch_scale: 0.10
+  fly_to_cube_contact_enter_sum: 0.015
+  fly_to_cube_hand_release_touch_sum: 0.14
+  fly_to_cube_contact_force_floor: 0.020
+  fly_to_cube_contact_force_scale: 1.0
+
+  fly_to_cube_hand_pid_kp: 0.65
+  fly_to_cube_hand_pid_ki: 0.08
+  fly_to_cube_hand_pid_kd: 0.18
+  fly_to_cube_hand_pid_integral_limit: 1.00
+
+  fly_to_cube_hand_no_contact_boost: 0.35
+  fly_to_cube_hand_extension_rate: 0.035
+  fly_to_cube_finger_curl_rate: 0.018
+  fly_to_cube_palpate_pulse_speed: 0.30
+
+  # ------------------------------------------------------------
+  # Fly to obj_box_small + grasp + rotate
+  # ------------------------------------------------------------
+  # The small cube is on top of the large cube, so the body standoff is closer
+  # and the hover target is higher. Contact truth is direct MuJoCo contact with
+  # the obj_box_small geom only.
+  fly_to_small_cube_arm_reach_distance: 0.62
+  fly_to_small_cube_min_arm_reach_distance: 0.47
+  fly_to_small_cube_max_arm_reach_distance: 0.92
+  fly_to_small_cube_body_keepout: 0.44
+  fly_to_small_cube_body_keepout_buffer: 0.025
+
+  fly_to_small_cube_fingertip_face_goal: 0.018
+  fly_to_small_cube_fingertip_face_near: 0.045
+  fly_to_small_cube_palm_contact_enter_sum: 0.018
+  fly_to_small_cube_palm_contact_hold_steps: 2
+  fly_to_small_cube_finger_contact_enter_sum: 0.012
+  fly_to_small_cube_pre_palm_contact_finger_mcp: 0.015
+  fly_to_small_cube_pre_palm_contact_finger_pip: 0.0
+  fly_to_small_cube_pre_palm_contact_finger_dip: 0.0
+  fly_to_small_cube_body_adapt_to_fingertip_gap: true
+  fly_to_small_cube_reach_distance_adapt_rate: 0.0070
+  fly_to_small_cube_reach_surface_offset: -0.012
+  fly_to_small_cube_reach_target_z_above_center: -0.005
+
+  fly_to_small_cube_leg_clearance: 0.74
+  fly_to_small_cube_hover_above_cube: 0.30
+  fly_to_small_cube_ground_cube_z_threshold: 0.35
+  fly_to_small_cube_ground_leg_clearance: 0.76
+  fly_to_small_cube_ground_hover_above_cube: 1.00
+  fly_to_small_cube_ground_leg_engage_z_margin: 0.20
+  fly_to_small_cube_direct_body_pitch_deg: -22.0
+  fly_to_small_cube_body_pitch_cmd: -0.08
+  fly_to_small_cube_ground_reach_body_pitch_cmd: -0.28
+  fly_to_small_cube_head_pitch_cmd: 0.22
+  fly_to_small_cube_ground_reach_head_pitch_cmd: 0.38
+  fly_to_small_cube_ground_reach_min_support_ratio: 0.50
+  fly_to_small_cube_ground_leg_ramp_steps: 45
+  fly_to_small_cube_ground_toe_contact_enter_sum: 0.12
+  fly_to_small_cube_ground_toe_contact_enter_max: 0.055
+  fly_to_small_cube_ground_toe_contact_hard_sum: 0.36
+  fly_to_small_cube_ground_toe_contact_hard_max: 0.14
+  fly_to_small_cube_ground_toe_contact_hold_steps: 2
+  fly_to_small_cube_ground_toe_contact_force_scale: 1.0
+  fly_to_small_cube_ground_toe_support_min_force: 0.018
+  fly_to_small_cube_ground_toe_support_target_ratio: 0.75
+  fly_to_small_cube_ground_toe_missing_gain: 0.28
+  fly_to_small_cube_ground_toe_rear_missing_gain: 0.24
+  fly_to_small_cube_ground_ankle_pitch_balance_gain: 0.34
+  fly_to_small_cube_ground_ankle_roll_balance_gain: 0.24
+  fly_to_small_cube_ground_attitude_pitch_gain: 0.18
+  fly_to_small_cube_ground_attitude_roll_gain: 0.18
+  fly_to_small_cube_ground_balance_limit: 0.28
+  fly_to_small_cube_ground_reach_front_force_target_ratio: 0.62
+  fly_to_small_cube_ground_reach_front_force_max_ratio: 0.78
+  fly_to_small_cube_ground_reach_com_pitch_gain: 0.26
+  fly_to_small_cube_ground_reach_hip_pitch_gain: 0.05
+  fly_to_small_cube_ground_reach_knee_gain: -0.06
+  fly_to_small_cube_ground_reach_ankle_pitch_gain: 0.00
+  fly_to_small_cube_ground_reach_front_toe_gain: 0.12
+  fly_to_small_cube_ground_reach_rear_toe_catch_gain: 0.18
+  fly_to_small_cube_ground_ankle_pitch_reach_gain: 0.62
+  fly_to_small_cube_ground_ankle_pitch_com_gain: 0.32
+  fly_to_small_cube_ground_ankle_pitch_overload_recover_gain: 0.25
+  fly_to_small_cube_ground_ankle_pitch_bias_min: -0.35
+  fly_to_small_cube_ground_ankle_pitch_bias_max: 0.82
+  fly_to_small_cube_ground_ankle_pitch_bias_rate: 0.075
+  fly_to_small_cube_ground_ankle_pitch_min_ramp: 0.92
+  fly_to_small_cube_ground_leg_pre_contact_preload: 0.03
+  fly_to_small_cube_ground_leg_crouch_rate: 0.035
+  fly_to_small_cube_ground_leg_hard_crouch_rate: 0.055
+  fly_to_small_cube_ground_leg_release_rate: 0.020
+  fly_to_small_cube_ground_leg_touch_crouch: 0.12
+  fly_to_small_cube_ground_leg_standing_crouch: 0.24
+  fly_to_small_cube_ground_leg_max_standing_crouch: 0.28
+  fly_to_small_cube_ground_leg_contact_ramp_steps: 8
+  fly_to_small_cube_ground_leg_manipulation_enabled: 0.0
+  fly_to_small_cube_standing_leg_hip_yaw: 0.04
+  fly_to_small_cube_standing_leg_hip_pitch: 0.04
+  fly_to_small_cube_standing_leg_knee: -0.30
+  fly_to_small_cube_standing_leg_ankle_pitch: 0.18
+  fly_to_small_cube_standing_leg_ankle_roll: 0.0
+  fly_to_small_cube_standing_leg_toe_front: 0.04
+  fly_to_small_cube_standing_leg_toe_rear: -0.02
+  fly_to_small_cube_ground_leg_rotate_crouch: 0.25
+  fly_to_small_cube_ground_leg_hip_yaw: 0.10
+  fly_to_small_cube_ground_leg_hip_pitch: 0.22
+  fly_to_small_cube_ground_leg_knee: -0.30
+  fly_to_small_cube_ground_leg_ankle_pitch: 0.24
+  fly_to_small_cube_ground_leg_ankle_roll: 0.04
+  fly_to_small_cube_ground_leg_toe_front: 0.45
+  fly_to_small_cube_ground_leg_toe_rear: -0.28
+  fly_to_small_cube_max_hover_z: 1.90
+  fly_to_small_cube_max_direct_xy_step: 0.038
+  fly_to_small_cube_max_direct_z_step: 0.075
+
+  fly_to_small_cube_reach_shoulder_yaw_abs: 0.04
+  fly_to_small_cube_reach_shoulder_pitch: -0.86
+  fly_to_small_cube_reach_elbow: -0.98
+  fly_to_small_cube_reach_palm_pitch: 0.64
+  fly_to_small_cube_palpate_palm_pitch: 0.62
+  fly_to_small_cube_reach_palm_pitch_min: 0.54
+  fly_to_small_cube_reach_palm_pitch_max: 0.76
+  fly_to_small_cube_right_palm_ik_gain: 0.62
+  fly_to_small_cube_right_palm_ik_align_scale: 0.70
+  fly_to_small_cube_right_palm_ik_grasp_scale: 0.45
+  fly_to_small_cube_head_track_yaw_gain: 0.85
+  fly_to_small_cube_head_track_pitch_gain: 1.15
+  fly_to_small_cube_reach_left_palm_roll: 0.47
+  fly_to_small_cube_reach_right_palm_roll: 0.53
+  fly_to_small_cube_left_nearby_shoulder_yaw_abs: 0.11
+  fly_to_small_cube_left_nearby_shoulder_pitch: -0.28
+  fly_to_small_cube_left_nearby_elbow: -0.24
+  fly_to_small_cube_left_nearby_palm_roll: 0.46
+  fly_to_small_cube_left_nearby_palm_pitch: 0.54
+  fly_to_small_cube_reach_finger_base: 0.05
+  fly_to_small_cube_palpate_finger_base: 0.22
+  fly_to_small_cube_distance_minimizer_step: 0.035
+  fly_to_small_cube_distance_improve_epsilon: 0.002
+  fly_to_small_cube_distance_minimizer_stall_steps: 3
+  fly_to_small_cube_pre_reach_extension: 0.72
+  fly_to_small_cube_pre_reach_ramp_steps: 22
+  fly_to_small_cube_approach_max_steps: 220
+  fly_to_small_cube_force_reach_after_steps: 55
+  fly_to_small_cube_force_reach_ring_err: 0.32
+  fly_to_small_cube_force_reach_yaw_err: 0.42
+
+  fly_to_small_cube_contact_enter_sum: 0.012
+  fly_to_small_cube_hand_target_touch_sum: 0.045
+  fly_to_small_cube_grasp_contact_count: 2
+  fly_to_small_cube_grasp_touch_sum: 0.050
+  fly_to_small_cube_grasp_hold_steps: 18
+  fly_to_small_cube_grasp_finger_base: 0.58
+  fly_to_small_cube_grasp_close_rate: 0.018
+  fly_to_small_cube_grasp_lost_contact_reopen_steps: 16
+  fly_to_small_cube_force_grasp_after_steps: 180
+
+  fly_to_small_cube_lift_height: 0.18
+  fly_to_small_cube_lift_steps: 70
+  fly_to_small_cube_rotate_speed: 0.62
+  fly_to_small_cube_rotate_arm_twist: 0.075
+  fly_to_small_cube_rotate_arm_lift: 0.035
+  fly_to_small_cube_rotate_palm_roll_amp: 0.12
+  fly_to_small_cube_rotate_palm_pitch_amp: 0.045
+
+
+  # ------------------------------------------------------------
+
+  # Closer approach. V2 reached the cube visually but did not consistently grasp.
+
+  # Gaze lock.
+  # If yaw turns away from the cube, flip small_cube_gaze_body_yaw_sign to -1.
+  # If head yaw/pitch goes opposite, flip the corresponding sign.
+
+  # Vertical stabilization.
+  # Uses qpos quaternion if available; otherwise direct MuJoCo accelerometer sensor.
+  # If body leans more instead of leveling, flip pitch/roll sign.
+
+  # Hand approach.
+
+  # Contact / grasp.
+
+  # Fallback if contact names/sensors do not report but fingers are fully closed.
+
+
+  # ------------------------------------------------------------
+
+
+
+
+  # Explicit open/take phase.
+
+  # Close/grasp.
+
+  # ------------------------------------------------------------
+  # Small cube adaptive palm/cube servo V5
+  # ------------------------------------------------------------
+  small_cube_adaptive_timeout_steps: 5000
+  small_cube_approach_standoff: 0.44
+  small_cube_approach_speed: 0.62
+  small_cube_approach_hover_above_cube: 0.70
+  small_cube_approach_tol: 0.075
+  small_cube_adaptive_surface_dist_goal: 0.018
+  small_cube_adaptive_surface_signed_goal: 0.010
+  small_cube_open_to_close_dist: 0.035
+  small_cube_adaptive_contact_sum: 0.020
+  small_cube_adaptive_contact_count: 2.0
+  small_cube_servo_kp: 2.20
+  small_cube_servo_ki: 0.04
+  small_cube_servo_kd: 0.28
+  small_cube_servo_integral_limit: 0.25
+  small_cube_servo_output_limit: 0.45
+  small_cube_servo_dt_per_step: 0.02
+  small_cube_servo_body_xy_gain: 0.55
+  small_cube_servo_body_z_gain: 0.55
+  small_cube_servo_arm_base_pitch: -0.90
+  small_cube_servo_arm_base_elbow: -0.98
+  small_cube_servo_arm_yaw_abs: 0.06
+  small_cube_servo_arm_side_gain: 0.40
+  small_cube_adaptive_close_rate: 0.022
+  small_cube_adaptive_hold_contact_steps: 10
+  small_cube_adaptive_hold_steps: 40
+  small_cube_adaptive_force_hold_strength: 0.97
+  small_cube_gaze_body_yaw_sign: 1.0
+  small_cube_gaze_head_yaw_sign: 1.0
+  small_cube_gaze_head_pitch_sign: 1.0
+  small_cube_gaze_body_yaw_kp: 1.00
+  small_cube_gaze_head_yaw_kp: 1.35
+  small_cube_gaze_head_pitch_kp: 1.25
+  small_cube_gaze_target_z_offset: 0.03
+  small_cube_level_kp: 1.10
+  small_cube_level_pitch_sign: -1.0
+  small_cube_level_roll_sign: -1.0
+
+  # ------------------------------------------------------------
+  # Small cube chase-until-grasp V6
+  # ------------------------------------------------------------
+  small_cube_chase_open_servo_gain: 1.15
+  small_cube_chase_close_servo_gain: 1.05
+  small_cube_chase_hold_servo_gain: 0.55
+  small_cube_chase_rotate_servo_gain: 0.25
+
+  # Do not freeze on first palm touch. Confirm grasp only after stable contact
+  # and enough finger close strength.
+  small_cube_chase_confirm_contact_steps: 16
+  small_cube_chase_confirm_strength: 0.72
+  small_cube_chase_confirm_dist: 0.060
+  small_cube_chase_contact_dist_gate: 0.085
+
+  # If cube slips away, go back to capture_close and chase again.
+  small_cube_chase_reacquire_dist: 0.095
+  small_cube_chase_reacquire_after_steps: 8
+  small_cube_chase_reopen_rate: 0.010
+
+  # ------------------------------------------------------------
+  # Small cube arm reach servo V7
+  # ------------------------------------------------------------
+  small_cube_reach_forward_gain: 0.36
+  small_cube_reach_side_gain: 0.18
+  small_cube_reach_height_gain: 0.20
+  small_cube_reach_extension_max: 1.0
+
+  # If servo_dist does not improve, extend the arm anyway.
+  small_cube_reach_improve_eps: 0.003
+  small_cube_reach_stall_steps: 6
+  small_cube_reach_stall_extend: 0.018
+  small_cube_reach_near_dist: 0.030
+  small_cube_reach_near_relax: 0.006
+
+  # Damp body circling; arm becomes the main reaching actuator.
+  small_cube_reach_body_forward_gain: 0.18
+  small_cube_reach_body_side_gain: 0.10
+  small_cube_reach_body_z_gain: 0.18
+
+  # Arm extension mapping.
+  small_cube_reach_arm_yaw_abs: 0.05
+  small_cube_reach_arm_base_pitch: -0.55
+  small_cube_reach_arm_base_elbow: -0.45
+  small_cube_reach_shoulder_extend: 0.52
+  small_cube_reach_elbow_extend: 0.62
+  small_cube_reach_approach_prep_gain: 0.35

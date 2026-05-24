@@ -1,0 +1,201 @@
+{
+  "id": "debug_slot_4d_deformation_step3b",
+  "mode": "codex_debug_and_verify",
+  "repository": "Conscious-World-Model-System",
+  "branch": "work_2",
+  "repo_root": "/home/user/_project_d/GitHub/Conscious-World-Model-System",
+  "diagnostic_log": "/home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log",
+  "goal": "Verify and repair Step 3B: per-slot neural 4D deformation field trained from Step 3A timeline frame pairs.",
+  "depends_on": [
+    "Step 3A: per-slot 4D Gaussian timeline",
+    "runtime/slot_4d_reconstruction.py",
+    "object_imagery_runtime calls _slot_4d_timeline_step"
+  ],
+  "step_boundary": {
+    "step_3b_should_do": [
+      "create Slot4DDeformationModel(nn.Module)",
+      "create Slot4DDeformationTrainer",
+      "train per-slot deformation models from adjacent timeline frames",
+      "predict delta_xyz from [xyz, time_code]",
+      "log slot_4d_deformation_model and slot_4d_deformation_train",
+      "write SUCCESS_SLOT_4D_DEFORMATION_STEP3B after slot-0 and slot-1 train"
+    ],
+    "step_3b_should_not_do": [
+      "replace Step 3A timeline",
+      "replace Gaussian reconstructor",
+      "replace LongDynamicObjectMemory",
+      "full 4D playback UI"
+    ],
+    "future_step_3c": [
+      "4D playback visualizer",
+      "render at arbitrary time t",
+      "deformation-aware Gaussian preview"
+    ]
+  },
+  "required_files": [
+    "runtime/slot_4d_deformation.py",
+    "runtime/object_imagery_runtime.py",
+    "runtime/tetra_dynamic_slot_diagnostic.py",
+    "runtime/config.py",
+    "conf/runner.yaml"
+  ],
+  "required_code_objects": [
+    "Slot4DDeformationModel",
+    "Slot4DDeformationTrainer",
+    "Slot4DDeformationMetrics",
+    "_ensure_slot_4d_deformation",
+    "_slot_4d_deformation_step",
+    "_maybe_log_slot_4d_deformation_success"
+  ],
+  "required_model_api": {
+    "Slot4DDeformationModel": [
+      "inherits torch.nn.Module",
+      "forward(xyz, time_code)",
+      "returns delta_xyz with shape [N, 3]",
+      "has trainable parameters"
+    ],
+    "Slot4DDeformationTrainer": [
+      "stores model per slot_id",
+      "stores optimizer per slot_id",
+      "trains from timeline.frames[slot_id][-2:]",
+      "does not mix slots"
+    ]
+  },
+  "required_config_fields": [
+    "slot_4d_deformation_enabled",
+    "slot_4d_deformation_hidden_dim",
+    "slot_4d_deformation_lr",
+    "slot_4d_deformation_train_steps_per_update",
+    "slot_4d_deformation_min_frames",
+    "slot_4d_deformation_delta_reg_weight"
+  ],
+  "required_object_runtime_sequence": [
+    "_slot_4d_timeline_step(target_slot, target_name_for_recon, source)",
+    "_slot_4d_deformation_step(target_slot, target_name_for_recon, source)"
+  ],
+  "required_events": [
+    {
+      "event": "slot_4d_deformation_model",
+      "fields": [
+        "slot_id",
+        "target_name",
+        "model_type",
+        "trainable_params",
+        "enabled",
+        "trainable"
+      ]
+    },
+    {
+      "event": "slot_4d_deformation_train",
+      "fields": [
+        "slot_id",
+        "target_name",
+        "enabled",
+        "trainable",
+        "valid",
+        "updates",
+        "loss",
+        "motion_norm",
+        "pred_delta_norm",
+        "sample_count",
+        "temporal_dt",
+        "model_type"
+      ]
+    },
+    {
+      "event": "SUCCESS_SLOT_4D_DEFORMATION_STEP3B",
+      "fields": [
+        "slot_0_target",
+        "slot_0_deformation_updates",
+        "slot_0_deformation_loss",
+        "slot_0_motion_norm",
+        "slot_0_sample_count",
+        "slot_1_target",
+        "slot_1_deformation_updates",
+        "slot_1_deformation_loss",
+        "slot_1_motion_norm",
+        "slot_1_sample_count",
+        "trainable_params",
+        "slot_0_overwritten",
+        "slot_1_allocated",
+        "reason"
+      ]
+    }
+  ],
+  "target_behavior": {
+    "slot_0": {
+      "target": "tetrahedron",
+      "must_have": [
+        "deformation_updates > 0",
+        "sample_count > 0",
+        "trainable=true",
+        "target_name=tetrahedron"
+      ]
+    },
+    "slot_1": {
+      "target": "cube",
+      "must_have": [
+        "deformation_updates > 0",
+        "sample_count > 0",
+        "trainable=true",
+        "target_name=cube"
+      ]
+    },
+    "do_not_mix_slots": true
+  },
+  "must_verify": [
+    "runtime/slot_4d_deformation.py exists",
+    "Slot4DDeformationModel inherits torch.nn.Module",
+    "Slot4DDeformationTrainer stores separate models per slot_id",
+    "Slot4DDeformationTrainer trains from adjacent Step 3A timeline frames",
+    "object_imagery_runtime calls _slot_4d_deformation_step after _slot_4d_timeline_step",
+    "runtime/config.py has Step 3B config fields",
+    "conf/runner.yaml has Step 3B config fields",
+    "diagnostic log contains slot_4d_deformation_model",
+    "diagnostic log contains slot_4d_deformation_train",
+    "slot-0/tetrahedron deformation_updates > 0",
+    "slot-1/cube deformation_updates > 0",
+    "trainable_params > 0",
+    "slot-0 is not overwritten by cube",
+    "SUCCESS_SLOT_4D_DEFORMATION_STEP3B is written only after proof"
+  ],
+  "forbidden": [
+    "replace Step 3A timeline",
+    "replace Gaussian reconstruction",
+    "replace LongDynamicObjectMemory",
+    "bypass object slots",
+    "mix tetrahedron and cube deformation models",
+    "train cube in slot-0",
+    "fake updates",
+    "fake loss",
+    "fake sample_count",
+    "fake trainable_params",
+    "hard-code success",
+    "implement full 4D playback UI here",
+    "print git diff",
+    "print full file contents",
+    "print long changed-file summaries"
+  ],
+  "inner_object_metrics": [
+    "slot_4d_deformation_updates",
+    "slot_4d_deformation_loss",
+    "slot_4d_deformation_pred_delta_norm",
+    "slot_4d_deformation_sample_count"
+  ],
+  "output_policy": {
+    "format": "[STAGE] <stage_id> status=<status> comment=<short explanation>",
+    "do_not_print": [
+      "git diff",
+      "patch text",
+      "changed file lists",
+      "full file contents"
+    ],
+    "comment_style": "short human explanation of what Codex is doing"
+  },
+  "success_marker": "event=SUCCESS_SLOT_4D_DEFORMATION_STEP3B",
+  "grep_commands": [
+    "grep \"event=slot_4d_deformation_model\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log | tail -n 40",
+    "grep \"event=slot_4d_deformation_train\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log | tail -n 40",
+    "grep \"SUCCESS_SLOT_4D_DEFORMATION_STEP3B\" /home/user/_project/temp/logs/tetra_dynamic_slot_diagnostic.log"
+  ]
+}
