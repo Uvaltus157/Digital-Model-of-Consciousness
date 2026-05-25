@@ -1,0 +1,53 @@
+[project]
+name = "digital-model-of-consciousness"
+version = "0.1.0"
+description = "Experimental embodied world-model system for digital consciousness research."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Research prototype" }
+authors = [
+  { name = "Uvaltus157" }
+]
+dependencies = [
+  "numpy",
+  "scipy",
+  "torch",
+  "omegaconf",
+  "hydra-core",
+  "mujoco",
+  "opencv-python",
+  "Pillow",
+  "matplotlib",
+  "open3d",
+  "PyQt5",
+  "websockets",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "ruff",
+]
+
+[tool.setuptools]
+package-dir = { "" = "." }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+exclude = [
+  "checkpoints",
+  "data",
+  "runs",
+  "artifacts",
+  "logs",
+  "legacy",
+]
