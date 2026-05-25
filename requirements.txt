@@ -1,0 +1,23 @@
+# Core numeric / ML stack
+numpy
+scipy
+torch
+omegaconf
+hydra-core
+
+# Simulation / rendering
+mujoco
+opencv-python
+Pillow
+matplotlib
+
+# 3D visualization
+open3d
+
+# GUI / IPC helpers
+PyQt5
+websockets
+
+# Development / validation
+pytest
+ruff
