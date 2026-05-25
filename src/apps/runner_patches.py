@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-"""Behavior-preserving runtime patches for the slim V5.10 entrypoint.
+"""Idempotent runtime patch records for the slim V5.10 entrypoint.
 
-During the runner unload, the large `src/apps/runner.py` file still owns the
-heavy `UnifiedSystemV510` class. The slim entrypoint imports that class and then
-applies these method/function replacements so extracted helpers are used without
-risking a full edit of the large runtime file.
+`src.apps.runner.UnifiedSystemV510` now defines its main hooks directly from the
+extracted helper modules. This file remains as a compatibility/idempotency layer
+for the slim entrypoint and for tests/docs that want to inspect what was moved
+out of the former heavy runner.
 """
 
 from dataclasses import dataclass
@@ -61,7 +61,7 @@ RUNNER_PATCHES: List[RunnerPatchRecord] = [
 
 
 def apply_runner_patches(runner_runtime: Any, unified_system_cls: type) -> None:
-    """Patch the heavy runner module/class to use extracted helpers."""
+    """Idempotently ensure runner module/class uses extracted helpers."""
     runner_runtime.load_inner_speech_teacher_from_config = load_inner_speech_teacher_from_config
     unified_system_cls.__init__ = initialize_unified_system_v510
     unified_system_cls.run = run_unified_life_loop
