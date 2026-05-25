@@ -4,7 +4,7 @@ from __future__ import annotations
 
 This module keeps the heavy runtime class in `src/apps/runner.py` for now, but
 uses small app-level helpers for config normalization, behavior-preserving
-runtime patching and startup mode handling.
+runtime patching, startup-state normalization and mode handling.
 """
 
 import os
@@ -17,6 +17,7 @@ from src.apps.runner import UnifiedSystemV510
 from src.apps.runner_config import build_runner_config, render_resolved_runner_config
 from src.apps.runner_modes import apply_runner_mode
 from src.apps.runner_patches import apply_runner_patches
+from src.apps.runner_startup_state import apply_startup_state
 
 apply_runner_patches(runner_runtime, UnifiedSystemV510)
 
@@ -29,6 +30,7 @@ def main(cfg_raw) -> None:
     cfg_obj = build_runner_config(cfg_raw)
 
     system = UnifiedSystemV510(cfg_obj)
+    apply_startup_state(system, cfg_obj)
     apply_runner_mode(system, cfg_obj)
     system.run()
 
