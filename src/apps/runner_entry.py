@@ -2,10 +2,9 @@ from __future__ import annotations
 
 """Slim Hydra entrypoint for the V5.10 runner.
 
-This module is the second step in unloading `src/apps/runner.py`.
-It keeps the heavy runtime class in `runner.py` for now, but moves startup
-config normalization into `runner_config.py` and keeps the actual Hydra main
-small and readable.
+This module keeps the heavy runtime class in `src/apps/runner.py` for now, but
+moves startup config normalization, teacher loading and the outer life loop into
+small app-level helpers.
 """
 
 import os
@@ -16,11 +15,13 @@ import hydra
 import src.apps.runner as runner_runtime
 from src.apps.runner import UnifiedSystemV510
 from src.apps.runner_config import build_runner_config, render_resolved_runner_config
+from src.apps.runner_loop import run_unified_life_loop
 from src.apps.runner_teachers import load_inner_speech_teacher_from_config
 
-# Patch the heavy runtime module to use the extracted teacher loader.
-# This is behavior-preserving and avoids editing the large runner.py in this step.
+# Behavior-preserving patches for the heavy runtime module.
+# They avoid a risky full edit of the large runner.py while migration is ongoing.
 runner_runtime.load_inner_speech_teacher_from_config = load_inner_speech_teacher_from_config
+UnifiedSystemV510.run = run_unified_life_loop
 
 os.environ.setdefault("PROJECT_ROOT", str(Path(__file__).resolve().parents[2]))
 
