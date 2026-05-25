@@ -1,62 +1,54 @@
-# Conscious World Model System
+# Digital Model of Consciousness
 
-> **A model of conscious behavior in the latent space of a world model** is a research project aimed at one of humanity's highest aspirations: the pursuit of extended, durable life through the construction of a digital model of consciousness.
+> Experimental embodied world-model system with MuJoCo life loop, multi-modal sensors, object-slot memory, inner imagery, sleep/dream modes, self-state, debug tools, and modular M1-M15 architecture.
 
-This project treats consciousness not as a single isolated algorithm, but as a time-unfolding system: body, sensors, actions, memory, an internal world model, object representations, sleep and dream states, self-observation, and attention control. The central idea is to create a digital agent that does not merely recognize images or execute commands, but lives inside a simulated environment, accumulates experience, forms internal images of objects, tests its expectations through action, and gradually builds a stable model of its own presence in the world.
+This project treats consciousness not as one isolated algorithm, but as a time-unfolding system: body, sensors, actions, memory, an internal world model, object representations, sleep and dream states, self-observation, attention control, motivation, metacognition, and inner narration.
 
-In the long term, the project is intended as a research platform for studying how a digital form of subjectivity may emerge through a continuous loop of perception, action, memory, inner replay, and adaptation. The practical goal of the current version is to make internal processes visible and controllable: to observe what the world model is learning, which object slots are forming, when memory truly contains a dynamic object image, and which modules are currently training or frozen.
-
-
-> Experimental embodied world-model system with MuJoCo life loop, multi-modal sensors, object-slot memory, inner imagery, dream/sleep modes, and live visualization tools.
-
-**Language:** [English](#english)
+The practical goal of the current version is to make internal processes visible and controllable: to observe what the world model is learning, which object slots are forming, when memory contains a dynamic object image, which modules are training or frozen, and how the agent behaves in wake/sleep/dream modes.
 
 ---
 
-## English
+## Current focus
 
-### Overview
+The current development focus is the modular architecture for a digital model of consciousness:
 
-**Conscious World Model System** is an experimental research prototype for building an embodied agent that lives inside a MuJoCo world, receives multi-modal sensory input, forms internal object representations, and visualizes its own latent state.
-
-The project combines:
-
-- a MuJoCo embodied environment;
-- stereo camera/depth input;
-- tactile/contact sensors;
-- IMU/vestibular input;
-- neural world-model components;
-- object-slot latent memory;
-- inner object decoding and 3D imagery;
-- sleep/dream sensor-gating modes;
-- live debugging and visualization windows;
-- IPC/JSON control from an external control panel.
-
-The goal is not only to train a policy, but to inspect how internal representations appear, persist, disappear, and become available for inner replay or dream-like decoding.
-
-
-<p align="center">
-  <img src="docs/images/architecture.svg" alt="Conscious World Model System architecture" width="920">
-</p>
+```text
+M1  Object imagery
+M2  Event and dream replay
+M3  Self/action causality
+M4  Long dynamic memory
+M5  World model / attention / workspace
+M6  Learning / sleep / consolidation
+M7  Inner speech / thoughts
+M8  Debug / visual / control
+M9  Self core
+M10 Global conscious broadcast
+M11 Motivational homeostasis
+M12 Metacognition monitor
+M13 Autobiographical memory
+M14 Semantic grounding
+M15 Counterfactual imagination / planning
+```
 
 ---
 
-### Current focus
+## Capabilities
 
-The current development branch is focused on **latent object representation**:
+- MuJoCo embodied life loop.
+- Stereo RGB/depth sensing.
+- Contact/tactile sensing.
+- IMU/vestibular/body-state input.
+- Dreamer-style world model.
+- Multi-slot latent object imagery.
+- Inner object decoding and 3D visualization.
+- Sleep and dream sensor-gating modes.
+- SelfCore / agency / self-state runtime.
+- Debug module schematic and IPC control.
+- Manual action override and action trace diagnostics.
 
+---
 
-<p align="center">
-  <img src="docs/images/object_slots.svg" alt="10-slot object memory visualizer" width="920">
-</p>
-
-- how object slots are formed;
-- how slots remain bound to objects;
-- how internal object memory behaves when sensors are disabled;
-- how dream decoding differs from live sensory decoding;
-- how to visualize all object slots and their confidence/binding/similarity/update values.
-
-Recent runtime states include:
+## Runtime states
 
 | State | Meaning |
 |---|---|
@@ -72,253 +64,91 @@ Full sleep is defined as:
 not video_sensor_enabled and not contact_sensor_enabled and not imu_sensor_enabled
 ```
 
-If at least one sensor is enabled again, for example IMU, the system exits full sleep.
-
 ---
 
-### Main capabilities
+## Repository structure
 
-
-### Runtime screenshots
-
-These screenshots show the current live runtime tools.
-
-<p align="center">
-  <img src="docs/images/module_debug_schematic.png" alt="Module Debug Schematic and IPC control panel" width="920">
-</p>
-
-**Module Debug Schematic / IPC control panel** — a live control surface for module training flags, sensor gates, presets, and runtime IPC messages.
-
-<p align="center">
-  <img src="docs/images/inner_object_imagery.png" alt="Inner Object Imagery V2 with multi-slot object memory" width="920">
-</p>
-
-**Inner Object Imagery V2** — internal RGB/depth/mask decoding, active object slot diagnostics, temporal signals, and multi-slot object memory.
-
-<p align="center">
-  <img src="docs/images/mujoco_scene.png" alt="MuJoCo embodied scene with object world" width="920">
-</p>
-
-**MuJoCo embodied scene** — the agent body, stereo rig, manipulators, and simple object world used for embodied sensing and control.
-
----
-
-
-#### 1. Embodied MuJoCo life loop
-
-The agent runs continuously inside a MuJoCo world. The life loop is responsible for:
-
-- observing the world;
-- updating model state;
-- applying actions;
-- updating visualizers;
-- writing replay samples;
-- polling external control commands;
-- opening/closing the MuJoCo viewer from runtime flags.
-
-`life_step()` is the central life update and always remains the owner of MuJoCo viewer runtime toggling.
-
-#### 2. Parallel training loop
-
-Training is designed to run in a **parallel background thread**.
-
-Architecture:
+The project is now organized around application orchestration, architecture modules, platform infrastructure, and shared utilities.
 
 ```text
-main thread:
-  system.run()
-    -> life_step()
-       -> MuJoCo viewer
-       -> visualizers
-       -> replay.add()
-
-background thread:
-  train_loop()
-    -> train_once()
-       -> optimizer.step()
+Digital-Model-of-Consciousness/
+├── runner.py                         # root compatibility launcher
+├── config/
+│   └── runner.yaml                   # main Hydra config
+├── docs/
+│   ├── architecture/
+│   └── images/
+├── src/
+│   ├── apps/
+│   │   ├── runner.py                 # main V5.10 orchestration entrypoint
+│   │   ├── life_runtime.py
+│   │   ├── unified_conscious_viewer.py
+│   │   ├── bootstrap.py              # future extraction boundary
+│   │   ├── runtime_wiring.py         # future cross-module wiring boundary
+│   │   └── system_factory.py         # future system factory boundary
+│   │
+│   ├── modules/
+│   │   ├── m01_object_imagery/
+│   │   ├── m02_event_dream_replay/
+│   │   ├── m03_self_action_causality/
+│   │   ├── m04_long_dynamic_memory/
+│   │   ├── m05_world_model_attention_workspace/
+│   │   ├── m06_learning_sleep_consolidation/
+│   │   ├── m07_inner_speech_thoughts/
+│   │   ├── m08_debug_visual_control/
+│   │   ├── m09_self_core/
+│   │   ├── m10_global_conscious_broadcast/
+│   │   ├── m11_motivational_homeostasis/
+│   │   ├── m12_metacognition_monitor/
+│   │   ├── m13_autobiographical_memory/
+│   │   ├── m14_semantic_grounding/
+│   │   └── m15_counterfactual_imagination_planning/
+│   │
+│   ├── platform/
+│   │   ├── mujoco_world/
+│   │   ├── ipc/
+│   │   ├── gui/
+│   │   └── scene_builder/
+│   │
+│   └── shared/
+│       ├── config.py
+│       ├── checkpointing.py
+│       └── console_colors.py
 ```
 
-During full sleep, training is disabled:
+For the detailed current structure, see:
 
 ```text
-video OFF + contact OFF + imu OFF
--> sleep_mode_training_disabled
--> no optimizer step
-```
-
-#### 3. Multi-slot object memory
-
-The system uses a multi-slot latent object memory. Current default:
-
-```yaml
-object_image:
-  num_slots: 10
-  max_object_proposals: 10
-```
-
-Each slot can be visualized with:
-
-- confidence;
-- binding;
-- similarity;
-- update strength;
-- age;
-- latent norm.
-
-The inner object visualizer draws all 10 slots in a compact two-column layout.
-
-#### 4. Inner object imagery
-
-The object imagery module decodes latent object slots into internal visual representations:
-
-- RGB-like internal image;
-- depth-like internal map;
-- mask/object alpha;
-- 3D point/voxel-style representation.
-
-This is used to inspect whether the model is only copying the current camera input or actually holding a persistent internal object representation.
-
-#### 5. Sleep and dream modes
-
-Sleep/dream behavior is controlled by sensor gates:
-
-
-<p align="center">
-  <img src="docs/images/sleep_dream_states.svg" alt="Sleep and dream state machine" width="920">
-</p>
-
-```text
-video OFF + contact OFF + imu OFF -> full sleep
-video OFF only                    -> blind awake mode
-video OFF + contact OFF + imu ON  -> partial sensor cut, not sleep
-```
-
-Dream decoding has two modes:
-
-```text
-DREAMER-DECODING
-  internal slot exists and is decoded
-
-DREAM-EMPTY
-  all sensors are off, but no stable slot exists yet
-```
-
-In dream mode, object slots can be selected manually from the inner object visualizer window using keys:
-
-```text
-0 1 2 3 4 5 6 7 8 9
-```
-
-#### 6. External control panel / IPC
-
-The system supports runtime control through JSON/IPC commands. Typical controls include:
-
-- enable/disable MuJoCo viewer;
-- show/hide camera preview;
-- show/hide inner world visualizer;
-- show/hide object imagery visualizer;
-- toggle object Open3D viewer;
-- enable/disable training;
-- disable video/contact/IMU sensors;
-- send manual action overrides.
-
-MuJoCo viewer can be toggled with compatible keys:
-
-```text
-mujoco_next_run
-mujoco
-mujoco_viewer
+docs/architecture/current_structure.md
 ```
 
 ---
 
-### Project structure
+## Layer rules
 
-The runner has been refactored into an orchestration-style structure:
+### `runner.py`
 
-```text
-runner.py
-runtime_v5_10/
-  config.py
-  life_runtime.py
-  training_runtime.py
-  sleep_sensors.py
-  external_control.py
-  ipc_runtime.py
-  action_runtime.py
-  object_imagery_runtime.py
-  inner_visual_runtime.py
-  camera_preview_window.py
-  action_outputs_window.py
-  checkpointing.py
-  module_status_runtime.py
-  leg_bird_runtime.py
-  self_core_runtime.py
-models/
-  object_inner_imagery_3d.py
-visualizer/
-  inner_object_visualizer.py
-```
+The root runner is a thin compatibility launcher. It normalizes config paths, sets `PROJECT_ROOT`, and delegates to `src/apps/runner.py`.
 
-High-level responsibilities:
+### `src/apps/`
 
-| File | Responsibility |
-|---|---|
-| `runner.py` | Main entry point and orchestration. |
-| `runtime_v5_10/life_runtime.py` | Life loop, MuJoCo viewer sync, replay writing. |
-| `runtime_v5_10/training_runtime.py` | Parallel train loop and train step logic. |
-| `runtime_v5_10/sleep_sensors.py` | Sensor-gating and full-sleep detection. |
-| `runtime_v5_10/object_imagery_runtime.py` | Runtime bridge for inner object imagery. |
-| `models/object_inner_imagery_3d.py` | Multi-slot latent object memory and decoder. |
-| `visualizer/inner_object_visualizer.py` | 10-slot inner object visualization window. |
+Application orchestration. This layer may import from many modules and is allowed to wire the full system together.
+
+### `src/modules/`
+
+Architecture-level consciousness modules. Each M-module should own its own state, runtime, models, memory, debug helpers, and module-specific visualization.
+
+### `src/platform/`
+
+Infrastructure that is not a consciousness module: MuJoCo world, low-level IPC transport, GUI support, scene builders, and simulator adapters.
+
+### `src/shared/`
+
+Common config dataclasses, checkpointing, event bus, schemas, common types, and utilities.
 
 ---
 
-### Configuration example
-
-Example `runner.yaml` fragments:
-
-```yaml
-mode: train
-
-train:
-  enabled: true
-  lr: 0.00015
-  weight_decay: 0.00001
-  gradient_clip: 5.0
-  train_sleep_sec: 0.01
-
-object_image:
-  enabled: true
-  width: 1520
-  height: 1260
-  num_slots: 10
-  max_object_proposals: 10
-  dream_latent_dynamics: true
-  dream_strength: 0.025
-  dream_cycle_slots: false
-  dream_slot_cycle_steps: 90
-  dream_empty_confidence_threshold: 0.05
-
-object_image_open3d:
-  enabled: true
-  max_slots: 10
-```
-
-Important distinction:
-
-```yaml
-mode: train
-
-train:
-  enabled: true
-```
-
-`mode: train` is top-level. Do not put `mode: train` inside the `train:` block.
-
----
-
-### Running
+## Running
 
 Typical Hydra-style run:
 
@@ -342,14 +172,67 @@ python runner.py --config-path config --config-name runner mode=train train.enab
 
 ---
 
-### Notes
+## Configuration
 
-This project is a fast-moving experimental prototype. APIs, file names, and module boundaries may change often. The current direction prioritizes:
+Main config:
 
-- clear separation between life loop and training loop;
-- live inspection of latent states;
-- object memory stability;
-- sleep/dream mode correctness;
-- runtime controllability from an external panel.
+```text
+config/runner.yaml
+```
+
+Module-specific config fragments may live inside module folders, for example:
+
+```text
+src/modules/m02_event_dream_replay/config/
+src/modules/m03_self_action_causality/config/
+src/modules/m08_debug_visual_control/config/
+src/modules/m15_counterfactual_imagination_planning/config/
+```
 
 ---
+
+## Generated runtime data
+
+The following directories are runtime artifacts and should normally not be committed:
+
+```text
+checkpoints/
+data/
+runs/
+logs/
+artifacts/
+outputs/
+inner_world_frames/
+open3d_exports/
+```
+
+---
+
+## Architecture documentation
+
+```text
+docs/architecture/current_structure.md
+docs/architecture/module_file_map.md
+docs/architecture/module_file_map.json
+docs/architecture/module_migration_plan.md
+```
+
+---
+
+## Current architecture caution
+
+`M1_OBJECT_IMAGERY` is currently a strong integration point and imports several cross-module mixins. This is acceptable during migration, but the target direction is to move cross-module composition into `src/apps/runtime_wiring.py` and keep each M-module focused on its own semantic responsibility.
+
+---
+
+## Notes
+
+This is a fast-moving experimental research prototype. APIs, file names, and module boundaries may change often. The current direction prioritizes:
+
+- clear M1-M15 module boundaries;
+- live inspection of latent state;
+- object memory stability;
+- sleep/dream correctness;
+- explicit self-state and agency modeling;
+- runtime controllability from an external panel;
+- safe refactoring with documentation and compatibility boundaries.
