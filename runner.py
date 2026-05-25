@@ -7,7 +7,20 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
-TARGET = ROOT / "src" / "apps" / "runner.py"
+DEFAULT_TARGET = ROOT / "src" / "apps" / "runner_entry.py"
+LEGACY_TARGET = ROOT / "src" / "apps" / "runner.py"
+
+
+def resolve_target() -> Path:
+    """Return the runner target.
+
+    By default the root launcher now enters through the slim Hydra entrypoint
+    (`runner_entry.py`). Set `CWMS_LEGACY_RUNNER=1` to route directly to the
+    legacy heavy runner module while the migration is being validated.
+    """
+    if os.environ.get("CWMS_LEGACY_RUNNER", "").strip().lower() in {"1", "true", "yes", "on"}:
+        return LEGACY_TARGET
+    return DEFAULT_TARGET
 
 
 def normalize_config_path_arg() -> None:
@@ -38,7 +51,7 @@ def main() -> None:
     if root_path not in sys.path:
         sys.path.insert(0, root_path)
     normalize_config_path_arg()
-    runpy.run_path(str(TARGET), run_name="__main__")
+    runpy.run_path(str(resolve_target()), run_name="__main__")
 
 
 if __name__ == "__main__":
