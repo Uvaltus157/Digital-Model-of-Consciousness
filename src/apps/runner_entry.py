@@ -13,8 +13,14 @@ from pathlib import Path
 
 import hydra
 
+import src.apps.runner as runner_runtime
 from src.apps.runner import UnifiedSystemV510
 from src.apps.runner_config import build_runner_config, render_resolved_runner_config
+from src.apps.runner_teachers import load_inner_speech_teacher_from_config
+
+# Patch the heavy runtime module to use the extracted teacher loader.
+# This is behavior-preserving and avoids editing the large runner.py in this step.
+runner_runtime.load_inner_speech_teacher_from_config = load_inner_speech_teacher_from_config
 
 os.environ.setdefault("PROJECT_ROOT", str(Path(__file__).resolve().parents[2]))
 
