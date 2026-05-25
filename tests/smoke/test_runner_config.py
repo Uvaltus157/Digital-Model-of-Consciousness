@@ -2,7 +2,15 @@ from __future__ import annotations
 
 from omegaconf import OmegaConf
 
-from src.apps.runner_config import ALLOWED_TOP_KEYS, build_runner_config, filter_runner_config_dict, render_resolved_runner_config
+from src.apps.runner_config import (
+    ALLOWED_TOP_KEYS,
+    DEFAULT_MODEL_DIMS,
+    DEFAULT_OBJECT_IMAGE_TACTILE_DIM,
+    apply_required_runner_defaults,
+    build_runner_config,
+    filter_runner_config_dict,
+    render_resolved_runner_config,
+)
 from src.shared.config import UnifiedV510Config
 
 
@@ -46,6 +54,27 @@ def test_build_runner_config_returns_unified_v510_config() -> None:
     assert cfg.runtime.device == "cpu"
     assert cfg.runtime.seed == 11
     assert cfg.train.enabled is False
+    assert cfg.action_dim == DEFAULT_MODEL_DIMS["action_dim"]
+    assert cfg.embodied_dim == DEFAULT_MODEL_DIMS["embodied_dim"]
+    assert cfg.hand_motor_dim == DEFAULT_MODEL_DIMS["hand_motor_dim"]
+    assert cfg.tactile_dim == DEFAULT_MODEL_DIMS["tactile_dim"]
+    assert cfg.body_state_dim == DEFAULT_MODEL_DIMS["body_state_dim"]
+    assert cfg.object_image.tactile_dim == DEFAULT_OBJECT_IMAGE_TACTILE_DIM
+
+
+def test_apply_required_runner_defaults_preserves_explicit_dimensions() -> None:
+    clean = apply_required_runner_defaults(
+        {
+            "action_dim": 12,
+            "tactile_dim": 34,
+            "object_image": {"tactile_dim": 56},
+        }
+    )
+
+    assert clean["action_dim"] == 12
+    assert clean["tactile_dim"] == 34
+    assert clean["object_image"]["tactile_dim"] == 56
+    assert clean["body_state_dim"] == DEFAULT_MODEL_DIMS["body_state_dim"]
 
 
 def test_render_resolved_runner_config_contains_known_sections() -> None:

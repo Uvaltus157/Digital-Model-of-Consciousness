@@ -90,6 +90,16 @@ ALLOWED_TOP_KEYS: Set[str] = {
     "inner_speech_loss_weight",
 }
 
+DEFAULT_MODEL_DIMS: Dict[str, int] = {
+    "action_dim": 24,
+    "embodied_dim": 15,
+    "hand_motor_dim": 44,
+    "tactile_dim": 42,
+    "body_state_dim": 83,
+}
+
+DEFAULT_OBJECT_IMAGE_TACTILE_DIM = 50
+
 
 def _keys_of(config_type: type) -> Set[str]:
     return set(OmegaConf.structured(config_type()).keys())
@@ -153,10 +163,26 @@ def filter_runner_config_dict(raw: DictConfig | Mapping[str, Any]) -> Dict[str, 
     return clean_dict
 
 
+def apply_required_runner_defaults(clean_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """Fill mandatory runner dimensions before converting structured config."""
+    clean = dict(clean_dict)
+    for key, value in DEFAULT_MODEL_DIMS.items():
+        clean.setdefault(key, value)
+
+    object_image = clean.get("object_image")
+    if object_image is None:
+        object_image = {}
+    else:
+        object_image = dict(object_image)
+    object_image.setdefault("tactile_dim", DEFAULT_OBJECT_IMAGE_TACTILE_DIM)
+    clean["object_image"] = object_image
+    return clean
+
+
 def build_runner_config(cfg_raw: DictConfig | Mapping[str, Any]) -> UnifiedV510Config:
     """Build the typed V5.10 runner config from a Hydra raw config."""
     base = OmegaConf.structured(UnifiedV510Config())
-    clean = OmegaConf.create(filter_runner_config_dict(cfg_raw))
+    clean = OmegaConf.create(apply_required_runner_defaults(filter_runner_config_dict(cfg_raw)))
     merged = OmegaConf.merge(base, clean)
     return OmegaConf.to_object(merged)
 
@@ -164,6 +190,6 @@ def build_runner_config(cfg_raw: DictConfig | Mapping[str, Any]) -> UnifiedV510C
 def render_resolved_runner_config(cfg_raw: DictConfig | Mapping[str, Any]) -> str:
     """Return the resolved YAML used for startup diagnostics."""
     base = OmegaConf.structured(UnifiedV510Config())
-    clean = OmegaConf.create(filter_runner_config_dict(cfg_raw))
+    clean = OmegaConf.create(apply_required_runner_defaults(filter_runner_config_dict(cfg_raw)))
     merged = OmegaConf.merge(base, clean)
     return OmegaConf.to_yaml(merged, resolve=True)
