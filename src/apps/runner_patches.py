@@ -13,6 +13,7 @@ from typing import Any, List
 
 from src.apps.runner_hover_config import force_hover_flight_runtime_config_for_system
 from src.apps.runner_loop import run_unified_life_loop
+from src.apps.runner_optimizer import rebuild_optimizer_from_trainable_modules_for_system
 from src.apps.runner_teachers import load_inner_speech_teacher_from_config
 from src.apps.runner_training_flags import resolve_module_training_flags_for_system
 
@@ -45,6 +46,11 @@ RUNNER_PATCHES: List[RunnerPatchRecord] = [
         replacement="src.apps.runner_hover_config.force_hover_flight_runtime_config_for_system",
         reason="hover safety clamp extracted from heavy runner",
     ),
+    RunnerPatchRecord(
+        target="UnifiedSystemV510.rebuild_optimizer_from_trainable_modules",
+        replacement="src.apps.runner_optimizer.rebuild_optimizer_from_trainable_modules_for_system",
+        reason="optimizer rebuild extracted from heavy runner",
+    ),
 ]
 
 
@@ -54,6 +60,7 @@ def apply_runner_patches(runner_runtime: Any, unified_system_cls: type) -> None:
     unified_system_cls.run = run_unified_life_loop
     unified_system_cls.resolve_module_training_flags_from_config = resolve_module_training_flags_for_system
     unified_system_cls._force_hover_flight_runtime_config = force_hover_flight_runtime_config_for_system
+    unified_system_cls.rebuild_optimizer_from_trainable_modules = rebuild_optimizer_from_trainable_modules_for_system
 
 
 def runner_patch_summary() -> list[dict[str, str]]:
