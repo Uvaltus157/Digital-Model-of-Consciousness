@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+*.local
+
+# Runtime outputs
+logs/
+runs/
+artifacts/
+outputs/
+multirun/
+wandb/
+tensorboard/
+
+# Data and generated memories
+data/
+replay_buffer/
+episodes/
+object_memory/
+autobiographical_memory/
+
+# Model weights / checkpoints
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.npz
+*.npy
+
+# Viewer / export outputs
+inner_world_frames/
+open3d_exports/
+screenshots/
+videos/
+
+# MuJoCo / local assets that may be large
+*.mjb
+*.stl
+*.obj
+!assets/**/*.obj
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+*.pid
+/tmp/
