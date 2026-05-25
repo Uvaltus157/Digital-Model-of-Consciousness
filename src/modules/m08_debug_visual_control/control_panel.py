@@ -51,6 +51,8 @@ DEFAULT_WINDOW_CONFIG = {
     "height": 1040,
 }
 
+DEFAULT_MODULE_DEBUG_SCRIPT = "pyqt_module_debug_ipc_status_registry.py"
+
 
 @dataclass
 class LocalPanelState:
@@ -77,7 +79,7 @@ def main() -> None:
     parser.add_argument("--viewer-script", default="runner.py")
     parser.add_argument("--viewer-config", default="runner")
     parser.add_argument("--terminal", default="xterm")
-    parser.add_argument("--module-debug-script", default="pyqt_module_debug_ipc_status.py")
+    parser.add_argument("--module-debug-script", default=DEFAULT_MODULE_DEBUG_SCRIPT)
     parser.add_argument("--module-status-port", type=int, default=8766)
     parser.add_argument("--agent-actions-script", default="pyqt_agent_actions_ipc.py")
     parser.add_argument("--panel-config", default=None)
@@ -214,7 +216,7 @@ def main() -> None:
             self.btn_latent.setToolTip("Show or hide the latent semantic map window")
             self.btn_mujoco.setToolTip("Enable or disable the MuJoCo viewer on the next runner launch")
             self.btn_train.setToolTip("Enable or disable online training in the runner")
-            self.btn_module_debug_pyqt.setToolTip("Open or close the PyQt module debug window")
+            self.btn_module_debug_pyqt.setToolTip("Open or close the registry-backed PyQt module debug window")
             self.btn_close_aux.setToolTip("Close auxiliary visualizer windows controlled by the runner")
             self.btn_save_ply.setToolTip("Export the current internal 3D object model as a PLY file")
             self.btn_save_pcd.setToolTip("Export the current internal 3D object model as a PCD file")
