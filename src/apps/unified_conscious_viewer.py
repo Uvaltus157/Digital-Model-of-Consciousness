@@ -3,23 +3,21 @@ from __future__ import annotations
 """
 unified_conscious_viewer.py
 
-V5.7 runner:
-- uses ConsciousDreamerV2.2 with:
-    AttentionControllerV2
-    AutobiographicalMemoryV2
-    ThoughtLoopV2
-    InnerSpeechLoop / symbolic report
-- uses realistic 5-finger hands and 42 tactile sensors
-- shows MuJoCo viewer
-- optionally shows inner world visualizer window
+Legacy V5.7 compatibility module.
 
-This file is based on v5_6_v2 but swaps the model to V2.2 and calls
-DreamerInnerWorldVisualizer on every life step.
+This file still provides the V5.7 base classes used by the newer V5.10 runner
+compatibility layer, but model creation now goes through the canonical M5
+ConsciousDreamer API instead of importing versioned V21/V22/V23 names directly.
+
+Current app-level rule:
+    import ConsciousDreamer / ConsciousDreamerConfig from
+    src.modules.m05_world_model_attention_workspace.models.conscious_dreamer
+
+Historical implementation files remain inside M5 as internal layers only.
 """
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from threading import Thread
 from typing import Dict
 import json
 import os
@@ -39,31 +37,30 @@ from src.shared.console_colors import install_colored_errors
 
 install_colored_errors()
 
-from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_inner_speech import (
-    ConsciousDreamerV22,
-    make_v22_config_from_world,
+from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer import (
+    ConsciousDreamer,
+    make_conscious_dreamer_config_from_world,
 )
-
-
-from src.shared.unified_conscious_utils import (
-    action_names,
-    NoveltyConfig,
-    ReplayConfig,
-    LifeConfig,
-    TrainLoopConfig,
-    MujocoWorldConfig,
-    ViewerConfig,
-    RuntimeConfig,
-    ReplayBuffer,
-    QualityMeter,
-    NoveltyDetector,
-    yaw_pitch_to_forward,
-    quat_from_forward_up,
+from src.modules.m07_inner_speech_thoughts.inner_world_visualizer import (
+    DreamerInnerWorldVisualizer,
+    InnerWorldVizConfig,
 )
-
 from src.platform.mujoco_world.realistic_hand_control import RealisticHandBridge
-from src.modules.m07_inner_speech_thoughts.inner_world_visualizer import DreamerInnerWorldVisualizer, InnerWorldVizConfig
-from src.modules.m07_inner_speech_thoughts.models.symbolic_report_language import decode_debug_tokens
+from src.shared.unified_conscious_utils import (
+    LifeConfig,
+    MujocoWorldConfig,
+    NoveltyConfig,
+    NoveltyDetector,
+    QualityMeter,
+    ReplayBuffer,
+    ReplayConfig,
+    RuntimeConfig,
+    TrainLoopConfig,
+    ViewerConfig,
+    action_names,
+    quat_from_forward_up,
+    yaw_pitch_to_forward,
+)
 
 
 @dataclass
@@ -103,12 +100,10 @@ class MujocoLiveWorldV57:
         self.embodied_dim = embodied_dim
         self.hand_motor_dim = hand_motor_dim
 
-        #self.scene_builder = SceneBuilder(cfg)
-        #self.model = self.scene_builder.build_model(validate=True, save_xml_path="scene.xml")
         project_root = Path(os.environ.get("PROJECT_ROOT", Path(__file__).resolve().parents[2]))
         xml_path = project_root / "src" / "platform" / "mujoco_world" / "assets" / "scene.xml"
         self.model = mujoco.MjModel.from_xml_path(str(xml_path))
-        self.data  = mujoco.MjData(self.model)
+        self.data = mujoco.MjData(self.model)
         self.renderer = mujoco.Renderer(self.model, height=cfg.height, width=cfg.width)
         self.hand_bridge = RealisticHandBridge(self.model)
 
@@ -328,7 +323,7 @@ class UnifiedSystemV57:
         random.seed(cfg.runtime.seed)
         torch.manual_seed(cfg.runtime.seed)
 
-        self.v22_cfg = make_v22_config_from_world(
+        self.model_cfg = make_conscious_dreamer_config_from_world(
             image_height=cfg.mujoco_world.height,
             image_width=cfg.mujoco_world.width,
             body_state_dim=cfg.body_state_dim,
@@ -337,7 +332,9 @@ class UnifiedSystemV57:
             embodied_dim=cfg.embodied_dim,
             action_dim=cfg.action_dim,
         )
-        self.model = ConsciousDreamerV22(self.v22_cfg).to(self.device)
+        self.v22_cfg = self.model_cfg  # compatibility for old V5.7 diagnostics
+        self.v23_cfg = self.model_cfg  # compatibility with newer checkpoints/helpers
+        self.model = ConsciousDreamer(self.model_cfg).to(self.device)
 
         self.optimizer = optim.AdamW(
             self.model.parameters(),
@@ -457,7 +454,7 @@ class UnifiedSystemV57:
         if self.cfg.inner_world.save_frames and self.global_step % max(1, self.cfg.inner_world.save_every_steps) == 0:
             path = Path(self.cfg.inner_world.out_dir) / f"inner_world_{self.global_step:07d}.png"
             self.inner_viz.save(str(path), out, symbolic)
-            
+
     def maybe_print_status(self):
         now = time.time()
         if self.latest_stats is not None and (now - self.last_print_time) >= self.cfg.viewer.print_status_every_sec:
@@ -473,144 +470,6 @@ class UnifiedSystemV57:
                 f"attn[v,t,m,obj]=({mw[0]:.2f},{mw[3]:.2f},{mw[4]:.2f},{mw[5]:.2f})"
             )
             self.last_print_time = now
-
-            
-    """
-    def life_step(self) -> None:
-        prev_action = int(self.state["prev_action_ids"].item())
-
-        obs0 = self.world.observe(
-            action_id=prev_action,
-            embodied_targets=self.prev_embodied_action[0].detach().cpu().numpy(),
-            hand_controls=self.prev_hand_motor[0].detach().cpu().numpy(),
-        )
-
-        with torch.no_grad():
-            out0 = self.model_step(obs0, self.state)
-
-        self.world.set_attention_drive(
-            focus_idx=int(out0["focus"]["focus_idx"].item()),
-            curiosity_drive=float(out0["values"]["curiosity"].item()),
-            planned_action_id=int(out0["action_ids"].item()),
-        )
-
-        obs = self.world.observe(
-            action_id=int(out0["action_ids"].item()),
-            embodied_targets=out0["embodied_targets"][0].detach().cpu().numpy(),
-            hand_controls=out0["hand_ctrl"][0].detach().cpu().numpy(),
-        )
-
-        with torch.no_grad():
-            out = self.model_step(obs, self.state)
-
-        self.prev_embodied_action = out["embodied_targets"].detach()
-        self.prev_hand_motor = out["hand_ctrl"].detach()
-        self.state = out["state"]
-        self.latest_out = out
-
-        chosen_action = int(out["action_ids"].item())
-        obs["next_action_id"] = torch.tensor([chosen_action], device=self.device, dtype=torch.long)
-
-        self.replay.add({
-            "left": obs["left"].detach().cpu(),
-            "right": obs["right"].detach().cpu(),
-            "pose": obs["pose"].detach().cpu(),
-            "body_state": obs["body_state"].detach().cpu(),
-            "tactile": obs["tactile"].detach().cpu(),
-            "hand_motor": self.prev_hand_motor.detach().cpu(),
-            "embodied_action": self.prev_embodied_action.detach().cpu(),
-            "object_state": obs["object_state"].detach().cpu(),
-            "reward": obs["reward"].detach().cpu(),
-            "done": obs["done"].detach().cpu(),
-            "action_id": obs["next_action_id"].detach().cpu(),
-            "depth": obs["depth"].detach().cpu(),
-        })
-
-        novelty_score = self.novelty.score(
-            out["obs_embed"],
-            out["workspace_out"],
-            out["imagined"]["imagined_value"],
-        )
-
-        decoded_report = decode_debug_tokens(out["symbolic_report"]["text_token_ids"], max_tokens=16)[0]
-
-        self.latest_stats = {
-            "step": self.global_step,
-            "training": self.training_enabled,
-            "quality": self.quality.get(),
-            "train_steps": self.train_steps,
-            "focus_idx": int(out["focus"]["focus_idx"].item()),
-            "action": chosen_action,
-            "curiosity": float(out["values"]["curiosity"].item()),
-            "coherence": float(out["values"]["coherence"].item()),
-            "self_confidence": float(out["reflection_out"]["self_confidence"].item()),
-            "inner_report_confidence": float(out["symbolic_report"]["confidence"].item()),
-            "decoded_report": decoded_report,
-            "novelty_score": float(novelty_score),
-            "touch_sum": float(obs["tactile"].sum().item()),
-            "object_repr_norm": float(out["object_repr"].norm(dim=-1).mean().item()),
-            "memory_used": float(out["memory"]["memory_usage"].sum().item()),
-            "modality_weights": out["attention"]["modality_weights"][0].detach().cpu().numpy(),
-            "sphere": self.world.get_object_pos("sphere"),
-        }
-
-        self.update_inner_world_window(out)
-
-        if self.global_step % self.cfg.life.report_every_steps == 0:
-            serial = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in self.latest_stats.items()}
-            self.log_event({"step": self.global_step, "event": "life_tick", **serial})
-
-        self.global_step += 1
-
-    def train_once(self):
-        if len(self.replay) < self.cfg.replay.min_ready:
-            return None
-
-        batch = self.replay.sample(self.cfg.replay.batch_size, recent_bias=self.cfg.replay.recent_bias)
-        if not batch:
-            return None
-
-        self.model.train()
-        self.optimizer.zero_grad(set_to_none=True)
-        total_loss = 0.0
-
-        for sample in batch:
-            obs = {k: v.to(self.device) for k, v in sample.items()}
-            local_state = self.model.initial_state(batch_size=1, device=self.device)
-
-            out = self.model.step(
-                left=obs["left"],
-                right=obs["right"],
-                pose=obs["pose"],
-                body_state=obs["body_state"],
-                state=local_state,
-                tactile=obs["tactile"],
-                hand_motor=obs["hand_motor"],
-                embodied_action=obs["embodied_action"],
-                depth=obs["depth"],
-                object_state=obs["object_state"],
-                action_override=obs["action_id"],
-                write_memory=False,
-            )
-            total_loss = total_loss + self.compute_step_loss(out, obs)
-
-        total_loss = total_loss / len(batch)
-        total_loss.backward()
-        nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg.train.gradient_clip)
-        self.optimizer.step()
-
-        self.train_steps += 1
-        q = self.quality.update(float(total_loss.detach().cpu().item()))
-        return q
-
-    def train_loop(self):
-        while not self.shutdown:
-            if self.cfg.train.enabled and self.training_enabled:
-                self.train_once()
-            time.sleep(self.cfg.train.train_sleep_sec)
-    """
-
-    
 
 
 @hydra.main(version_base=None, config_path="../../config", config_name="runner")
@@ -667,7 +526,10 @@ def main(cfg_raw) -> None:
     cfg_obj: UnifiedV57Config = OmegaConf.to_object(cfg)
 
     system = UnifiedSystemV57(cfg_obj)
-    system.run()
+    if hasattr(system, "run"):
+        system.run()
+    else:
+        raise RuntimeError("UnifiedSystemV57 has no run() method. Use src.apps.runner for the V5.10 runtime.")
 
 
 if __name__ == "__main__":
