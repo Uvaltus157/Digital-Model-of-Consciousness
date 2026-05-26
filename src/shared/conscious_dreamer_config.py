@@ -4,24 +4,20 @@ from __future__ import annotations
 
 This file is the runner/app-facing replacement for versioned helpers such as
 `make_v23_config_from_unified()`. It keeps app-level code away from historical
-implementation names while still reusing the existing runner dimension
-validation from `src.shared.config`.
+implementation names and depends only on the shared model-dimension contract.
 """
 
 from typing import Any
 
 from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer import ConsciousDreamerConfig
+from src.shared.model_dimensions import validate_runner_model_dimensions
 
 
 def make_conscious_dreamer_config_from_unified(cfg: Any) -> ConsciousDreamerConfig:
     """Build the canonical M5 config from `UnifiedV510Config`.
 
     The runner config remains the single source of truth for model dimensions.
-    This helper intentionally imports validation lazily to avoid pushing M5
-    implementation imports into the app startup path earlier than needed.
     """
-    from src.shared.config import validate_runner_model_dimensions
-
     dims = validate_runner_model_dimensions(cfg)
 
     model_cfg = ConsciousDreamerConfig()
