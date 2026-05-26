@@ -72,20 +72,21 @@
 
 <section class="card">
   <h2>Main src/apps files</h2>
+  <p class="muted">Preferred table format: <strong>File → Link → What's inside → How it works</strong>.</p>
   <table>
-    <tr><th>File</th><th>Contents</th><th>Role in the sequence</th></tr>
-    <tr><td><a href="../../../src/apps/runner_entry.py">runner_entry.py</a></td><td>Hydra entrypoint.</td><td>Starts the typed launch chain.</td></tr>
-    <tr><td><a href="../../../src/apps/runner_config.py">runner_config.py</a></td><td>Config filtering and dataclass merge.</td><td>Protects structured config from unknown keys.</td></tr>
-    <tr><td><a href="../../../src/apps/runner_system_factory.py">runner_system_factory.py</a></td><td><code>build_unified_system()</code>.</td><td>Single order for runtime state, startup state, services and mode.</td></tr>
-    <tr><td><a href="../../../src/apps/runner.py">runner.py</a></td><td><code>UnifiedSystemV510</code> wrapper.</td><td>Stable import path, mixins and extracted hooks.</td></tr>
-    <tr><td><a href="../../../src/apps/runner_unified_init.py">runner_unified_init.py</a></td><td><code>initialize_unified_system_v510()</code>.</td><td>Creates heavy runtime components.</td></tr>
-    <tr><td><a href="../../../src/apps/runner_loop.py">runner_loop.py</a></td><td>Life loop.</td><td>Main runtime loop and shutdown path.</td></tr>
-    <tr><td><a href="../../../src/apps/runner_services.py">runner_services.py</a></td><td>IPC/status services.</td><td>Idempotent service startup.</td></tr>
-    <tr><td><a href="../../../src/apps/runner_components.py">runner_components.py</a></td><td>M1/self/emotional/visualizer factories.</td><td>Creates M1 object system and visualizers.</td></tr>
-    <tr><td><a href="../../../src/apps/runner_model_factory.py">runner_model_factory.py</a></td><td>Device, seed, V23 config and Dreamer model.</td><td>Creates the central world model.</td></tr>
-    <tr><td><a href="../../../src/apps/runner_world_factories.py">runner_world_factories.py</a></td><td>MuJoCo world factory.</td><td>Creates the physical simulation world.</td></tr>
-    <tr><td><a href="../../../src/apps/runner_dynamic_rig_config.py">runner_dynamic_rig_config.py</a></td><td>Dynamic rig kwargs.</td><td>Maps config into controller settings.</td></tr>
-    <tr><td><a href="../../../src/apps/runner_optimizer.py">runner_optimizer.py</a></td><td>Optimizer rebuild from module training gate.</td><td>Supports train/passive module modes.</td></tr>
+    <tr><th>File</th><th>Link</th><th>What's inside</th><th>How it works</th></tr>
+    <tr><td><code>runner_entry.py</code></td><td><a href="../../../src/apps/runner_entry.py">open source</a></td><td>Hydra entrypoint and minimal launch body.</td><td>Receives the Hydra config, renders it for diagnostics, builds the typed config object, constructs the system and starts the runtime loop.</td></tr>
+    <tr><td><code>runner_config.py</code></td><td><a href="../../../src/apps/runner_config.py">open source</a></td><td>Config filtering, structured config merge and resolved config rendering.</td><td>Prevents unknown OmegaConf keys from breaking the dataclass config while preserving the user-facing YAML launch path.</td></tr>
+    <tr><td><code>runner_system_factory.py</code></td><td><a href="../../../src/apps/runner_system_factory.py">open source</a></td><td><code>build_unified_system()</code> and diagnostic construction context.</td><td>Centralizes the construction order: instantiate system, apply runtime state, apply startup state, ensure services and apply mode.</td></tr>
+    <tr><td><code>runner.py</code></td><td><a href="../../../src/apps/runner.py">open source</a></td><td><code>UnifiedSystemV510</code> compatibility wrapper assembled from mixins and extracted hooks.</td><td>Keeps the public import path stable while delegating initialization, loop, optimizer rebuild, hover config and training flags to helper modules.</td></tr>
+    <tr><td><code>runner_unified_init.py</code></td><td><a href="../../../src/apps/runner_unified_init.py">open source</a></td><td><code>initialize_unified_system_v510()</code>, the extracted heavy runtime initializer.</td><td>Creates device, seeds, speech teacher/vocab, model, optimizer, M1 object system, self core, replay, emotional drive, MuJoCo world, dynamic rig, visualizers, checkpoints and services.</td></tr>
+    <tr><td><code>runner_loop.py</code></td><td><a href="../../../src/apps/runner_loop.py">open source</a></td><td>Extracted life loop, train thread handling, viewer sync and shutdown sequence.</td><td>Runs the system continuously: steps the world/model, updates visualizers and services, handles shutdown and saves checkpoints.</td></tr>
+    <tr><td><code>runner_services.py</code></td><td><a href="../../../src/apps/runner_services.py">open source</a></td><td>IPC/status service startup helpers and service snapshots.</td><td>Starts or reuses ModuleDebugStatusServer and IPCControlServer idempotently so duplicate port binding is avoided.</td></tr>
+    <tr><td><code>runner_components.py</code></td><td><a href="../../../src/apps/runner_components.py">open source</a></td><td>Factories for M1 object imagery, self core, emotional drive and visualizers.</td><td>Maps the global runner config into constructor kwargs for subsystem components.</td></tr>
+    <tr><td><code>runner_model_factory.py</code></td><td><a href="../../../src/apps/runner_model_factory.py">open source</a></td><td>Device, seed, V23 config, ConsciousDreamerV23 and base optimizer helpers.</td><td>Builds the central world model and its base optimizer in a testable helper boundary.</td></tr>
+    <tr><td><code>runner_world_factories.py</code></td><td><a href="../../../src/apps/runner_world_factories.py">open source</a></td><td>MuJoCo world kwargs and simulation world factory.</td><td>Creates the physical simulation world while keeping heavy imports inside factory functions.</td></tr>
+    <tr><td><code>runner_dynamic_rig_config.py</code></td><td><a href="../../../src/apps/runner_dynamic_rig_config.py">open source</a></td><td>Dynamic agent rig config-to-kwargs mapping.</td><td>Maps YAML/dataclass rig settings into the controller config used by the MuJoCo dynamic agent rig.</td></tr>
+    <tr><td><code>runner_optimizer.py</code></td><td><a href="../../../src/apps/runner_optimizer.py">open source</a></td><td>Optimizer rebuild from selected trainable module parameters.</td><td>Supports module debug train/passive modes by rebuilding AdamW over the active trainable parameter set.</td></tr>
   </table>
 </section>
 </main>
