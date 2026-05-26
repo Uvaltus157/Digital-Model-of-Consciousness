@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>M1_OBJECT_IMAGERY — Full Module Documentation</title>
+  <link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header><div class="wrap">
+  <div class="nav"><a href="../index.html">← Back to project index</a></div>
+  <span class="eyebrow">M1_OBJECT_IMAGERY</span>
+  <h1>M1: internal object imagery</h1>
+  <p class="lead">M1 transforms sensor streams into stable internal object slots, maintains latent object memory, reconstructs objects in 2D/3D/4D and exposes object state to event memory, self core, world model, metacognition and planning.</p>
+  <div><span class="badge red">neural module</span><span class="badge blue">sensors → fusion</span><span class="badge green">object slots / memory</span><span class="badge purple">2D/3D/4D debug</span></div>
+</div></header>
+
+<main class="wrap">
+<section class="grid two">
+  <article class="card"><h2>Purpose</h2>
+    <p>M1 is the first internal object layer of the conscious model. It should not merely mirror camera frames. Its job is to create an internal object that keeps identity over time, has confidence, can be decoded, compared and used as a base for events, memory, language and planning.</p>
+    <p>The main output of M1 is <code>z_obj</code> and the set of <code>z_obj_slots</code>. These object slots become inputs to M2, M4, M5, M9, M12 and M15.</p>
+  </article>
+  <article class="card"><h2>Main data structures</h2>
+<pre><code>z_obj                         # active latent object
+z_obj_slots[B, S, D]           # all object slots
+confidence_slots[B, S, 1]      # current sensory confidence
+memory_stability_slots[B,S,1]  # persistent stability
+active_slot_index              # current object of attention
+dream_activation_slots         # sleep/dream activation
+slot_age                       # slot age / persistence
+slot_4d timeline               # temporal 3DGS/xyz history</code></pre>
+  </article>
+</section>
+
+<section class="card"><h2>Strict top-down M1 pipeline</h2>
+  <div class="flow">
+    <div class="row"><div class="row-title">0. Inputs</div><div class="row-body"><div class="blockline"><span class="block sensor">left camera</span><span class="block sensor">right camera</span><span class="block sensor">depth</span><span class="block sensor">tactile/contact</span><span class="block sensor">body/pose/imu</span><span class="block sensor">hand action</span><span class="block sensor">leg action</span></div></div></div>
+    <div class="arrow">↓</div>
+    <div class="row"><div class="row-title">1. Sensor gate</div><div class="row-body">Runtime checks <code>video_sensor_enabled</code>, <code>contact_sensor_enabled</code> and <code>imu_sensor_enabled</code>. Disabled sensors are zeroed so sleep/debug paths cannot secretly bypass the gate.</div></div>
+    <div class="arrow">↓</div>
+    <div class="row"><div class="row-title">2. Vision summary</div><div class="row-body"><span class="block nn">summarize_vision_tensors()</span> compresses left/right/depth into mean, std, min and max statistics.</div></div>
+    <div class="arrow">↓</div>
+    <div class="row"><div class="row-title">3. Fusion</div><div class="row-body"><span class="block nn">VisualTactileObjectFusion</span> consumes vision, tactile, body, hand and leg features, then outputs <code>z_update</code>, <code>vision_strength</code> and <code>touch_strength</code>.</div></div>
+    <div class="arrow">↓</div>
+    <div class="row"><div class="row-title">4. Slot routing</div><div class="row-body"><span class="block memory">ObjectSlotMemory</span> selects the target slot, preserves sticky identity, switches only with enough margin, and can use proposal-to-slot locking.</div></div>
+    <div class="arrow">↓</div>
+    <div class="row"><div class="row-title">5. Latent object</div><div class="row-body">Slot memory reads the active <code>z_obj</code>, confidence, active slot and stability. This is the internal object used by decoders, event memory, self core and planning.</div></div>
+    <div class="arrow">↓</div>
+    <div class="row"><div class="row-title">6. Reconstruction</div><div class="row-body"><div class="blockline"><span class="block nn">ObjectImaginationHead2D</span><span class="block nn">ObjectImageryDecoder</span><span class="block nn">3D points/voxels</span><span class="block nn">Slot4D timeline</span><span class="block nn">Slot4D deformation</span><span class="block nn">Slot4D playback</span></div></div></div>
+    <div class="arrow">↓</div>
+    <div class="row"><div class="row-title">7. Debug / export</div><div class="row-body"><div class="blockline"><span class="block debug">InnerObjectVisualizerV2</span><span class="block debug">Open3D viewer</span><span class="block debug">slot_4d_open3d_export</span><span class="block debug">event code visualizer</span></div></div></div>
+  </div>
+</section>
+
+<section class="card"><h2>Main M1 Python files</h2>
+<p class="muted">Links are local repository links. They work when browsing this file inside the repository checkout.</p>
+
+<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/models/object_inner_imagery_3d.py">models/object_inner_imagery_3d.py</a> <span class="badge red">main M1 model</span></h3>
+<div class="path">src/modules/m01_object_imagery/models/object_inner_imagery_3d.py</div>
+<p>The central M1 model file. It contains <code>ObjectInnerImagery3DConfig</code>, helper functions, <code>VisualTactileObjectFusion</code>, <code>ObjectSlotMemory</code>, 2D/3D reconstruction heads and the overall inner object representation system.</p>
+<ul><li><strong>ObjectInnerImagery3DConfig</strong>: latent, hidden, image, vision, tactile, body, hand, leg, point, voxel, slot and dream settings.</li><li><strong>VisualTactileObjectFusion</strong>: maps multimodal features to <code>z_update</code> and sensor strength signals.</li><li><strong>ObjectSlotMemory</strong>: maintains object slots, confidence, stability, sticky routing and active slot identity.</li><li><strong>ObjectImaginationHead2D</strong>: decodes latent object state into RGB/depth/mask and attributes.</li></ul></div>
+
+<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/models/object_imagery_decoder.py">models/object_imagery_decoder.py</a> <span class="badge red">2D semantic decoder</span></h3>
+<div class="path">src/modules/m01_object_imagery/models/object_imagery_decoder.py</div>
+<p>A dedicated decoder for internal object representations. It accepts <code>object_repr</code> and, when context is enabled, appends workspace, thought and reflection vectors. It then creates a feature grid, upsamples with transposed convolutions and emits several heads.</p>
+<ul><li><strong>ObjectImageryConfig</strong>: object_dim, workspace_dim, thought_dim, reflection_dim, hidden_dim, image size/channels and semantic class counts.</li><li><strong>ObjectImageryDecoder</strong>: MLP encoder → latent grid → upsampling → <code>rgb</code>, <code>alpha</code>, <code>depth</code>.</li><li><strong>Semantic heads</strong>: shape/color/material logits, class ids and object confidence.</li><li><strong>blended_object_image()</strong>: blends RGB with alpha and a background value for visualization.</li></ul></div>
+
+<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/models/slot_4d_deformation.py">models/slot_4d_deformation.py</a> <span class="badge red">4D deformation model</span></h3>
+<div class="path">src/modules/m01_object_imagery/models/slot_4d_deformation.py</div>
+<p>The Step 3B neural 4D deformation component. It learns a compact per-slot deformation field over sampled 3D Gaussian points.</p>
+<ul><li><strong>Slot4DDeformationModel</strong>: small MLP mapping <code>[xyz, normalized_time] → delta_xyz</code>.</li><li><strong>Slot4DDeformationTrainer</strong>: keeps one deformation model and optimizer per object slot.</li><li><strong>train_from_timeline()</strong>: trains from the last two timeline frames by predicting <code>xyz(t0)+delta → xyz(t1)</code>.</li><li><strong>Slot4DDeformationMetrics</strong>: slot id, target, validity, loss, motion norm, predicted delta norm, sample count and temporal dt.</li></ul></div>
+
+<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/slot_4d_reconstruction.py">slot_4d_reconstruction.py</a> <span class="badge green">4D timeline</span></h3>
+<div class="path">src/modules/m01_object_imagery/slot_4d_reconstruction.py</div>
+<p>Step 3A: temporal history over per-slot Gaussian states. It does not learn deformation yet; it captures state(t) so Step 3B can learn the deformation.</p>
+<ul><li><strong>Slot4DFrame</strong>: a snapshot of a slot state: live step, gaussian count, loss, confidence, dynamic norm and sampled xyz.</li><li><strong>Slot4DTimelineBuffer</strong>: per-slot frame queue with motion norm, temporal span and mean delta metrics.</li><li><strong>Slot4DReconstructor</strong>: extracts xyz samples from the Gaussian reconstructor and appends timeline frames.</li></ul></div>
+
+<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/slot_4d_playback.py">slot_4d_playback.py</a> <span class="badge purple">4D playback</span></h3>
+<div class="path">src/modules/m01_object_imagery/slot_4d_playback.py</div>
+<p>Step 3C: deformation-aware playback preview. It applies the learned deformation to the current Gaussian state and renders a time-phase preview using the existing Gaussian renderer/backend.</p>
+<ul><li><strong>Slot4DPlaybackRenderer</strong>: computes playback phase, applies deformation and calls preview rendering.</li><li><strong>_DeformedGaussianState</strong>: read-only wrapper that replaces xyz but keeps scale, opacity and color.</li><li><strong>Slot4DPlaybackMetrics</strong>: render validity, deformation usage, gaussian count, phase, delta norm, backend and fps.</li></ul></div>
+
+<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/slot_4d_open3d_export.py">slot_4d_open3d_export.py</a> <span class="badge purple">Open3D export</span></h3>
+<div class="path">src/modules/m01_object_imagery/slot_4d_open3d_export.py</div>
+<p>Exports raw and deformed slot point clouds to a compressed <code>.npz</code> file so a separate Open3D viewer can inspect the latest 4D slot state.</p>
+<ul><li><strong>Slot4DOpen3DExporter</strong>: throttled exporter for raw/deformed xyz, color, alpha and metrics.</li><li><strong>_deformed_xyz()</strong>: applies the deformation model for a playback phase when available.</li><li><strong>export()</strong>: writes arrays such as <code>slot_0_raw_xyz</code>, <code>slot_0_deformed_xyz</code>, color, alpha and phase.</li></ul></div>
+
+<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/runtime.py">runtime.py</a> <span class="badge blue">runtime bridge</span></h3>
+<div class="path">src/modules/m01_object_imagery/runtime.py</div>
+<p>The main M1 runtime bridge. It connects object imagery with M2/M3/M4/M12/M15 through event latent memory, debug windows, passport memory, action traces, trust gates and scenario runtime mixins.</p>
+<ul><li><strong>ObjectImageryRuntimeMixin</strong>: combines many cross-module runtime mixins used by object imagery.</li><li><strong>_input_sensor_enabled()</strong> and <strong>_safe_obs_for_inner_object_viz()</strong>: prevent disabled sensors from leaking into visual/debug paths.</li><li><strong>_ensure_event_latent_memory()</strong>: creates the bridge to event sentence memory.</li><li><strong>update_event_code_visualizer_window()</strong>: shows slot vocabulary and event code sentences.</li></ul></div>
+
+<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/visualizer_inner_object.py">visualizer_inner_object.py</a> <span class="badge purple">2D debug window</span></h3>
+<div class="path">src/modules/m01_object_imagery/visualizer_inner_object.py</div>
+<p>The main 2D object imagery dashboard. It renders slots, RGB/depth/mask previews, confidence, slot activity, latent heatmaps, sensor masks and debug panels through the OpenCV GUI thread.</p>
+<ul><li><strong>InnerObjectVisualizerV2Config</strong>: window size, history, panel size and max slots.</li><li><strong>InnerObjectVisualizerV2</strong>: builds the visible dashboard from object state and runtime signals.</li><li>Helper functions convert tensors to numpy, create color maps, add labels, compute mask stats and handle pose utilities.</li></ul></div>
+
+<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/inner_object_open3d_viewer.py">inner_object_open3d_viewer.py</a> <span class="badge purple">3D/Open3D viewer</span></h3>
+<div class="path">src/modules/m01_object_imagery/inner_object_open3d_viewer.py</div>
+<p>Open3D visualization for internal objects. It is used to inspect points, voxels and slot-separated geometry and to verify that M1 forms an internal 3D object rather than only a 2D image.</p></div>
+
+<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/visualizer_inner_object_3d.py">visualizer_inner_object_3d.py</a> <span class="badge purple">3D visualizer / legacy diagnostic</span></h3>
+<div class="path">src/modules/m01_object_imagery/visualizer_inner_object_3d.py</div>
+<p>An additional or earlier 3D visualization path. The current main 2D dashboard is <code>InnerObjectVisualizerV2</code>, and the Open3D path is <code>InnerObjectOpen3DViewerV2</code>, but this file remains important for 3D object imagery diagnostics.</p></div>
+
+<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/inner_visual_runtime.py">inner_visual_runtime.py</a> <span class="badge blue">visual runtime hooks</span></h3>
+<div class="path">src/modules/m01_object_imagery/inner_visual_runtime.py</div>
+<p>Runtime hooks for internal visual windows. This layer manages window update/close behavior and connects visualizer state to runtime flags.</p></div>
+
+<div class="file-card"><h3><a href="../../../src/apps/runner_components.py">src/apps/runner_components.py</a> <span class="badge green">factory integration</span></h3>
+<div class="path">src/apps/runner_components.py</div>
+<p>App-level factories used by the runner to create M1: <code>create_inner_object_system()</code>, <code>create_inner_object_visualizer()</code> and <code>create_inner_object_open3d_viewer()</code>. This is where global config is mapped to M1 implementation constructors.</p></div>
+</section>
+
+<section class="grid two">
+  <article class="card"><h2>How M1 works during a life step</h2>
+    <ol><li>The runner receives observations from the MuJoCo world: cameras, depth, tactile signals, body state and actions.</li><li>M1 runtime creates a safe observation copy respecting sensor gates.</li><li>Vision summary and tactile/body/action features are fed into fusion.</li><li>Fusion outputs <code>z_update</code> and sensor-strength signals.</li><li>ObjectSlotMemory selects a slot and updates only that selected slot.</li><li>Decoders produce internal images, shapes, depth, points and voxels.</li><li>Runtime updates visualizers and event memory.</li><li>4D subsystem may append a timeline frame, train deformation and export Open3D preview.</li></ol>
+  </article>
+  <article class="card"><h2>How M1 works in sleep</h2>
+    <p>When video/contact/imu are disabled, M1 must not secretly use the external scene. It reads previous slots, can run dream latent dynamics and decodes internal state.</p>
+    <div class="callout">The sleep goal for M1 is not a black frame; it is autonomous internal object replay from saved latent state.</div>
+  </article>
+</section>
+
+<section class="card"><h2>2D / 3D / 4D subsystem</h2>
+<table><tr><th>Level</th><th>Files</th><th>What happens</th></tr>
+<tr><td>2D</td><td><code>object_inner_imagery_3d.py</code>, <code>object_imagery_decoder.py</code></td><td>Latent object is decoded into RGB, depth, mask, alpha and semantic logits.</td></tr>
+<tr><td>3D</td><td><code>inner_object_open3d_viewer.py</code>, 3D heads in the model</td><td>The internal object is shown as points, voxels and slot-separated geometry.</td></tr>
+<tr><td>4D timeline</td><td><code>slot_4d_reconstruction.py</code></td><td>Per-slot Gaussian xyz state history is accumulated.</td></tr>
+<tr><td>4D deformation</td><td><code>models/slot_4d_deformation.py</code></td><td>An MLP learns <code>delta_xyz</code> through time.</td></tr>
+<tr><td>4D playback</td><td><code>slot_4d_playback.py</code></td><td>The object is replayed at a time phase: <code>xyz_base + deformation(xyz,t)</code>.</td></tr>
+<tr><td>4D Open3D export</td><td><code>slot_4d_open3d_export.py</code></td><td>Raw/deformed clouds are written to npz for an external viewer.</td></tr>
+</table></section>
+
+<section class="card"><h2>Links to other modules</h2>
+<table><tr><th>Module</th><th>Connection</th></tr>
+<tr><td>M2 Event Dream Replay</td><td>Slot changes become event tokens, sentences, episodes and replay.</td></tr>
+<tr><td>M3 Self Action Causality</td><td>Action traces help explain whether the agent caused an object change.</td></tr>
+<tr><td>M4 Long Dynamic Memory</td><td>Object passport and dynamic identity help recognize the same object later.</td></tr>
+<tr><td>M5 World Model</td><td>Object latent state becomes part of world state and active workspace.</td></tr>
+<tr><td>M9 Self Core</td><td>Object latent state is linked to body ownership, agency and egocentric frame.</td></tr>
+<tr><td>M12 Metacognition</td><td>Trust and confidence gates judge how reliable the internal object is.</td></tr>
+<tr><td>M15 Imagination Planning</td><td>Internal objects are used by imagined scenarios and counterfactual rollout.</td></tr>
+</table></section>
+
+<section class="grid two">
+  <article class="card"><h2>Debug checklist</h2>
+    <table><tr><th>Signal</th><th>Expected behavior</th></tr><tr><td>active_slot_index</td><td>Does not jump randomly between objects.</td></tr><tr><td>confidence_slots</td><td>Increases or remains stable for a visible stable object.</td></tr><tr><td>memory_stability_slots</td><td>Does not immediately reset after a short sensor loss.</td></tr><tr><td>sensor gates</td><td>Video/contact/imu OFF actually zeros relevant inputs.</td></tr><tr><td>4D motion_norm</td><td>Changes only when motion/deformation is present.</td></tr><tr><td>Open3D export</td><td>Raw/deformed points appear when a Gaussian state exists.</td></tr></table>
+  </article>
+  <article class="card"><h2>Typical failure modes</h2>
+    <ul><li>Slot identity jumping: inspect sticky thresholds and proposal slot lock.</li><li>Sleep still sees the scene: look for sensor-gate bypass in runtime/visualizers.</li><li>Confidence always zero: check evidence strength and disabled sensors.</li><li>3D output empty: Gaussian state may not exist or confidence may be below threshold.</li><li>4D deformation not training: timeline has fewer than two valid frames or an empty sample.</li></ul>
+  </article>
+</section>
+
+<section class="card"><h2>Minimum readiness specification</h2>
+<ul><li>Stable <code>z_obj_slots</code>, <code>confidence_slots</code> and <code>memory_stability_slots</code>.</li><li>Clear active slot and sticky routing without random switching.</li><li>Full sensor-gate protection for video/contact/imu.</li><li>2D decoding from latent state, not a direct sensor copy.</li><li>3D/Open3D output for formed objects.</li><li>4D timeline → deformation → playback/export pipeline.</li><li>Connection to M2 event memory through slot changes.</li><li>Debug UI shows slot identity, confidence, latent heatmap, reconstruction and sleep masks.</li></ul></section>
+</main>
+<footer><div class="wrap">M1 documentation. Keep this page growing with new M1 files and runtime paths.</div></footer>
+</body></html>
