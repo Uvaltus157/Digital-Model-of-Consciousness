@@ -28,9 +28,9 @@ def initialize_unified_system_v510(self: Any, cfg: Any) -> None:
     from src.apps.runner_memory_factory import create_novelty_detector, create_quality_meter, create_replay_buffer, seed_python_random
     from src.apps.runner_model_factory import (
         create_base_optimizer,
-        create_conscious_dreamer_v23,
+        create_conscious_dreamer,
+        create_conscious_dreamer_config,
         create_torch_device,
-        create_v23_config,
         seed_torch,
     )
     from src.apps.runner_services import ensure_runner_services
@@ -65,8 +65,10 @@ def initialize_unified_system_v510(self: Any, cfg: Any) -> None:
     seed_torch(cfg)
 
     self.speech_vocab, self.speech_teacher = load_inner_speech_teacher_from_config(cfg)
-    self.v23_cfg = create_v23_config(cfg, speech_vocab_size=self.speech_vocab.size)
-    self.model = create_conscious_dreamer_v23(cfg, self.device, speech_vocab_size=self.speech_vocab.size)
+    self.model_cfg = create_conscious_dreamer_config(cfg, speech_vocab_size=self.speech_vocab.size)
+    # Compatibility attribute for older code/checkpoints that still look for the old name.
+    self.v23_cfg = self.model_cfg
+    self.model = create_conscious_dreamer(cfg, self.device, speech_vocab_size=self.speech_vocab.size)
     self.optimizer = create_base_optimizer(self.model, cfg)
 
     self.init_leg_control_head()
@@ -198,10 +200,3 @@ def initialize_unified_system_v510(self: Any, cfg: Any) -> None:
     # Idempotent service boundary for the slim path. If the old code above
     # already started services, this does not create duplicates.
     ensure_runner_services(self, cfg)
-
-
-# This name is patched by runner_patches to the extracted loader.
-def load_inner_speech_teacher_from_config(cfg: Any):  # pragma: no cover - replaced at runtime
-    from src.apps.runner_teachers import load_inner_speech_teacher_from_config as _loader
-
-    return _loader(cfg)
