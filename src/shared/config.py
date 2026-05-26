@@ -5,7 +5,14 @@ from typing import Dict, Any
 
 from omegaconf import MISSING
 
-from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_object_imagery import ConsciousDreamerV23Config
+from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer import ConsciousDreamerConfig
+from src.shared.conscious_dreamer_config import make_conscious_dreamer_config_from_unified
+from src.shared.model_dimensions import (
+    MODEL_DIM_KEYS,
+    cfg_get as _cfg_get,
+    model_dimensions_from_runner_cfg,
+    validate_runner_model_dimensions,
+)
 
 from src.apps.unified_conscious_viewer import (
     InnerWorldWindowConfig,
@@ -26,61 +33,8 @@ class TrainLoopV510Config(TrainLoopConfig):
     russian_inner_speech_teacher_enabled: bool = False
 
 
-MODEL_DIM_KEYS = (
-    "action_dim",
-    "embodied_dim",
-    "hand_motor_dim",
-    "tactile_dim",
-    "body_state_dim",
-)
-
-
-def _cfg_get(cfg, key: str):
-    if hasattr(cfg, key):
-        return getattr(cfg, key)
-    if isinstance(cfg, dict):
-        return cfg[key]
-    raise KeyError(key)
-
-
-def model_dimensions_from_runner_cfg(cfg) -> dict:
-    dims = {key: int(_cfg_get(cfg, key)) for key in MODEL_DIM_KEYS}
-    return dims
-
-
-def validate_runner_model_dimensions(cfg) -> dict:
-    dims = model_dimensions_from_runner_cfg(cfg)
-    expected = {
-        "action_dim": 24,
-        "embodied_dim": 15,
-        "hand_motor_dim": 44,
-        "tactile_dim": 42,
-        "body_state_dim": 83,
-    }
-    bad = {k: (dims[k], expected[k]) for k in expected if dims[k] != expected[k]}
-    if bad:
-        raise ValueError(
-            "Invalid model dimensions in runner config: "
-            + ", ".join(f"{k}={got} expected {exp}" for k, (got, exp) in bad.items())
-        )
-    return dims
-
-def make_v23_config_from_unified(cfg: "UnifiedV510Config") -> ConsciousDreamerV23Config:
-    dims = validate_runner_model_dimensions(cfg)
-
-    model_cfg = ConsciousDreamerV23Config()
-    model_cfg.data.image_height = cfg.mujoco_world.height
-    model_cfg.data.image_width = cfg.mujoco_world.width
-
-    # runner.yaml is the single source of truth for model dimensions.
-    model_cfg.data.body_state_dim = dims["body_state_dim"]
-    model_cfg.data.tactile_dim = dims["tactile_dim"]
-    model_cfg.data.hand_motor_dim = dims["hand_motor_dim"]
-    model_cfg.data.embodied_dim = dims["embodied_dim"]
-    model_cfg.data.action_dim = dims["action_dim"]
-
-    model_cfg.object_imagery.image_size = 96
-    return model_cfg
+def make_v23_config_from_unified(cfg: "UnifiedV510Config") -> ConsciousDreamerConfig:
+    return make_conscious_dreamer_config_from_unified(cfg)
 
 
 @dataclass
