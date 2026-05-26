@@ -54,63 +54,82 @@ slot_4d timeline               # temporal 3DGS/xyz history</code></pre>
 </section>
 
 <section class="card"><h2>Main M1 Python files</h2>
-<p class="muted">Links are local repository links. They work when browsing this file inside the repository checkout.</p>
-
-<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/models/object_inner_imagery_3d.py">models/object_inner_imagery_3d.py</a> <span class="badge red">main M1 model</span></h3>
-<div class="path">src/modules/m01_object_imagery/models/object_inner_imagery_3d.py</div>
-<p>The central M1 model file. It contains <code>ObjectInnerImagery3DConfig</code>, helper functions, <code>VisualTactileObjectFusion</code>, <code>ObjectSlotMemory</code>, 2D/3D reconstruction heads and the overall inner object representation system.</p>
-<ul><li><strong>ObjectInnerImagery3DConfig</strong>: latent, hidden, image, vision, tactile, body, hand, leg, point, voxel, slot and dream settings.</li><li><strong>VisualTactileObjectFusion</strong>: maps multimodal features to <code>z_update</code> and sensor strength signals.</li><li><strong>ObjectSlotMemory</strong>: maintains object slots, confidence, stability, sticky routing and active slot identity.</li><li><strong>ObjectImaginationHead2D</strong>: decodes latent object state into RGB/depth/mask and attributes.</li></ul></div>
-
-<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/models/object_imagery_decoder.py">models/object_imagery_decoder.py</a> <span class="badge red">2D semantic decoder</span></h3>
-<div class="path">src/modules/m01_object_imagery/models/object_imagery_decoder.py</div>
-<p>A dedicated decoder for internal object representations. It accepts <code>object_repr</code> and, when context is enabled, appends workspace, thought and reflection vectors. It then creates a feature grid, upsamples with transposed convolutions and emits several heads.</p>
-<ul><li><strong>ObjectImageryConfig</strong>: object_dim, workspace_dim, thought_dim, reflection_dim, hidden_dim, image size/channels and semantic class counts.</li><li><strong>ObjectImageryDecoder</strong>: MLP encoder → latent grid → upsampling → <code>rgb</code>, <code>alpha</code>, <code>depth</code>.</li><li><strong>Semantic heads</strong>: shape/color/material logits, class ids and object confidence.</li><li><strong>blended_object_image()</strong>: blends RGB with alpha and a background value for visualization.</li></ul></div>
-
-<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/models/slot_4d_deformation.py">models/slot_4d_deformation.py</a> <span class="badge red">4D deformation model</span></h3>
-<div class="path">src/modules/m01_object_imagery/models/slot_4d_deformation.py</div>
-<p>The Step 3B neural 4D deformation component. It learns a compact per-slot deformation field over sampled 3D Gaussian points.</p>
-<ul><li><strong>Slot4DDeformationModel</strong>: small MLP mapping <code>[xyz, normalized_time] → delta_xyz</code>.</li><li><strong>Slot4DDeformationTrainer</strong>: keeps one deformation model and optimizer per object slot.</li><li><strong>train_from_timeline()</strong>: trains from the last two timeline frames by predicting <code>xyz(t0)+delta → xyz(t1)</code>.</li><li><strong>Slot4DDeformationMetrics</strong>: slot id, target, validity, loss, motion norm, predicted delta norm, sample count and temporal dt.</li></ul></div>
-
-<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/slot_4d_reconstruction.py">slot_4d_reconstruction.py</a> <span class="badge green">4D timeline</span></h3>
-<div class="path">src/modules/m01_object_imagery/slot_4d_reconstruction.py</div>
-<p>Step 3A: temporal history over per-slot Gaussian states. It does not learn deformation yet; it captures state(t) so Step 3B can learn the deformation.</p>
-<ul><li><strong>Slot4DFrame</strong>: a snapshot of a slot state: live step, gaussian count, loss, confidence, dynamic norm and sampled xyz.</li><li><strong>Slot4DTimelineBuffer</strong>: per-slot frame queue with motion norm, temporal span and mean delta metrics.</li><li><strong>Slot4DReconstructor</strong>: extracts xyz samples from the Gaussian reconstructor and appends timeline frames.</li></ul></div>
-
-<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/slot_4d_playback.py">slot_4d_playback.py</a> <span class="badge purple">4D playback</span></h3>
-<div class="path">src/modules/m01_object_imagery/slot_4d_playback.py</div>
-<p>Step 3C: deformation-aware playback preview. It applies the learned deformation to the current Gaussian state and renders a time-phase preview using the existing Gaussian renderer/backend.</p>
-<ul><li><strong>Slot4DPlaybackRenderer</strong>: computes playback phase, applies deformation and calls preview rendering.</li><li><strong>_DeformedGaussianState</strong>: read-only wrapper that replaces xyz but keeps scale, opacity and color.</li><li><strong>Slot4DPlaybackMetrics</strong>: render validity, deformation usage, gaussian count, phase, delta norm, backend and fps.</li></ul></div>
-
-<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/slot_4d_open3d_export.py">slot_4d_open3d_export.py</a> <span class="badge purple">Open3D export</span></h3>
-<div class="path">src/modules/m01_object_imagery/slot_4d_open3d_export.py</div>
-<p>Exports raw and deformed slot point clouds to a compressed <code>.npz</code> file so a separate Open3D viewer can inspect the latest 4D slot state.</p>
-<ul><li><strong>Slot4DOpen3DExporter</strong>: throttled exporter for raw/deformed xyz, color, alpha and metrics.</li><li><strong>_deformed_xyz()</strong>: applies the deformation model for a playback phase when available.</li><li><strong>export()</strong>: writes arrays such as <code>slot_0_raw_xyz</code>, <code>slot_0_deformed_xyz</code>, color, alpha and phase.</li></ul></div>
-
-<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/runtime.py">runtime.py</a> <span class="badge blue">runtime bridge</span></h3>
-<div class="path">src/modules/m01_object_imagery/runtime.py</div>
-<p>The main M1 runtime bridge. It connects object imagery with M2/M3/M4/M12/M15 through event latent memory, debug windows, passport memory, action traces, trust gates and scenario runtime mixins.</p>
-<ul><li><strong>ObjectImageryRuntimeMixin</strong>: combines many cross-module runtime mixins used by object imagery.</li><li><strong>_input_sensor_enabled()</strong> and <strong>_safe_obs_for_inner_object_viz()</strong>: prevent disabled sensors from leaking into visual/debug paths.</li><li><strong>_ensure_event_latent_memory()</strong>: creates the bridge to event sentence memory.</li><li><strong>update_event_code_visualizer_window()</strong>: shows slot vocabulary and event code sentences.</li></ul></div>
-
-<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/visualizer_inner_object.py">visualizer_inner_object.py</a> <span class="badge purple">2D debug window</span></h3>
-<div class="path">src/modules/m01_object_imagery/visualizer_inner_object.py</div>
-<p>The main 2D object imagery dashboard. It renders slots, RGB/depth/mask previews, confidence, slot activity, latent heatmaps, sensor masks and debug panels through the OpenCV GUI thread.</p>
-<ul><li><strong>InnerObjectVisualizerV2Config</strong>: window size, history, panel size and max slots.</li><li><strong>InnerObjectVisualizerV2</strong>: builds the visible dashboard from object state and runtime signals.</li><li>Helper functions convert tensors to numpy, create color maps, add labels, compute mask stats and handle pose utilities.</li></ul></div>
-
-<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/inner_object_open3d_viewer.py">inner_object_open3d_viewer.py</a> <span class="badge purple">3D/Open3D viewer</span></h3>
-<div class="path">src/modules/m01_object_imagery/inner_object_open3d_viewer.py</div>
-<p>Open3D visualization for internal objects. It is used to inspect points, voxels and slot-separated geometry and to verify that M1 forms an internal 3D object rather than only a 2D image.</p></div>
-
-<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/visualizer_inner_object_3d.py">visualizer_inner_object_3d.py</a> <span class="badge purple">3D visualizer / legacy diagnostic</span></h3>
-<div class="path">src/modules/m01_object_imagery/visualizer_inner_object_3d.py</div>
-<p>An additional or earlier 3D visualization path. The current main 2D dashboard is <code>InnerObjectVisualizerV2</code>, and the Open3D path is <code>InnerObjectOpen3DViewerV2</code>, but this file remains important for 3D object imagery diagnostics.</p></div>
-
-<div class="file-card"><h3><a href="../../../src/modules/m01_object_imagery/inner_visual_runtime.py">inner_visual_runtime.py</a> <span class="badge blue">visual runtime hooks</span></h3>
-<div class="path">src/modules/m01_object_imagery/inner_visual_runtime.py</div>
-<p>Runtime hooks for internal visual windows. This layer manages window update/close behavior and connects visualizer state to runtime flags.</p></div>
-
-<div class="file-card"><h3><a href="../../../src/apps/runner_components.py">src/apps/runner_components.py</a> <span class="badge green">factory integration</span></h3>
-<div class="path">src/apps/runner_components.py</div>
-<p>App-level factories used by the runner to create M1: <code>create_inner_object_system()</code>, <code>create_inner_object_visualizer()</code> and <code>create_inner_object_open3d_viewer()</code>. This is where global config is mapped to M1 implementation constructors.</p></div>
+<p class="muted">This source map now uses the preferred table format: <strong>File → Link → What's inside → How it works</strong>. Links are local repository links.</p>
+<table>
+  <tr><th>File</th><th>Link</th><th>What's inside</th><th>How it works</th></tr>
+  <tr>
+    <td><code>object_inner_imagery_3d.py</code></td>
+    <td><a href="../../../src/modules/m01_object_imagery/models/object_inner_imagery_3d.py">open source</a></td>
+    <td>Main M1 model file: <code>ObjectInnerImagery3DConfig</code>, <code>pad_or_trim</code>, <code>summarize_vision_tensors</code>, <code>VisualTactileObjectFusion</code>, <code>ObjectSlotMemory</code>, 2D/3D heads and the overall inner object representation system.</td>
+    <td>Receives multimodal sensor/action features, creates <code>z_update</code>, routes it into a stable object slot, reads <code>z_obj</code>, and decodes it into internal object representations.</td>
+  </tr>
+  <tr>
+    <td><code>object_imagery_decoder.py</code></td>
+    <td><a href="../../../src/modules/m01_object_imagery/models/object_imagery_decoder.py">open source</a></td>
+    <td><code>ObjectImageryConfig</code>, <code>ObjectImageryDecoder</code>, RGB/alpha/depth heads, shape/color/material heads, object confidence and <code>blended_object_image()</code>.</td>
+    <td>Takes <code>object_repr</code>, optionally appends workspace/thought/reflection context, encodes it through an MLP, expands it into a feature grid and decodes a semantic 2D object image.</td>
+  </tr>
+  <tr>
+    <td><code>slot_4d_deformation.py</code></td>
+    <td><a href="../../../src/modules/m01_object_imagery/models/slot_4d_deformation.py">open source</a></td>
+    <td><code>Slot4DDeformationModel</code>, <code>Slot4DDeformationTrainer</code>, <code>Slot4DDeformationMetrics</code>, one deformation model and optimizer per object slot.</td>
+    <td>Implements Step 3B: learns a compact neural field <code>[xyz, normalized_time] → delta_xyz</code> from two timeline frames, so a slot can be replayed as a deforming 4D object.</td>
+  </tr>
+  <tr>
+    <td><code>slot_4d_reconstruction.py</code></td>
+    <td><a href="../../../src/modules/m01_object_imagery/slot_4d_reconstruction.py">open source</a></td>
+    <td><code>Slot4DFrame</code>, <code>Slot4DTimelineBuffer</code>, <code>Slot4DReconstructor</code>, per-slot temporal history of Gaussian xyz samples and metrics.</td>
+    <td>Implements Step 3A: extracts xyz samples from the Gaussian reconstructor and appends them to a per-slot timeline. This gives the deformation trainer real frame pairs.</td>
+  </tr>
+  <tr>
+    <td><code>slot_4d_playback.py</code></td>
+    <td><a href="../../../src/modules/m01_object_imagery/slot_4d_playback.py">open source</a></td>
+    <td><code>Slot4DPlaybackRenderer</code>, <code>_DeformedGaussianState</code>, <code>Slot4DPlaybackMetrics</code>, phase calculation and preview rendering.</td>
+    <td>Implements Step 3C: computes a playback phase, applies the learned deformation to Gaussian xyz, then renders a deformation-aware preview through the existing Gaussian backend.</td>
+  </tr>
+  <tr>
+    <td><code>slot_4d_open3d_export.py</code></td>
+    <td><a href="../../../src/modules/m01_object_imagery/slot_4d_open3d_export.py">open source</a></td>
+    <td><code>Slot4DOpen3DExporter</code>, <code>SlotOpen3DExportMetrics</code>, raw/deformed xyz extraction, color/alpha extraction and compressed <code>.npz</code> writing.</td>
+    <td>Exports raw and deformed slot point clouds for a separate Open3D viewer. It writes arrays such as <code>slot_0_raw_xyz</code> and <code>slot_0_deformed_xyz</code>.</td>
+  </tr>
+  <tr>
+    <td><code>runtime.py</code></td>
+    <td><a href="../../../src/modules/m01_object_imagery/runtime.py">open source</a></td>
+    <td><code>ObjectImageryRuntimeMixin</code>, sensor-gate helpers, safe observation handling, event latent memory bridge and event-code visualizer update functions.</td>
+    <td>Connects the M1 model to the live system. It protects sleep sensor gates, updates inner object state, pushes slot changes toward event memory and updates debug windows.</td>
+  </tr>
+  <tr>
+    <td><code>visualizer_inner_object.py</code></td>
+    <td><a href="../../../src/modules/m01_object_imagery/visualizer_inner_object.py">open source</a></td>
+    <td><code>InnerObjectVisualizerV2Config</code>, <code>InnerObjectVisualizerV2</code>, tensor-to-image helpers, colormaps, labels, mask stats, pose helpers and dashboard drawing code.</td>
+    <td>Builds the main 2D M1 dashboard: slots, RGB/depth/mask previews, confidence, latent heatmaps, sensor masks, history panels and debug overlays.</td>
+  </tr>
+  <tr>
+    <td><code>inner_object_open3d_viewer.py</code></td>
+    <td><a href="../../../src/modules/m01_object_imagery/inner_object_open3d_viewer.py">open source</a></td>
+    <td>Open3D viewer configuration and viewer logic for internal object point clouds, voxels and slot-separated geometry.</td>
+    <td>Shows whether M1 has formed an internal 3D object rather than only a 2D image. It is used for live inspection of internal geometry.</td>
+  </tr>
+  <tr>
+    <td><code>visualizer_inner_object_3d.py</code></td>
+    <td><a href="../../../src/modules/m01_object_imagery/visualizer_inner_object_3d.py">open source</a></td>
+    <td>Additional / legacy 3D object imagery visualizer path.</td>
+    <td>Provides a diagnostic 3D visualization route. It is kept documented so older 3D debugging paths are not forgotten.</td>
+  </tr>
+  <tr>
+    <td><code>inner_visual_runtime.py</code></td>
+    <td><a href="../../../src/modules/m01_object_imagery/inner_visual_runtime.py">open source</a></td>
+    <td>Runtime hooks for internal visual windows and their update/close behavior.</td>
+    <td>Links runtime window flags to the M1 visualizer lifecycle so debug windows can be opened, refreshed and closed consistently.</td>
+  </tr>
+  <tr>
+    <td><code>runner_components.py</code></td>
+    <td><a href="../../../src/apps/runner_components.py">open source</a></td>
+    <td>App-level factory functions: <code>create_inner_object_system()</code>, <code>create_inner_object_visualizer()</code>, <code>create_inner_object_open3d_viewer()</code> and related kwargs builders.</td>
+    <td>Connects the global runner config to M1 constructors. It is the boundary where the app creates the M1 model and visualizers.</td>
+  </tr>
+</table>
 </section>
 
 <section class="grid two">
