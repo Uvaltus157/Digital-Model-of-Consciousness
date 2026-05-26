@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Runner / src/apps — Project Skeleton</title>
+  <link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+<header><div class="wrap">
+  <div class="nav"><a href="../index.html">← Back to project index</a></div>
+  <span class="eyebrow">src/apps runner skeleton</span>
+  <h1>Runner as the project skeleton</h1>
+  <p class="lead">The runner layer connects Hydra configuration, UnifiedSystemV510 construction, the life loop, IPC control, debug services, visualizers, MuJoCo world creation and training control.</p>
+</div></header>
+
+<main class="wrap">
+<section class="card">
+  <h2>Launch sequence</h2>
+  <div class="flow">
+    <div class="row"><div class="row-title"><a href="../../../runner.py">runner.py</a></div><div class="row-body">Root compatibility launcher. It preserves the normal command and delegates to the slim Hydra entrypoint.</div></div>
+    <div class="arrow">↓</div>
+    <div class="row"><div class="row-title"><a href="../../../src/apps/runner_entry.py">runner_entry.py</a></div><div class="row-body">Hydra <code>main()</code>. It prints resolved config, builds the typed runner config, constructs the system through <code>build_unified_system()</code>, then calls <code>system.run()</code>.</div></div>
+    <div class="arrow">↓</div>
+    <div class="row"><div class="row-title"><a href="../../../src/apps/runner_config.py">runner_config.py</a></div><div class="row-body">Filters unknown top-level/nested OmegaConf keys, merges into <code>UnifiedV510Config</code>, and renders resolved YAML for diagnostics.</div></div>
+    <div class="arrow">↓</div>
+    <div class="row"><div class="row-title"><a href="../../../src/apps/runner_system_factory.py">runner_system_factory.py</a></div><div class="row-body">Single construction sequence: instantiate the system, normalize runtime bookkeeping, normalize startup/window/sensor state, ensure services, apply mode.</div></div>
+    <div class="arrow">↓</div>
+    <div class="row"><div class="row-title"><a href="../../../src/apps/runner.py">runner.py / UnifiedSystemV510</a></div><div class="row-body">Slim compatibility wrapper. It preserves <code>from src.apps.runner import UnifiedSystemV510</code>, assembles mixins and binds main hooks to extracted helpers.</div></div>
+    <div class="arrow">↓</div>
+    <div class="row"><div class="row-title"><a href="../../../src/apps/runner_unified_init.py">runner_unified_init.py</a></div><div class="row-body">Actual heavy initialization: device, seeds, teacher/vocab, world model, optimizer, M1, SelfCore, replay, emotional drive, MuJoCo world, dynamic rig, visualizers, checkpoints and services.</div></div>
+    <div class="arrow">↓</div>
+    <div class="row"><div class="row-title"><a href="../../../src/apps/runner_loop.py">runner_loop.py</a></div><div class="row-body">Runtime life loop: world reset, background train thread, life steps, optional MuJoCo viewer sync, slot-4D streaming, checkpoint save and shutdown.</div></div>
+  </div>
+</section>
+
+<section class="grid two">
+  <article class="card">
+    <h2>IPC control</h2>
+    <table>
+      <tr><th>Component</th><th>Role</th><th>File</th></tr>
+      <tr><td>IPCControlServer</td><td>Main command channel: open/close windows, mode switches, manual actions.</td><td><a href="../../../src/platform/ipc/ipc_control_bus.py">src/platform/ipc/ipc_control_bus.py</a></td></tr>
+      <tr><td>IPCRuntimeMixin</td><td>Processes incoming IPC commands inside the runtime object.</td><td><a href="../../../src/platform/ipc/ipc_runtime.py">src/platform/ipc/ipc_runtime.py</a></td></tr>
+      <tr><td>ModuleDebugStatusServer</td><td>Read-only module status server used by the Module Debug window.</td><td><a href="../../../src/modules/m08_debug_visual_control/module_debug_status_ipc.py">module_debug_status_ipc.py</a></td></tr>
+      <tr><td>ExternalControlMixin</td><td>External control flags and compatibility with the separate control panel.</td><td><a href="../../../src/platform/ipc/external_control.py">external_control.py</a></td></tr>
+      <tr><td>slot_4d stream</td><td>Streams 4D slot state for inspection/visualization.</td><td><a href="../../../src/modules/m02_event_dream_replay/slot_4d_jsonrpc_stream.py">slot_4d_jsonrpc_stream.py</a></td></tr>
+    </table>
+  </article>
+  <article class="card">
+    <h2>Connection diagram</h2>
+    <div class="diagram">
+      <svg width="920" height="440" viewBox="0 0 920 440" xmlns="http://www.w3.org/2000/svg">
+        <style>.b{fill:#fff;stroke:#dce2ee;stroke-width:2}.r{fill:#fff0f0;stroke:#ffc4c4;stroke-width:2}.g{fill:#edfbf3;stroke:#c9edd2;stroke-width:2}.p{fill:#f6f2ff;stroke:#d8ceff;stroke-width:2}.t{font:700 14px system-ui;fill:#172033}.s{font:12px system-ui;fill:#657287}.a{stroke:#3b4658;stroke-width:2;marker-end:url(#m)}</style>
+        <defs><marker id="m" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 z" fill="#3b4658"/></marker></defs>
+        <rect class="b" x="25" y="40" width="160" height="70" rx="14"/><text class="t" x="45" y="70">runner.py</text><text class="s" x="45" y="91">root launcher</text>
+        <rect class="b" x="240" y="40" width="175" height="70" rx="14"/><text class="t" x="260" y="70">runner_entry</text><text class="s" x="260" y="91">Hydra main</text>
+        <rect class="b" x="470" y="40" width="190" height="70" rx="14"/><text class="t" x="490" y="70">system_factory</text><text class="s" x="490" y="91">build system</text>
+        <rect class="r" x="715" y="40" width="170" height="70" rx="14"/><text class="t" x="735" y="70">UnifiedSystem</text><text class="s" x="735" y="91">mixin skeleton</text>
+        <line class="a" x1="185" y1="75" x2="240" y2="75"/><line class="a" x1="415" y1="75" x2="470" y2="75"/><line class="a" x1="660" y1="75" x2="715" y2="75"/>
+        <rect class="r" x="110" y="190" width="180" height="72" rx="14"/><text class="t" x="130" y="220">runner_unified_init</text><text class="s" x="130" y="241">models/world/viz</text>
+        <rect class="g" x="370" y="190" width="180" height="72" rx="14"/><text class="t" x="390" y="220">runner_loop</text><text class="s" x="390" y="241">life step/train/viewer</text>
+        <rect class="p" x="630" y="190" width="190" height="72" rx="14"/><text class="t" x="650" y="220">IPC/services</text><text class="s" x="650" y="241">control/status/debug</text>
+        <line class="a" x1="800" y1="110" x2="210" y2="190"/><line class="a" x1="800" y1="110" x2="460" y2="190"/><line class="a" x1="800" y1="110" x2="725" y2="190"/>
+        <rect class="b" x="110" y="335" width="180" height="62" rx="14"/><text class="t" x="130" y="361">M1 Object Imagery</text><text class="s" x="130" y="382">slots/latent/4D</text>
+        <rect class="b" x="370" y="335" width="180" height="62" rx="14"/><text class="t" x="390" y="361">MuJoCo world</text><text class="s" x="390" y="382">sensors/actions</text>
+        <rect class="b" x="630" y="335" width="190" height="62" rx="14"/><text class="t" x="650" y="361">Debug windows</text><text class="s" x="650" y="382">visual control</text>
+        <line class="a" x1="200" y1="262" x2="200" y2="335"/><line class="a" x1="460" y1="262" x2="460" y2="335"/><line class="a" x1="725" y1="262" x2="725" y2="335"/>
+      </svg>
+    </div>
+  </article>
+</section>
+
+<section class="card">
+  <h2>Main src/apps files</h2>
+  <table>
+    <tr><th>File</th><th>Contents</th><th>Role in the sequence</th></tr>
+    <tr><td><a href="../../../src/apps/runner_entry.py">runner_entry.py</a></td><td>Hydra entrypoint.</td><td>Starts the typed launch chain.</td></tr>
+    <tr><td><a href="../../../src/apps/runner_config.py">runner_config.py</a></td><td>Config filtering and dataclass merge.</td><td>Protects structured config from unknown keys.</td></tr>
+    <tr><td><a href="../../../src/apps/runner_system_factory.py">runner_system_factory.py</a></td><td><code>build_unified_system()</code>.</td><td>Single order for runtime state, startup state, services and mode.</td></tr>
+    <tr><td><a href="../../../src/apps/runner.py">runner.py</a></td><td><code>UnifiedSystemV510</code> wrapper.</td><td>Stable import path, mixins and extracted hooks.</td></tr>
+    <tr><td><a href="../../../src/apps/runner_unified_init.py">runner_unified_init.py</a></td><td><code>initialize_unified_system_v510()</code>.</td><td>Creates heavy runtime components.</td></tr>
+    <tr><td><a href="../../../src/apps/runner_loop.py">runner_loop.py</a></td><td>Life loop.</td><td>Main runtime loop and shutdown path.</td></tr>
+    <tr><td><a href="../../../src/apps/runner_services.py">runner_services.py</a></td><td>IPC/status services.</td><td>Idempotent service startup.</td></tr>
+    <tr><td><a href="../../../src/apps/runner_components.py">runner_components.py</a></td><td>M1/self/emotional/visualizer factories.</td><td>Creates M1 object system and visualizers.</td></tr>
+    <tr><td><a href="../../../src/apps/runner_model_factory.py">runner_model_factory.py</a></td><td>Device, seed, V23 config and Dreamer model.</td><td>Creates the central world model.</td></tr>
+    <tr><td><a href="../../../src/apps/runner_world_factories.py">runner_world_factories.py</a></td><td>MuJoCo world factory.</td><td>Creates the physical simulation world.</td></tr>
+    <tr><td><a href="../../../src/apps/runner_dynamic_rig_config.py">runner_dynamic_rig_config.py</a></td><td>Dynamic rig kwargs.</td><td>Maps config into controller settings.</td></tr>
+    <tr><td><a href="../../../src/apps/runner_optimizer.py">runner_optimizer.py</a></td><td>Optimizer rebuild from module training gate.</td><td>Supports train/passive module modes.</td></tr>
+  </table>
+</section>
+</main>
+<footer><div class="wrap">Runner documentation page. Keep it aligned with src/apps changes.</div></footer>
+</body></html>
