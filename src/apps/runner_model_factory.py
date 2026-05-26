@@ -51,12 +51,9 @@ def seed_torch(cfg: Any) -> int:
 
 def create_conscious_dreamer_config(cfg: Any, speech_vocab_size: int | None = None) -> Any:
     """Create the canonical M5 ConsciousDreamer config from runner config."""
-    # Keep using the existing shared config factory for now. It currently builds
-    # the latest implementation config, and the canonical API maps that to
-    # ConsciousDreamerConfig. This avoids a risky broad rewrite of shared config.
-    from src.shared.config import make_v23_config_from_unified
+    from src.shared.conscious_dreamer_config import make_conscious_dreamer_config_from_unified
 
-    model_cfg = make_v23_config_from_unified(cfg)
+    model_cfg = make_conscious_dreamer_config_from_unified(cfg)
     if speech_vocab_size is not None:
         model_cfg.symbolic_report.text_vocab_size = int(speech_vocab_size)
     return model_cfg
