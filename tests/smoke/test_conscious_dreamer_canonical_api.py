@@ -1,0 +1,36 @@
+from __future__ import annotations
+
+
+def test_conscious_dreamer_canonical_api_exports_latest_model():
+    from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer import (
+        CONSCIOUS_DREAMER_IMPLEMENTATION_LAYER,
+        CONSCIOUS_DREAMER_MODEL_VERSION,
+        ConsciousDreamer,
+        ConsciousDreamerConfig,
+        ConsciousDreamerLatest,
+        ConsciousDreamerLatestConfig,
+    )
+    from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_object_imagery import (
+        ConsciousDreamerV23,
+        ConsciousDreamerV23Config,
+    )
+
+    assert ConsciousDreamer is ConsciousDreamerV23
+    assert ConsciousDreamerConfig is ConsciousDreamerV23Config
+    assert ConsciousDreamerLatest is ConsciousDreamer
+    assert ConsciousDreamerLatestConfig is ConsciousDreamerConfig
+    assert CONSCIOUS_DREAMER_IMPLEMENTATION_LAYER == "V23"
+    assert CONSCIOUS_DREAMER_MODEL_VERSION.startswith("M5_CONSCIOUS_DREAMER")
+
+
+def test_runner_model_factory_uses_canonical_api_names():
+    import src.apps.runner_model_factory as factory
+
+    assert hasattr(factory, "create_conscious_dreamer")
+    assert hasattr(factory, "create_conscious_dreamer_config")
+
+    # Compatibility shims remain available for older smoke tests/checkpoints.
+    assert hasattr(factory, "create_conscious_dreamer_v23")
+    assert hasattr(factory, "create_v23_config")
+    assert factory.create_conscious_dreamer_v23 is not None
+    assert factory.create_v23_config is not None
