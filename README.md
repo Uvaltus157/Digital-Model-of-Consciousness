@@ -8,6 +8,12 @@ The practical goal of the current version is to make internal processes visible 
 
 ---
 
+## Dynamic streams of consciousness
+
+![DMoC dynamic streams of consciousness](docs/images/dmoc_dynamic_streams_of_consciousness.svg)
+
+---
+
 ## Current focus
 
 The current development focus is the modular architecture for a digital model of consciousness:
