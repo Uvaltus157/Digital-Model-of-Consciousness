@@ -83,8 +83,8 @@ EDGES: List[Tuple[str, str, str]] = [
     ("self_core", "action_heads", "self-guided"),
 ]
 
-DEFAULT_FLAGS: Dict[str, bool] = {k: True for k, *_ in MODULES}
-DEFAULT_SENSOR_FLAGS: Dict[str, bool] = {"video": True, "contact": True, "imu": True}
+DEFAULT_FLAGS: Dict[str, bool] = {k: False for k, *_ in MODULES}
+DEFAULT_SENSOR_FLAGS: Dict[str, bool] = {"video": False, "contact": False, "imu": False}
 
 COLLECTIVE_PRESETS: List[Tuple[str, Dict[str, bool]]] = [
     ("Perception", {
@@ -445,13 +445,12 @@ class DiagramCanvas(QtWidgets.QWidget):
         counts = counts or {}
         status = status or {}
 
-        # Checkboxes are commands. Never disable a checkbox just because
-        # trainable_count is absent/zero. Counts are diagnostics only.
+        available = bool(status.get("ready", False))
         for key, card in self.cards.items():
             cnt = counts.get(key, None)
             if key == "long_dynamic_memory" and cnt is None:
                 cnt = counts.get("long_dynamic_object_memory", None)
-            card.set_from_status(bool(flags.get(key, False)), cnt, True)
+            card.set_from_status(bool(flags.get(key, False)), cnt, available)
 
         runner_module_training = status.get("module_training", {}) or {}
         effective_training = bool(status.get("effective_training", status.get("training", False)))
@@ -601,6 +600,10 @@ class ModulesTab(QtWidgets.QWidget):
     def set_module_state(self, flags: Dict[str, bool], counts: Dict[str, int] | None = None, status: Dict | None = None):
         self.diagram.set_module_state(flags, counts, status)
 
+    def set_controls_enabled(self, enabled: bool):
+        for child in self.preset_bar.findChildren(QtWidgets.QPushButton):
+            child.setEnabled(bool(enabled))
+
     def flags(self) -> Dict[str, bool]:
         return self.diagram.flags()
 
@@ -662,6 +665,10 @@ class ActivityModesTab(QtWidgets.QWidget):
             blocker = QtCore.QSignalBlocker(cb)
             cb.setChecked(bool(flags.get(key, True)))
             del blocker
+
+    def set_controls_enabled(self, enabled: bool):
+        for cb in self.sensor_checkboxes.values():
+            cb.setEnabled(bool(enabled))
 
     def sensor_flags(self) -> Dict[str, bool]:
         return {k: bool(cb.isChecked()) for k, cb in self.sensor_checkboxes.items()}
@@ -759,8 +766,8 @@ class ModuleDebugPyQtWindow(QtWidgets.QMainWindow):
 
         self.flags = dict(DEFAULT_FLAGS)
         self.sensor_flags = dict(DEFAULT_SENSOR_FLAGS)
-        self.training_enabled = True
-        self.effective_training = True
+        self.training_enabled = False
+        self.effective_training = False
         self.syncing_from_runner = False
         self.module_training_seq = 0
         self.pending_module_training_seq = 0
@@ -836,13 +843,13 @@ class ModuleDebugPyQtWindow(QtWidgets.QMainWindow):
         self.activity_lamp.setMinimumWidth(230)
         lay.addWidget(self.activity_lamp)
 
-        send = QtWidgets.QPushButton("Send current state")
-        send.clicked.connect(self.send_state)
-        lay.addWidget(send)
+        self.send_btn = QtWidgets.QPushButton("Send current state")
+        self.send_btn.clicked.connect(self.send_state)
+        lay.addWidget(self.send_btn)
 
-        ping = QtWidgets.QPushButton("Ping")
-        ping.clicked.connect(lambda: self.send_action("ping"))
-        lay.addWidget(ping)
+        self.ping_btn = QtWidgets.QPushButton("Ping")
+        self.ping_btn.clicked.connect(lambda: self.send_action("ping"))
+        lay.addWidget(self.ping_btn)
 
         lay.addStretch(1)
         return bar
@@ -910,6 +917,11 @@ class ModuleDebugPyQtWindow(QtWidgets.QMainWindow):
                 font-weight:800;
             }
             QPushButton:hover { background:#263B55; }
+            QPushButton:disabled {
+                background:#151B24;
+                color:#647287;
+                border:1px solid #263142;
+            }
             QLineEdit, QSpinBox {
                 background:#0F1722;
                 color:white;
@@ -920,6 +932,9 @@ class ModuleDebugPyQtWindow(QtWidgets.QMainWindow):
             QCheckBox {
                 spacing:8px;
                 font-weight:800;
+            }
+            QCheckBox:disabled {
+                color:#647287;
             }
             QCheckBox::indicator {
                 width:18px;
@@ -932,6 +947,10 @@ class ModuleDebugPyQtWindow(QtWidgets.QMainWindow):
                 background:#2B66F6;
                 border:1px solid #4F85FF;
             }
+            QCheckBox::indicator:disabled {
+                background:#1B2330;
+                border:1px solid #344052;
+            }
             QLabel#hintLabel {
                 color:#9DB1CD;
                 font-size:13px;
@@ -942,8 +961,13 @@ class ModuleDebugPyQtWindow(QtWidgets.QMainWindow):
     def sync_ui(self):
         self.modules_tab.set_module_state(self.flags, self.last_status.get("trainable_counts", {}), self.last_status)
         self.activity.set_sensor_flags(self.sensor_flags)
+        self.modules_tab.set_controls_enabled(self.last_status_ok)
+        self.activity.set_controls_enabled(self.last_status_ok)
+        self.send_btn.setEnabled(self.last_status_ok)
+        self.ping_btn.setEnabled(self.last_status_ok)
+        self.training_btn.setEnabled(self.last_status_ok)
 
-        state = self.last_status.get("sensor_state", local_sensor_state(self.sensor_flags))
+        state = self.last_status.get("sensor_state", local_sensor_state(self.sensor_flags)) if self.last_status_ok else "unknown"
         full_sleep = bool(self.last_status.get("full_sleep", state == "sleep"))
         self.activity.set_mode(state, full_sleep)
         self.update_top_training_button()
@@ -954,7 +978,10 @@ class ModuleDebugPyQtWindow(QtWidgets.QMainWindow):
         self.training_btn.setChecked(bool(self.training_enabled))
         del blocker
 
-        if self.training_enabled and self.effective_training:
+        if not self.last_status_ok:
+            text = "Training: no signal"
+            color = "#263142"
+        elif self.training_enabled and self.effective_training:
             text = "Training: ON"
             color = "#1F7A45"
         elif self.training_enabled and not self.effective_training:
@@ -1050,11 +1077,21 @@ class ModuleDebugPyQtWindow(QtWidgets.QMainWindow):
             f"action {action}: {'sent' if ok else 'failed'} | cmd={self.host}:{self.port} | status={self.status_host}:{self.status_port}"
         )
 
+    def reset_to_no_signal(self):
+        self.flags = dict(DEFAULT_FLAGS)
+        self.sensor_flags = dict(DEFAULT_SENSOR_FLAGS)
+        self.training_enabled = False
+        self.effective_training = False
+        self.last_status = {}
+        self.sync_ui()
+
     def poll_runner_status(self):
         data = request_module_debug_status(self.status_host, self.status_port, timeout=0.35)
-        if not data:
+        status_age = float(time.time() - float(data.get("updated_at", 0.0))) if isinstance(data, dict) else 999.0
+        if not data or not bool(data.get("ready", True)) or status_age > 2.5:
             self.last_status_ok = False
             self.status_ipc_pill.set_state("grey", "STATUS IPC: no signal")
+            self.reset_to_no_signal()
             self.status_board.raw.set_stable_plain_text(
                 f"Waiting for runner status IPC\n{self.status_host}:{self.status_port}\n\n"
                 "Runner must have module_status_ipc.enabled=true"

@@ -38,6 +38,18 @@ def test_legacy_training_cards_keep_current_runtime_keys() -> None:
     assert set(DEFAULT_FLAGS).issuperset(keys)
 
 
+def test_legacy_training_card_labels_include_module_ids() -> None:
+    labels = {key: label for key, label, _title, _color in LEGACY_TRAINING_MODULES}
+    assert labels["world_model"].startswith("M5 ")
+    assert labels["object_imagery"].startswith("M1 ")
+    assert labels["long_dynamic_memory"].startswith("M4 ")
+    assert labels["core_model"].startswith("M5 ")
+    assert labels["action_heads"].startswith("M3 ")
+    assert labels["leg_control"].startswith("M3 ")
+    assert labels["self_core"].startswith("M9 ")
+    assert labels["inner_speech"].startswith("M7 ")
+
+
 def test_status_schema_is_json_friendly() -> None:
     status = ModuleDebugStatus(
         module_id="M8",

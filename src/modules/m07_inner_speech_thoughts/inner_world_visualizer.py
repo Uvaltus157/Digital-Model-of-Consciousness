@@ -3,7 +3,7 @@ from __future__ import annotations
 """
 inner_world_visualizer.py
 
-Visualizer for the "inner world" of ConsciousDreamerV21.
+Visualizer for the M5 memory-thought inner world.
 
 What it shows:
 - workspace / thought / reflection / object / memory nodes
@@ -15,7 +15,7 @@ What it shows:
 - decoded debug report text
 
 Designed to work with outputs from:
-- conscious_dreamer_memory_thought.ConsciousDreamerV21
+- conscious_dreamer_memory_thought.ConsciousDreamerMemoryThought
 - optional symbolic report from symbolic_report_language.SymbolicReportMixin
 
 It does not depend on MuJoCo and can be plugged into any viewer.

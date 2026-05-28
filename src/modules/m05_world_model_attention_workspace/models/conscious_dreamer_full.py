@@ -3,7 +3,7 @@ from __future__ import annotations
 """
 conscious_dreamer_full.py
 
-Full ConsciousDreamerV2 stack for the embodied MuJoCo project.
+Full ConsciousDreamer core stack for the embodied MuJoCo project.
 
 Includes:
 - separate multimodal encoders
@@ -14,7 +14,7 @@ Includes:
 - object representation
 - embodied/base/arm action prediction
 - realistic hand motor prediction
-- V1-like output dictionary compatibility
+- stable output dictionary contract
 """
 
 from dataclasses import dataclass, field
@@ -67,7 +67,7 @@ class ConsciousV2Config:
 
 
 @dataclass
-class ConsciousDreamerV2Config:
+class ConsciousDreamerCoreConfig:
     data: DreamerV2DataConfig = field(default_factory=DreamerV2DataConfig)
     latent: DreamerV2LatentConfig = field(default_factory=DreamerV2LatentConfig)
     conscious: ConsciousV2Config = field(default_factory=ConsciousV2Config)
@@ -281,8 +281,8 @@ class DecoderHeadsV2(nn.Module):
         return {"rgb": rgb, "depth": depth, "reward": self.reward(rssm), "continue": self.cont(rssm)}
 
 
-class ConsciousDreamerV2Full(nn.Module):
-    def __init__(self, cfg: ConsciousDreamerV2Config) -> None:
+class ConsciousDreamerCore(nn.Module):
+    def __init__(self, cfg: ConsciousDreamerCoreConfig) -> None:
         super().__init__()
         self.cfg = cfg
         d, l, c = cfg.data, cfg.latent, cfg.conscious
@@ -361,8 +361,8 @@ class ConsciousDreamerV2Full(nn.Module):
         return self.step(*args, **kwargs)
 
 
-def make_v2_full_config_from_world(image_height: int = 128, image_width: int = 192, body_state_dim: int = 49, tactile_dim: int = 42, hand_motor_dim: int = 44, embodied_dim: int = 11, action_dim: int = 24) -> ConsciousDreamerV2Config:
-    cfg = ConsciousDreamerV2Config()
+def make_v2_full_config_from_world(image_height: int = 128, image_width: int = 192, body_state_dim: int = 49, tactile_dim: int = 42, hand_motor_dim: int = 44, embodied_dim: int = 11, action_dim: int = 24) -> ConsciousDreamerCoreConfig:
+    cfg = ConsciousDreamerCoreConfig()
     cfg.data.image_height = image_height
     cfg.data.image_width = image_width
     cfg.data.body_state_dim = body_state_dim
@@ -372,13 +372,30 @@ def make_v2_full_config_from_world(image_height: int = 128, image_width: int = 1
     cfg.data.action_dim = action_dim
     return cfg
 
-
-ConsciousDreamerV2 = ConsciousDreamerV2Full
+__all__ = [
+    "DreamerV2DataConfig",
+    "DreamerV2LatentConfig",
+    "ConsciousV2Config",
+    "ConsciousDreamerCore",
+    "ConsciousDreamerCoreConfig",
+    "VisionEncoder",
+    "MLPEncoder",
+    "AttentionControllerV2",
+    "RSSMCoreV2",
+    "WorkspaceV2",
+    "SelfModelV2",
+    "ObjectRepresentationV2",
+    "ReflectiveLoopV2",
+    "ImaginationCoreV2",
+    "ConsciousPlannerV2",
+    "DecoderHeadsV2",
+    "make_v2_full_config_from_world",
+]
 
 
 if __name__ == "__main__":
     cfg = make_v2_full_config_from_world()
-    model = ConsciousDreamerV2Full(cfg)
+    model = ConsciousDreamerCore(cfg)
     state = model.initial_state(1, "cpu")
     out = model.step(
         torch.zeros(1, 3, 128, 192), torch.zeros(1, 3, 128, 192), torch.zeros(1, 7), torch.zeros(1, cfg.data.body_state_dim), state,

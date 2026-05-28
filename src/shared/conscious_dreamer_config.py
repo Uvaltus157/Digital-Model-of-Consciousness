@@ -2,9 +2,8 @@ from __future__ import annotations
 
 """Canonical config helpers for the M5 ConsciousDreamer model.
 
-This file is the runner/app-facing replacement for versioned helpers such as
-`make_v23_config_from_unified()`. It keeps app-level code away from historical
-implementation names and depends only on the shared model-dimension contract.
+This file is the runner/app-facing helper for canonical M5 config creation.
+It depends only on the shared model-dimension contract.
 """
 
 from typing import Any

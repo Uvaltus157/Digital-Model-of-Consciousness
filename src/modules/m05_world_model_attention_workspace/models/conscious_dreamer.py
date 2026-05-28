@@ -24,23 +24,32 @@ single stable M5 model name.
 """
 
 from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_object_imagery import (
-    ConsciousDreamerV23,
-    ConsciousDreamerV23Config,
+    ConsciousDreamerObjectImagery,
+    ConsciousDreamerObjectImageryConfig,
+)
+from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_core import (
+    ConsciousDreamerCore,
+    ConsciousDreamerCoreConfig,
+)
+from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_memory_thought import (
+    ConsciousDreamerMemoryThought,
+    ConsciousDreamerMemoryThoughtConfig,
+)
+from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_inner_speech import (
+    ConsciousDreamerInnerSpeech,
+    ConsciousDreamerInnerSpeechConfig,
 )
 
 
 # Canonical public names used by runner/app code.
-ConsciousDreamer = ConsciousDreamerV23
-ConsciousDreamerConfig = ConsciousDreamerV23Config
+ConsciousDreamer = ConsciousDreamerObjectImagery
+ConsciousDreamerConfig = ConsciousDreamerObjectImageryConfig
 
 # Explicit latest aliases for diagnostics/documentation.
 ConsciousDreamerLatest = ConsciousDreamer
 ConsciousDreamerLatestConfig = ConsciousDreamerConfig
 CONSCIOUS_DREAMER_MODEL_VERSION = "M5_CONSCIOUS_DREAMER_CANONICAL_V1"
 CONSCIOUS_DREAMER_IMPLEMENTATION_LAYER = "V23"
-
-# Backward-compatible aliases. Prefer canonical names in new code.
-ConsciousDreamerV2_3 = ConsciousDreamerV23
 
 
 def make_conscious_dreamer_config_from_world(
@@ -101,9 +110,14 @@ __all__ = [
     "ConsciousDreamerConfig",
     "ConsciousDreamerLatest",
     "ConsciousDreamerLatestConfig",
-    "ConsciousDreamerV23",
-    "ConsciousDreamerV23Config",
-    "ConsciousDreamerV2_3",
+    "ConsciousDreamerObjectImagery",
+    "ConsciousDreamerObjectImageryConfig",
+    "ConsciousDreamerCore",
+    "ConsciousDreamerCoreConfig",
+    "ConsciousDreamerMemoryThought",
+    "ConsciousDreamerMemoryThoughtConfig",
+    "ConsciousDreamerInnerSpeech",
+    "ConsciousDreamerInnerSpeechConfig",
     "make_conscious_dreamer_config_from_world",
     "CONSCIOUS_DREAMER_MODEL_VERSION",
     "CONSCIOUS_DREAMER_IMPLEMENTATION_LAYER",

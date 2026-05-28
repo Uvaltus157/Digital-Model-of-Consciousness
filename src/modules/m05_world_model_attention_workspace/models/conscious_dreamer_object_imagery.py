@@ -3,17 +3,20 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict
 
-from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_inner_speech import ConsciousDreamerV22, ConsciousDreamerV22Config
+from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_inner_speech import (
+    ConsciousDreamerInnerSpeech,
+    ConsciousDreamerInnerSpeechConfig,
+)
 from src.modules.m01_object_imagery.models.object_imagery_decoder import ObjectImageryConfig, ObjectImageryDecoder
 
 
 @dataclass
-class ConsciousDreamerV23Config(ConsciousDreamerV22Config):
+class ConsciousDreamerObjectImageryConfig(ConsciousDreamerInnerSpeechConfig):
     object_imagery: ObjectImageryConfig = field(default_factory=ObjectImageryConfig)
 
 
-class ConsciousDreamerV23(ConsciousDreamerV22):
-    def __init__(self, cfg: ConsciousDreamerV23Config) -> None:
+class ConsciousDreamerObjectImagery(ConsciousDreamerInnerSpeech):
+    def __init__(self, cfg: ConsciousDreamerObjectImageryConfig) -> None:
         super().__init__(cfg)
         self.cfg = cfg
         self.cfg.object_imagery.object_dim = cfg.conscious.object_repr_dim
@@ -35,5 +38,7 @@ class ConsciousDreamerV23(ConsciousDreamerV22):
         out["object_imagery"] = self.build_object_imagery(out)
         return out
 
-
-ConsciousDreamerV2_3 = ConsciousDreamerV23
+__all__ = [
+    "ConsciousDreamerObjectImagery",
+    "ConsciousDreamerObjectImageryConfig",
+]

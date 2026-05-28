@@ -3,11 +3,11 @@ from __future__ import annotations
 """
 conscious_dreamer_memory_thought.py
 
-ConsciousDreamerV2.1:
-- extends V2Full-style multimodal architecture
+ConsciousDreamer memory-thought layer:
+- extends the semantic core multimodal architecture
 - adds ThoughtLoopV2
 - adds AutobiographicalMemoryV2
-- keeps the V2 step() API and V1-style output keys
+- keeps the canonical step() API and stable output keys
 """
 
 from dataclasses import dataclass, field
@@ -16,9 +16,10 @@ from typing import Dict, Optional
 import torch
 import torch.nn as nn
 
-from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_full import (
-    ConsciousDreamerV2Config,
+from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_core import (
     AttentionControllerV2,
+    ConsciousDreamerCore,
+    ConsciousDreamerCoreConfig,
     RSSMCoreV2,
     WorkspaceV2,
     SelfModelV2,
@@ -41,7 +42,7 @@ class ThoughtMemoryConfig:
 
 
 @dataclass
-class ConsciousDreamerV21Config(ConsciousDreamerV2Config):
+class ConsciousDreamerMemoryThoughtConfig(ConsciousDreamerCoreConfig):
     thought_memory: ThoughtMemoryConfig = field(default_factory=ThoughtMemoryConfig)
 
 
@@ -173,9 +174,9 @@ class ConsciousPlannerV21(nn.Module):
         }
 
 
-class ConsciousDreamerV21(nn.Module):
-    def __init__(self, cfg: ConsciousDreamerV21Config) -> None:
-        super().__init__()
+class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
+    def __init__(self, cfg: ConsciousDreamerMemoryThoughtConfig) -> None:
+        nn.Module.__init__(self)
         self.cfg = cfg
         d = cfg.data
         l = cfg.latent
@@ -356,7 +357,7 @@ class ConsciousDreamerV21(nn.Module):
 
 
 def make_v21_config_from_world(image_height=128, image_width=192, body_state_dim=None, tactile_dim=None, hand_motor_dim=None, embodied_dim=None, action_dim=None):
-    cfg = ConsciousDreamerV21Config()
+    cfg = ConsciousDreamerMemoryThoughtConfig()
 
     # runner.yaml is the source of truth for these dimensions.
     required_dims = {
@@ -383,6 +384,8 @@ def make_v21_config_from_world(image_height=128, image_width=192, body_state_dim
     cfg.data.action_dim = action_dim
     return cfg
 
-
-ConsciousDreamerV2_1 = ConsciousDreamerV21
-ConsciousDreamerV21MemoryThought = ConsciousDreamerV21
+__all__ = [
+    "ConsciousDreamerMemoryThought",
+    "ConsciousDreamerMemoryThoughtConfig",
+    "make_v21_config_from_world",
+]

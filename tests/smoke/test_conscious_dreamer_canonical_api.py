@@ -17,12 +17,12 @@ def test_conscious_dreamer_canonical_api_exports_latest_model():
         make_conscious_dreamer_config_from_world as package_make_config,
     )
     from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_object_imagery import (
-        ConsciousDreamerV23,
-        ConsciousDreamerV23Config,
+        ConsciousDreamerObjectImagery,
+        ConsciousDreamerObjectImageryConfig,
     )
 
-    assert ConsciousDreamer is ConsciousDreamerV23
-    assert ConsciousDreamerConfig is ConsciousDreamerV23Config
+    assert ConsciousDreamer is ConsciousDreamerObjectImagery
+    assert ConsciousDreamerConfig is ConsciousDreamerObjectImageryConfig
     assert ConsciousDreamerLatest is ConsciousDreamer
     assert ConsciousDreamerLatestConfig is ConsciousDreamerConfig
     assert PackageConsciousDreamer is ConsciousDreamer
@@ -66,9 +66,3 @@ def test_runner_model_factory_uses_canonical_api_names():
 
     assert hasattr(factory, "create_conscious_dreamer")
     assert hasattr(factory, "create_conscious_dreamer_config")
-
-    # Compatibility shims remain available for older smoke tests/checkpoints.
-    assert hasattr(factory, "create_conscious_dreamer_v23")
-    assert hasattr(factory, "create_v23_config")
-    assert factory.create_conscious_dreamer_v23 is not None
-    assert factory.create_v23_config is not None

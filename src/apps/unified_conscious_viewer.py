@@ -332,8 +332,6 @@ class UnifiedSystemV57:
             embodied_dim=cfg.embodied_dim,
             action_dim=cfg.action_dim,
         )
-        self.v22_cfg = self.model_cfg  # compatibility for old V5.7 diagnostics
-        self.v23_cfg = self.model_cfg  # compatibility with newer checkpoints/helpers
         self.model = ConsciousDreamer(self.model_cfg).to(self.device)
 
         self.optimizer = optim.AdamW(

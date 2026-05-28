@@ -53,6 +53,25 @@ DEFAULT_WINDOW_CONFIG = {
 
 DEFAULT_MODULE_DEBUG_SCRIPT = "pyqt_module_debug_ipc_status_registry.py"
 
+MODULE_TAB_BUTTONS = {
+    "m1": [
+        "btn_object_image",
+        "btn_object_open3d",
+        "btn_object_open3d_rpc",
+        "btn_object_open3d_step4",
+        "btn_object_open3d_file",
+        "btn_save_ply",
+        "btn_save_pcd",
+        "btn_static_dynamic",
+    ],
+    "m2": ["btn_event_code"],
+    "m3": [],
+    "m6": [],
+    "m7": ["btn_inner"],
+    "m8": ["btn_module_debug"],
+    "m14": ["btn_latent"],
+}
+
 
 @dataclass
 class LocalPanelState:
@@ -67,6 +86,9 @@ class LocalPanelState:
     training: bool = False
     module_debug: bool = False
     latent_semantic: bool = False
+    video_sensor_enabled: bool = False
+    contact_sensor_enabled: bool = False
+    imu_sensor_enabled: bool = False
     static_dynamic_code: bool = False
     connected: bool = False
 
@@ -171,29 +193,64 @@ def main() -> None:
             self.btn_module_debug_pyqt.setObjectName("pyqtWindowButton")
             self.btn_agent_actions_pyqt.setObjectName("pyqtWindowButton")
             self.btn_latent = QtWidgets.QPushButton()
+            self.chk_sensor_video = QtWidgets.QCheckBox("Video")
+            self.chk_sensor_contact = QtWidgets.QCheckBox("Tactile")
+            self.chk_sensor_imu = QtWidgets.QCheckBox("IMU")
 
-            for b in [self.btn_mujoco, self.btn_inner, self.btn_cameras, self.btn_actions, self.btn_object_image, self.btn_event_code, self.btn_static_dynamic, self.btn_object_open3d, self.btn_train, self.btn_latent]:
+            for b in [self.btn_mujoco, self.btn_inner, self.btn_cameras, self.btn_actions, self.btn_object_image, self.btn_event_code, self.btn_static_dynamic, self.btn_object_open3d, self.btn_train, self.btn_module_debug, self.btn_latent]:
                 b.setCheckable(True)
                 b.setMinimumHeight(42)
+            for cb in [self.chk_sensor_video, self.chk_sensor_contact, self.chk_sensor_imu]:
+                cb.setChecked(True)
+                cb.setFixedHeight(42)
+                cb.setFixedWidth(92)
+                cb.setStyleSheet(
+                    "QCheckBox {"
+                    " background:#141D29;"
+                    " color:#DCE8F8;"
+                    " border:1px solid #2B3A50;"
+                    " border-radius:10px;"
+                    " font-weight:800;"
+                    " spacing:7px;"
+                    " padding:0 9px;"
+                    "}"
+                    "QCheckBox:hover { background:#1A2636; border:1px solid #4A6386; }"
+                    "QCheckBox:disabled { color:#647287; background:#151B24; border:1px solid #263142; }"
+                    "QCheckBox::indicator {"
+                    " width:15px;"
+                    " height:15px;"
+                    " border-radius:8px;"
+                    " border:1px solid #46566D;"
+                    " background:#263142;"
+                    "}"
+                    "QCheckBox::indicator:checked {"
+                    " background:#43D17B;"
+                    " border:1px solid #9AF3BB;"
+                    "}"
+                    "QCheckBox::indicator:unchecked {"
+                    " background:#263142;"
+                    " border:1px solid #46566D;"
+                    "}"
+                    "QCheckBox::indicator:disabled {"
+                    " background:#1B2330;"
+                    " border:1px solid #344052;"
+                    "}"
+                )
 
-            self.btn_close_aux = QtWidgets.QPushButton("Close aux windows")
             self.btn_save_ply = QtWidgets.QPushButton("Save inner 3D as PLY")
             self.btn_save_pcd = QtWidgets.QPushButton("Save inner 3D as PCD")
             self.btn_save_model = QtWidgets.QPushButton("Save model")
             self.btn_stop = QtWidgets.QPushButton("Stop")
-            self.btn_ping = QtWidgets.QPushButton("Ping")
             self.btn_start_viewer = QtWidgets.QPushButton("Start runner")
             self.btn_stop.setStyleSheet(
                 "QPushButton { background:#7A2D4B; border:1px solid #C45A8B; color:white; "
                 "font-weight:900; border-radius:10px; }"
                 "QPushButton:hover { background:#944060; border:1px solid #FF8FA3; }"
             )
-            self.btn_close_aux.setMinimumHeight(42)
             self.btn_save_ply.setMinimumHeight(42)
             self.btn_save_pcd.setMinimumHeight(42)
             self.btn_save_model.setMinimumHeight(42)
             self.btn_stop.setMinimumHeight(42)
-            self.btn_ping.setMinimumHeight(42)
             self.btn_start_viewer.setMinimumHeight(42)
             self.btn_module_debug_pyqt.setMinimumHeight(42)
             self.btn_agent_actions_pyqt.setMinimumHeight(42)
@@ -201,8 +258,10 @@ def main() -> None:
             self.btn_object_open3d_rpc.setMinimumHeight(42)
             self.btn_object_open3d_file.setMinimumHeight(42)
             self.btn_start_viewer.setToolTip("Start the main runner process with the configured runner.yaml")
-            self.btn_ping.setToolTip("Send a ping action to the runner IPC server")
             self.btn_cameras.setToolTip("Show or hide the input sensors preview window")
+            self.chk_sensor_video.setToolTip("Enable or disable video / eyes input")
+            self.chk_sensor_contact.setToolTip("Enable or disable tactile / contact input")
+            self.chk_sensor_imu.setToolTip("Enable or disable IMU / vestibular body input")
             self.btn_actions.setToolTip("Show or hide the action outputs window")
             self.btn_agent_actions_pyqt.setToolTip("Open or close the PyQt agent action imitation window")
             self.btn_object_image.setToolTip("Show or hide the inner object visualizer window")
@@ -216,8 +275,8 @@ def main() -> None:
             self.btn_latent.setToolTip("Show or hide the latent semantic map window")
             self.btn_mujoco.setToolTip("Enable or disable the MuJoCo viewer on the next runner launch")
             self.btn_train.setToolTip("Enable or disable online training in the runner")
+            self.btn_module_debug.setToolTip("Show or hide the runner-owned module debug visualizer")
             self.btn_module_debug_pyqt.setToolTip("Open or close the registry-backed PyQt module debug window")
-            self.btn_close_aux.setToolTip("Close auxiliary visualizer windows controlled by the runner")
             self.btn_save_ply.setToolTip("Export the current internal 3D object model as a PLY file")
             self.btn_save_pcd.setToolTip("Export the current internal 3D object model as a PCD file")
             self.btn_save_model.setToolTip("Request the runner to save a checkpoint")
@@ -241,14 +300,14 @@ def main() -> None:
             launch_row = QtWidgets.QHBoxLayout()
             launch_row.setSpacing(10)
             launch_row.addWidget(self.btn_start_viewer)
-            launch_row.addWidget(self.btn_ping)
+            launch_row.addWidget(self.btn_stop)
             launch_box = QtWidgets.QGroupBox("Startup and Connection")
             launch_box_lay = QtWidgets.QVBoxLayout()
             launch_box_lay.setSpacing(10)
             launch_box_lay.addLayout(launch_row)
             launch_box.setLayout(launch_box_lay)
 
-            viewers_box = QtWidgets.QGroupBox("Windows and Visualizers")
+            viewers_box = QtWidgets.QGroupBox("Core Brain")
             viewers_box.setStyleSheet("""
                 QGroupBox {
                     background: #101722;
@@ -268,14 +327,14 @@ def main() -> None:
             """)
             viewers_lay = QtWidgets.QVBoxLayout()
             viewers_lay.setSpacing(10)
-
-            viewers_lay.addWidget(self.btn_cameras)
-
-            actions_imit_row = QtWidgets.QHBoxLayout()
-            actions_imit_row.setSpacing(10)
-            actions_imit_row.addWidget(self.btn_actions)
-            actions_imit_row.addWidget(self.btn_agent_actions_pyqt)
-            viewers_lay.addLayout(actions_imit_row)
+            sensor_row = QtWidgets.QHBoxLayout()
+            sensor_row.setSpacing(10)
+            sensor_row.addWidget(self.btn_cameras, 2)
+            sensor_row.addWidget(self.chk_sensor_video, 0)
+            sensor_row.addWidget(self.chk_sensor_contact, 0)
+            sensor_row.addWidget(self.chk_sensor_imu, 0)
+            sensor_row.addWidget(self.btn_train, 2)
+            viewers_lay.addLayout(sensor_row)
 
             module_tabs = QtWidgets.QTabWidget()
             module_tabs.setStyleSheet("""
@@ -300,65 +359,50 @@ def main() -> None:
                     border: 1px solid #4F85FF;
                 }
             """)
-            m1_tab = QtWidgets.QWidget()
-            m1_lay = QtWidgets.QVBoxLayout(m1_tab)
-            m1_lay.setContentsMargins(10, 10, 10, 10)
-            m1_lay.setSpacing(10)
+            def add_module_tab_buttons(tab_lay, button_names):
+                row = None
+                for idx, button_name in enumerate(button_names):
+                    if idx % 2 == 0:
+                        row = QtWidgets.QHBoxLayout()
+                        row.setSpacing(10)
+                        tab_lay.addLayout(row)
+                    row.addWidget(getattr(self, button_name))
+                if row is not None and len(button_names) % 2 == 1:
+                    row.addStretch(1)
 
-            object_debug_row = QtWidgets.QHBoxLayout()
-            object_debug_row.setSpacing(10)
-            object_debug_row.addWidget(self.btn_object_image)
-            object_debug_row.addWidget(self.btn_event_code)
-            object_debug_row.addWidget(self.btn_static_dynamic)
-            m1_lay.addLayout(object_debug_row)
-
-            open3d_debug_row = QtWidgets.QHBoxLayout()
-            open3d_debug_row.setSpacing(10)
-            open3d_debug_row.addWidget(self.btn_object_open3d)
-            open3d_debug_row.addWidget(self.btn_object_open3d_rpc)
-            open3d_debug_row.addWidget(self.btn_object_open3d_step4)
-            open3d_debug_row.addWidget(self.btn_object_open3d_file)
-            m1_lay.addLayout(open3d_debug_row)
-            
-            inner_latent_row = QtWidgets.QHBoxLayout()
-            inner_latent_row.setSpacing(10)
-            inner_latent_row.addWidget(self.btn_inner)
-            inner_latent_row.addWidget(self.btn_latent)
-            m1_lay.addLayout(inner_latent_row)
-            m1_lay.addStretch(1)
-
-            module_tabs.addTab(m1_tab, "m1")
-            for module_idx in range(2, 16):
+            for module_idx in range(1, 16):
                 tab = QtWidgets.QWidget()
                 tab_lay = QtWidgets.QVBoxLayout(tab)
                 tab_lay.setContentsMargins(10, 10, 10, 10)
+                tab_lay.setSpacing(10)
+                add_module_tab_buttons(tab_lay, MODULE_TAB_BUTTONS.get(f"m{module_idx}", []))
                 tab_lay.addStretch(1)
                 module_tabs.addTab(tab, f"m{module_idx}")
             viewers_lay.addWidget(module_tabs)
+            debug_row = QtWidgets.QHBoxLayout()
+            debug_row.setSpacing(10)
+            debug_row.addWidget(self.btn_module_debug_pyqt)
+            debug_row.addWidget(self.btn_save_model)
+            viewers_lay.addLayout(debug_row)
             
             viewers_box.setLayout(viewers_lay)
 
-            model_box = self.make_section("Model and Process", [
+            model_box = self.make_section("World", [
                 self.btn_mujoco,
-                self.btn_train,
-                self.btn_module_debug_pyqt,
             ])
 
             action_row = QtWidgets.QHBoxLayout()
             action_row.setSpacing(10)
-            action_row.addWidget(self.btn_close_aux)
-            action_row.addWidget(self.btn_save_ply)
-            action_row.addWidget(self.btn_save_pcd)
-            action_row.addWidget(self.btn_save_model)
-            action_row.addWidget(self.btn_stop)
+            action_row.addWidget(self.btn_actions)
+            action_row.addWidget(self.btn_agent_actions_pyqt)
             action_box = QtWidgets.QGroupBox("Actions")
             action_box_lay = QtWidgets.QVBoxLayout()
             action_box_lay.addLayout(action_row)
             action_box.setLayout(action_box_lay)
 
             layout.addWidget(launch_box)
-            layout.addWidget(viewers_box)
             layout.addWidget(model_box)
+            layout.addWidget(viewers_box)
             layout.addWidget(action_box)
             layout.addWidget(hint)
             self.setLayout(layout)
@@ -376,16 +420,17 @@ def main() -> None:
             self.btn_object_open3d_rpc.clicked.connect(self.launch_inner_object_open3d_rpc)
             self.btn_object_open3d_file.clicked.connect(self.launch_inner_object_open3d_file)
             self.btn_train.clicked.connect(lambda: self.toggle("training"))
+            self.chk_sensor_video.toggled.connect(lambda checked: self.set_sensor_gate("video", checked))
+            self.chk_sensor_contact.toggled.connect(lambda checked: self.set_sensor_gate("contact", checked))
+            self.chk_sensor_imu.toggled.connect(lambda checked: self.set_sensor_gate("imu", checked))
             self.btn_module_debug.clicked.connect(lambda: self.toggle("module_debug"))
             self.btn_module_debug_pyqt.clicked.connect(self.open_pyqt_module_debug)
             self.btn_agent_actions_pyqt.clicked.connect(self.open_pyqt_agent_actions)
             self.btn_latent.clicked.connect(lambda: self.toggle("latent_semantic"))
-            self.btn_close_aux.clicked.connect(lambda: self.action("close_aux"))
             self.btn_save_ply.clicked.connect(lambda: self.action("save_object_ply"))
             self.btn_save_pcd.clicked.connect(lambda: self.action("save_object_pcd"))
             self.btn_save_model.clicked.connect(lambda: self.action("save_checkpoint"))
             self.btn_stop.clicked.connect(lambda: self.action("stop"))
-            self.btn_ping.clicked.connect(lambda: self.action("ping"))
             self.btn_start_viewer.clicked.connect(self.start_viewer)
 
             self.status_timer = QtCore.QTimer(self)
@@ -408,6 +453,13 @@ def main() -> None:
                     continue
                 if f.name in data:
                     setattr(self.state, f.name, bool(data.get(f.name, False)))
+            sensors = data.get("input_sensors_enabled")
+            if not isinstance(sensors, dict) and isinstance(data.get("sleep_sensor_mask"), dict):
+                sensors = {k: not bool(v) for k, v in data.get("sleep_sensor_mask", {}).items()}
+            if isinstance(sensors, dict):
+                self.state.video_sensor_enabled = bool(sensors.get("video", self.state.video_sensor_enabled))
+                self.state.contact_sensor_enabled = bool(sensors.get("contact", self.state.contact_sensor_enabled))
+                self.state.imu_sensor_enabled = bool(sensors.get("imu", self.state.imu_sensor_enabled))
             if "training_enabled" in data:
                 self.state.training = bool(data.get("training_enabled", False))
             self.state.connected = True
@@ -491,14 +543,17 @@ def main() -> None:
                 self.btn_mujoco,
                 self.btn_inner,
                 self.btn_cameras,
+                self.chk_sensor_video,
+                self.chk_sensor_contact,
+                self.chk_sensor_imu,
                 self.btn_actions,
                 self.btn_object_image,
                 self.btn_event_code,
                 self.btn_static_dynamic,
                 self.btn_object_open3d,
                 self.btn_train,
+                self.btn_module_debug,
                 self.btn_latent,
-                self.btn_close_aux,
                 self.btn_save_ply,
                 self.btn_save_pcd,
                 self.btn_save_model,
@@ -519,14 +574,14 @@ def main() -> None:
             )
 
         def _restore_runner_action_button_styles(self):
-            for btn in [self.btn_close_aux, self.btn_save_ply, self.btn_save_pcd, self.btn_save_model]:
+            for btn in [self.btn_save_ply, self.btn_save_pcd, self.btn_save_model]:
                 btn.setStyleSheet("")
             self.btn_stop.setStyleSheet(self._stop_button_style())
 
         def _set_runner_controls_enabled(self, connected: bool):
             for btn in self._runner_dependent_buttons():
                 btn.setEnabled(bool(connected))
-                if not connected:
+                if not connected and isinstance(btn, QtWidgets.QPushButton):
                     btn.setStyleSheet(self._disabled_runner_button_style())
             if connected:
                 self._restore_runner_action_button_styles()
@@ -733,6 +788,14 @@ def main() -> None:
             self._style_button(self.btn_mujoco, s.mujoco_next_run, "MuJoCo viewer")
             self._style_button(self.btn_inner, s.inner_world, "Inner world / thoughts")
             self._style_button(self.btn_cameras, s.cameras, "Input sensors")
+            for cb, checked in [
+                (self.chk_sensor_video, s.video_sensor_enabled),
+                (self.chk_sensor_contact, s.contact_sensor_enabled),
+                (self.chk_sensor_imu, s.imu_sensor_enabled),
+            ]:
+                blocker = QtCore.QSignalBlocker(cb)
+                cb.setChecked(bool(checked))
+                del blocker
             self._style_button(self.btn_actions, s.actions, "Action outputs")
             
             self._style_button(self.btn_object_image, s.object_image, "Inner Object Visualizer")
@@ -780,6 +843,34 @@ def main() -> None:
             new_value = not current
             setattr(self.state, field, new_value)
             self.send(make_set_state_message(**{field: new_value}))
+
+        def set_sensor_gate(self, key: str, checked: bool):
+            if not self.state.connected:
+                self.status.setText("STATUS IPC: no signal")
+                self.refresh_ui()
+                return
+            if key == "video":
+                self.state.video_sensor_enabled = bool(checked)
+            elif key == "contact":
+                self.state.contact_sensor_enabled = bool(checked)
+            elif key == "imu":
+                self.state.imu_sensor_enabled = bool(checked)
+            sensors = {
+                "video": bool(self.state.video_sensor_enabled),
+                "contact": bool(self.state.contact_sensor_enabled),
+                "imu": bool(self.state.imu_sensor_enabled),
+            }
+            mask = {k: not v for k, v in sensors.items()}
+            self.send(make_set_state_message(
+                input_sensors_enabled=sensors,
+                sleep_sensor_mask=mask,
+                video_sensor_enabled=sensors["video"],
+                contact_sensor_enabled=sensors["contact"],
+                imu_sensor_enabled=sensors["imu"],
+                sleep_video_cut=mask["video"],
+                sleep_contact_cut=mask["contact"],
+                sleep_imu_cut=mask["imu"],
+            ))
 
         def open_pyqt_module_debug(self):
             self._refresh_pyqt_process_status(force=True)
@@ -1099,9 +1190,6 @@ def main() -> None:
                     print(f"[control] viewer start failed: {e2}")
 
         def action(self, action: str):
-            if action == "ping":
-                self.send(make_action_message(action))
-                return
             if not self.state.connected:
                 self.status.setText("STATUS IPC: no signal")
                 self.refresh_ui()

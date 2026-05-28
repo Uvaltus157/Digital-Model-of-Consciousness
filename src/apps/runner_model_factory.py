@@ -59,23 +59,11 @@ def create_conscious_dreamer_config(cfg: Any, speech_vocab_size: int | None = No
     return model_cfg
 
 
-# Compatibility alias for older callers/tests. New code should use
-# create_conscious_dreamer_config().
-def create_v23_config(cfg: Any, speech_vocab_size: int | None = None) -> Any:
-    return create_conscious_dreamer_config(cfg, speech_vocab_size=speech_vocab_size)
-
-
 def create_conscious_dreamer(cfg: Any, device: Any, speech_vocab_size: int | None = None) -> Any:
     """Create the canonical M5 ConsciousDreamer model."""
     from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer import ConsciousDreamer
 
     return ConsciousDreamer(create_conscious_dreamer_config(cfg, speech_vocab_size=speech_vocab_size)).to(device)
-
-
-# Compatibility alias for older callers/tests. New code should use
-# create_conscious_dreamer().
-def create_conscious_dreamer_v23(cfg: Any, device: Any, speech_vocab_size: int | None = None) -> Any:
-    return create_conscious_dreamer(cfg, device, speech_vocab_size=speech_vocab_size)
 
 
 def optimizer_kwargs(cfg: Any) -> Dict[str, float]:

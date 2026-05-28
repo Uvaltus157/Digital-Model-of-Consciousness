@@ -35,6 +35,7 @@ def initialize_unified_system_v510(self: Any, cfg: Any) -> None:
     )
     from src.apps.runner_services import ensure_runner_services
     from src.apps.runner_startup_state import startup_flag
+    from src.apps.runner_teachers import load_inner_speech_teacher_from_config
     from src.apps.runner_visualizer_factory import create_inner_world_visualizer
     from src.apps.runner_world_factories import create_simulation_world
     from src.modules.m06_learning_sleep_consolidation.module_training_gate import ModuleTrainingGate
@@ -66,8 +67,6 @@ def initialize_unified_system_v510(self: Any, cfg: Any) -> None:
 
     self.speech_vocab, self.speech_teacher = load_inner_speech_teacher_from_config(cfg)
     self.model_cfg = create_conscious_dreamer_config(cfg, speech_vocab_size=self.speech_vocab.size)
-    # Compatibility attribute for older code/checkpoints that still look for the old name.
-    self.v23_cfg = self.model_cfg
     self.model = create_conscious_dreamer(cfg, self.device, speech_vocab_size=self.speech_vocab.size)
     self.optimizer = create_base_optimizer(self.model, cfg)
 

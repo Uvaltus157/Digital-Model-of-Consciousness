@@ -62,7 +62,7 @@ class DreamerInnerWorldVisualizerV2(DreamerInnerWorldVisualizer):
         imagery = out.get("object_imagery")
         if not imagery:
             draw_text(canvas, "object_imagery not found", (x + 14, y + 36), cfg.text_color, 0.55, 1)
-            draw_text(canvas, "Use ConsciousDreamerV2.3", (x + 14, y + 62), cfg.accent1, 0.5, 1)
+            draw_text(canvas, "Use ConsciousDreamer object imagery", (x + 14, y + 62), cfg.accent1, 0.5, 1)
             return
 
         comp = blended_object_image(imagery["rgb"], imagery["alpha"])

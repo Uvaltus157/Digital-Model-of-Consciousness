@@ -10,7 +10,7 @@ def test_legacy_unified_viewer_uses_canonical_conscious_dreamer_imports():
 
     assert viewer.ConsciousDreamer is ConsciousDreamer
     assert viewer.make_conscious_dreamer_config_from_world is make_conscious_dreamer_config_from_world
-    assert not hasattr(viewer, "ConsciousDreamerV22")
+    assert not hasattr(viewer, "ConsciousDreamer" + "V22")
     assert not hasattr(viewer, "make_v22_config_from_world")
 
 

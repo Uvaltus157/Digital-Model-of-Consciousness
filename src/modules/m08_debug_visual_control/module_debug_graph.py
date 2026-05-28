@@ -63,12 +63,12 @@ def legacy_training_modules() -> List[Tuple[str, str, str, str]]:
     for module_id in ordered_ids:
         entry = MODULE_BY_ID[module_id]
         runtime_key = MODULE_ID_TO_RUNTIME_KEY[module_id]
-        result.append((runtime_key, entry.short_title, entry.title, _entry_color(module_id)))
+        result.append((runtime_key, f"{module_id} {entry.short_title}", entry.title, _entry_color(module_id)))
 
     # Preserve current non-M module controls.
-    result.insert(3, ("core_model", "Core Model", "Integration", "#A18BFF"))
-    result.insert(5, ("action_heads", "Action Heads", "M3_SELF_ACTION_CAUSALITY", _entry_color("M3")))
-    result.insert(6, ("leg_control", "Leg Control", "M3_SELF_ACTION_CAUSALITY", "#56E2AE"))
+    result.insert(3, ("core_model", "M5 Core Model", "M5_WORLD_MODEL_ATTENTION_WORKSPACE", "#A18BFF"))
+    result.insert(5, ("action_heads", "M3 Action Heads", "M3_SELF_ACTION_CAUSALITY", _entry_color("M3")))
+    result.insert(6, ("leg_control", "M3 Leg Control", "M3_SELF_ACTION_CAUSALITY", "#56E2AE"))
     return result
 
 

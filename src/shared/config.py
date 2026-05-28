@@ -5,8 +5,6 @@ from typing import Dict, Any
 
 from omegaconf import MISSING
 
-from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer import ConsciousDreamerConfig
-from src.shared.conscious_dreamer_config import make_conscious_dreamer_config_from_unified
 from src.shared.model_dimensions import (
     MODEL_DIM_KEYS,
     cfg_get as _cfg_get,
@@ -31,10 +29,6 @@ class TrainLoopV510Config(TrainLoopConfig):
     inner_speech_teacher_file: str = "english_inner_speech_teacher.py"
     english_inner_speech_teacher_enabled: bool = True
     russian_inner_speech_teacher_enabled: bool = False
-
-
-def make_v23_config_from_unified(cfg: "UnifiedV510Config") -> ConsciousDreamerConfig:
-    return make_conscious_dreamer_config_from_unified(cfg)
 
 
 @dataclass

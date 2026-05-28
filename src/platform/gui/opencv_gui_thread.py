@@ -215,11 +215,6 @@ class OpenCVGuiThread:
                 except Exception:
                     break
                 time.sleep(0.01)
-            try:
-                cv2.destroyAllWindows()
-                cv2.waitKey(1)
-            except Exception:
-                pass
             self.stopped_event.set()
 
 

@@ -3,8 +3,8 @@ from __future__ import annotations
 """
 conscious_dreamer_inner_speech.py
 
-ConsciousDreamerV2.2:
-- based on ConsciousDreamerV2.1
+ConsciousDreamer inner-speech layer:
+- based on the memory-thought layer
 - adds built-in InnerSpeechLoop / symbolic report layer
 - each step returns:
     out["symbolic_report"]
@@ -25,28 +25,26 @@ import torch
 import torch.nn as nn
 
 from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_memory_thought import (
-    ConsciousDreamerV21,
-    ConsciousDreamerV21Config,
-    ThoughtMemoryConfig,
-    make_v21_config_from_world,
+    ConsciousDreamerMemoryThought,
+    ConsciousDreamerMemoryThoughtConfig,
 )
 
 from src.modules.m07_inner_speech_thoughts.models.symbolic_report_language import InnerSpeechLoop, SymbolicReportConfig
 
 
 @dataclass
-class ConsciousDreamerV22Config(ConsciousDreamerV21Config):
+class ConsciousDreamerInnerSpeechConfig(ConsciousDreamerMemoryThoughtConfig):
     symbolic_report: SymbolicReportConfig = field(default_factory=SymbolicReportConfig)
 
 
-class ConsciousDreamerV22(ConsciousDreamerV21):
+class ConsciousDreamerInnerSpeech(ConsciousDreamerMemoryThought):
     """
     V2.1 + internal symbolic/phoneme/text report pathway.
     """
 
-    def __init__(self, cfg: ConsciousDreamerV22Config) -> None:
+    def __init__(self, cfg: ConsciousDreamerInnerSpeechConfig) -> None:
         super().__init__(cfg)
-        self.cfg: ConsciousDreamerV22Config = cfg
+        self.cfg: ConsciousDreamerInnerSpeechConfig = cfg
 
         c = cfg.conscious
         tm = cfg.thought_memory
@@ -113,7 +111,7 @@ def make_v22_config_from_world(
     phoneme_vocab_size=96,
     text_vocab_size=2048,
 ):
-    cfg = ConsciousDreamerV22Config()
+    cfg = ConsciousDreamerInnerSpeechConfig()
 
     # runner.yaml is the source of truth for these dimensions.
     required_dims = {
@@ -146,15 +144,16 @@ def make_v22_config_from_world(
     # input_dim is corrected in __init__
     return cfg
 
-
-# aliases
-ConsciousDreamerV2_2 = ConsciousDreamerV22
-ConsciousDreamerV22InnerSpeech = ConsciousDreamerV22
+__all__ = [
+    "ConsciousDreamerInnerSpeech",
+    "ConsciousDreamerInnerSpeechConfig",
+    "make_v22_config_from_world",
+]
 
 
 if __name__ == "__main__":
     cfg = make_v22_config_from_world()
-    model = ConsciousDreamerV22(cfg)
+    model = ConsciousDreamerInnerSpeech(cfg)
     state = model.initial_state(1, "cpu")
 
     left = torch.zeros(1, 3, 128, 192)

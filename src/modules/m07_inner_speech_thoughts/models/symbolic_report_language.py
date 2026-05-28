@@ -3,7 +3,7 @@ from __future__ import annotations
 """
 symbolic_report_language.py
 
-Internal symbolic reporting layer for ConsciousDreamerV2.1.
+Internal symbolic reporting layer for the M5 memory-thought stack.
 
 Goal:
     latent internal states
