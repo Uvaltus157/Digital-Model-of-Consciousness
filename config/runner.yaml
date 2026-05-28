@@ -24,7 +24,7 @@ mode: train # train run
 inner_speech_loss_weight: 0.25
 
 # ------------------------------------------------------------
-# Model dimensions used by ConsciousDreamerV2.3
+# Model dimensions used by M5 ConsciousDreamer
 # ------------------------------------------------------------
 action_dim: 24
 embodied_dim: 15

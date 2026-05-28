@@ -7,8 +7,7 @@ Torch/model imports stay inside factory functions where possible, while pure
 metadata helpers are easy to smoke-test.
 
 M5 naming rule:
-    app-level code should use the canonical ConsciousDreamer API instead of
-    importing historical V21/V22/V23 implementation names directly.
+    app-level code should use the current ConsciousDreamer API.
 """
 
 from dataclasses import dataclass

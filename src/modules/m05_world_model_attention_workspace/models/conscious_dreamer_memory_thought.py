@@ -5,8 +5,8 @@ conscious_dreamer_memory_thought.py
 
 ConsciousDreamer memory-thought layer:
 - extends the semantic core multimodal architecture
-- adds ThoughtLoopV2
-- adds AutobiographicalMemoryV2
+- adds ThoughtLoop
+- adds AutobiographicalMemory
 - keeps the canonical step() API and stable output keys
 """
 
@@ -17,16 +17,16 @@ import torch
 import torch.nn as nn
 
 from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_core import (
-    AttentionControllerV2,
+    AttentionController,
     ConsciousDreamerCore,
     ConsciousDreamerCoreConfig,
-    RSSMCoreV2,
-    WorkspaceV2,
-    SelfModelV2,
-    ObjectRepresentationV2,
-    ReflectiveLoopV2,
-    ImaginationCoreV2,
-    DecoderHeadsV2,
+    RSSMCore,
+    Workspace,
+    SelfModel,
+    ObjectRepresentation,
+    ReflectiveLoop,
+    ImaginationCore,
+    DecoderHeads,
     VisionEncoder,
     MLPEncoder,
 )
@@ -46,7 +46,7 @@ class ConsciousDreamerMemoryThoughtConfig(ConsciousDreamerCoreConfig):
     thought_memory: ThoughtMemoryConfig = field(default_factory=ThoughtMemoryConfig)
 
 
-class ThoughtLoopV2(nn.Module):
+class ThoughtLoop(nn.Module):
     def __init__(self, workspace_dim: int, thought_dim: int, reflective_dim: int, object_dim: int, memory_dim: int, steps: int = 4) -> None:
         super().__init__()
         self.steps = int(steps)
@@ -75,7 +75,7 @@ class ThoughtLoopV2(nn.Module):
         }
 
 
-class AutobiographicalMemoryV2(nn.Module):
+class AutobiographicalMemory(nn.Module):
     """
     Simple online episodic memory.
 
@@ -138,7 +138,7 @@ class AutobiographicalMemoryV2(nn.Module):
         self.usage.mul_(0.9995)
 
 
-class ConsciousPlannerV21(nn.Module):
+class ConsciousPlanner(nn.Module):
     def __init__(self, workspace_dim: int, thought_dim: int, reflective_dim: int, object_dim: int, memory_dim: int, value_dim: int, action_dim: int, embodied_dim: int, hand_motor_dim: int) -> None:
         super().__init__()
         self.value_latent = nn.Sequential(
@@ -191,7 +191,7 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
         self.object_state_encoder = MLPEncoder(9, l.object_state_dim)
         self.action_embed = nn.Embedding(d.action_dim, l.action_embed_dim)
 
-        self.attention = AttentionControllerV2(
+        self.attention = AttentionController(
             dims=[l.vision_dim, l.pose_dim, l.body_dim, l.tactile_dim, l.hand_motor_dim, l.object_state_dim, l.action_embed_dim],
             modality_dim=l.modality_dim,
             heads=c.attention_heads,
@@ -204,20 +204,20 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
             nn.LayerNorm(l.fused_dim),
         )
 
-        self.rssm = RSSMCoreV2(l.fused_dim, l.rssm_dim)
-        self.workspace = WorkspaceV2(l.rssm_dim, c.workspace_dim, c.workspace_dim, c.thought_dim, c.report_dim)
-        self.self_model = SelfModelV2(l.rssm_dim, l.body_dim, l.tactile_dim, c.body_self_dim, c.reflective_self_dim)
-        self.object_repr = ObjectRepresentationV2(c.workspace_dim, c.body_self_dim, l.tactile_dim, l.vision_dim, l.object_state_dim, c.object_repr_dim)
-        self.reflective_loop = ReflectiveLoopV2(c.workspace_dim, c.thought_dim, c.body_self_dim, c.object_repr_dim, c.reflective_self_dim)
+        self.rssm = RSSMCore(l.fused_dim, l.rssm_dim)
+        self.workspace = Workspace(l.rssm_dim, c.workspace_dim, c.workspace_dim, c.thought_dim, c.report_dim)
+        self.self_model = SelfModel(l.rssm_dim, l.body_dim, l.tactile_dim, c.body_self_dim, c.reflective_self_dim)
+        self.object_repr = ObjectRepresentation(c.workspace_dim, c.body_self_dim, l.tactile_dim, l.vision_dim, l.object_state_dim, c.object_repr_dim)
+        self.reflective_loop = ReflectiveLoop(c.workspace_dim, c.thought_dim, c.body_self_dim, c.object_repr_dim, c.reflective_self_dim)
 
         memory_query_dim = c.workspace_dim + c.thought_dim + c.body_self_dim + c.object_repr_dim
         episode_dim = c.workspace_dim + c.thought_dim + c.body_self_dim + c.object_repr_dim + l.tactile_dim + d.embodied_dim + d.hand_motor_dim + c.value_dim
-        self.memory = AutobiographicalMemoryV2(memory_query_dim, episode_dim, tm.memory_dim, tm.memory_slots, tm.write_decay)
+        self.memory = AutobiographicalMemory(memory_query_dim, episode_dim, tm.memory_dim, tm.memory_slots, tm.write_decay)
 
-        self.thought_loop = ThoughtLoopV2(c.workspace_dim, c.thought_dim, c.reflective_self_dim, c.object_repr_dim, tm.memory_dim, tm.thought_steps)
-        self.imagination = ImaginationCoreV2(l.rssm_dim, c.workspace_dim, c.thought_dim, c.object_repr_dim, l.tactile_dim, d.action_dim, c.imagination_horizon)
-        self.planner = ConsciousPlannerV21(c.workspace_dim, c.thought_dim, c.reflective_self_dim, c.object_repr_dim, tm.memory_dim, c.value_dim, d.action_dim, d.embodied_dim, d.hand_motor_dim)
-        self.decoder = DecoderHeadsV2(l.rssm_dim, d.image_channels, d.image_height, d.image_width)
+        self.thought_loop = ThoughtLoop(c.workspace_dim, c.thought_dim, c.reflective_self_dim, c.object_repr_dim, tm.memory_dim, tm.thought_steps)
+        self.imagination = ImaginationCore(l.rssm_dim, c.workspace_dim, c.thought_dim, c.object_repr_dim, l.tactile_dim, d.action_dim, c.imagination_horizon)
+        self.planner = ConsciousPlanner(c.workspace_dim, c.thought_dim, c.reflective_self_dim, c.object_repr_dim, tm.memory_dim, c.value_dim, d.action_dim, d.embodied_dim, d.hand_motor_dim)
+        self.decoder = DecoderHeads(l.rssm_dim, d.image_channels, d.image_height, d.image_width)
 
     def initial_state(self, batch_size: int, device: torch.device | str) -> Dict[str, torch.Tensor]:
         device = torch.device(device)
@@ -356,7 +356,7 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
         return self.step(*args, **kwargs)
 
 
-def make_v21_config_from_world(image_height=128, image_width=192, body_state_dim=None, tactile_dim=None, hand_motor_dim=None, embodied_dim=None, action_dim=None):
+def make_memory_thought_config_from_world(image_height=128, image_width=192, body_state_dim=None, tactile_dim=None, hand_motor_dim=None, embodied_dim=None, action_dim=None):
     cfg = ConsciousDreamerMemoryThoughtConfig()
 
     # runner.yaml is the source of truth for these dimensions.
@@ -370,7 +370,7 @@ def make_v21_config_from_world(image_height=128, image_width=192, body_state_dim
     missing = [k for k, v in required_dims.items() if v is None]
     if missing:
         raise ValueError(
-            "make_v21_config_from_world() does not own model dimensions. "
+            "make_memory_thought_config_from_world() does not own model dimensions. "
             "Read them from runner.yaml / UnifiedV510Config and pass them explicitly. "
             f"Missing: {missing}"
         )
@@ -387,5 +387,5 @@ def make_v21_config_from_world(image_height=128, image_width=192, body_state_dim
 __all__ = [
     "ConsciousDreamerMemoryThought",
     "ConsciousDreamerMemoryThoughtConfig",
-    "make_v21_config_from_world",
+    "make_memory_thought_config_from_world",
 ]

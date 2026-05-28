@@ -73,6 +73,10 @@ MODULE_TAB_BUTTONS = {
 }
 
 
+def start_runner_button_enabled(runner_connected: bool) -> bool:
+    return not bool(runner_connected)
+
+
 @dataclass
 class LocalPanelState:
     mujoco_next_run: bool = False
@@ -578,6 +582,20 @@ def main() -> None:
                 btn.setStyleSheet("")
             self.btn_stop.setStyleSheet(self._stop_button_style())
 
+        def _start_runner_button_style(self, enabled: bool) -> str:
+            if enabled:
+                return (
+                    "QPushButton { background:#1D2A3B; color:white; border:1px solid #37507A; "
+                    "border-radius:10px; padding:8px 12px; font-weight:700; }"
+                    "QPushButton:hover { background:#263B55; }"
+                )
+            return self._disabled_runner_button_style()
+
+        def _set_start_runner_enabled(self, connected: bool):
+            enabled = start_runner_button_enabled(connected)
+            self.btn_start_viewer.setEnabled(enabled)
+            self.btn_start_viewer.setStyleSheet(self._start_runner_button_style(enabled))
+
         def _set_runner_controls_enabled(self, connected: bool):
             for btn in self._runner_dependent_buttons():
                 btn.setEnabled(bool(connected))
@@ -585,6 +603,7 @@ def main() -> None:
                     btn.setStyleSheet(self._disabled_runner_button_style())
             if connected:
                 self._restore_runner_action_button_styles()
+            self._set_start_runner_enabled(connected)
 
         def _style_button(self, btn, on: bool, label: str):
             btn.setChecked(on)
@@ -1129,6 +1148,11 @@ def main() -> None:
             ]
 
         def start_viewer(self):
+            if self.state.connected:
+                self.status.setText("runner already running")
+                self.refresh_ui()
+                return
+
             root = self.resolve_root_path()
             script = root / args.viewer_script
 

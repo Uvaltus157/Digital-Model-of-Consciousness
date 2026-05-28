@@ -7,10 +7,10 @@ Full ConsciousDreamer core stack for the embodied MuJoCo project.
 
 Includes:
 - separate multimodal encoders
-- AttentionControllerV2
-- ConsciousPlannerV2
-- ImaginationCoreV2
-- ReflectiveLoopV2
+- AttentionController
+- ConsciousPlanner
+- ImaginationCore
+- ReflectiveLoop
 - object representation
 - embodied/base/arm action prediction
 - realistic hand motor prediction
@@ -26,7 +26,7 @@ import torch.nn.functional as F
 
 
 @dataclass
-class DreamerV2DataConfig:
+class DreamerDataConfig:
     image_channels: int = 3
     image_height: int = 128
     image_width: int = 192
@@ -39,7 +39,7 @@ class DreamerV2DataConfig:
 
 
 @dataclass
-class DreamerV2LatentConfig:
+class DreamerLatentConfig:
     vision_dim: int = 256
     pose_dim: int = 64
     body_dim: int = 128
@@ -53,7 +53,7 @@ class DreamerV2LatentConfig:
 
 
 @dataclass
-class ConsciousV2Config:
+class ConsciousConfig:
     workspace_dim: int = 256
     body_self_dim: int = 192
     reflective_self_dim: int = 192
@@ -68,9 +68,9 @@ class ConsciousV2Config:
 
 @dataclass
 class ConsciousDreamerCoreConfig:
-    data: DreamerV2DataConfig = field(default_factory=DreamerV2DataConfig)
-    latent: DreamerV2LatentConfig = field(default_factory=DreamerV2LatentConfig)
-    conscious: ConsciousV2Config = field(default_factory=ConsciousV2Config)
+    data: DreamerDataConfig = field(default_factory=DreamerDataConfig)
+    latent: DreamerLatentConfig = field(default_factory=DreamerLatentConfig)
+    conscious: ConsciousConfig = field(default_factory=ConsciousConfig)
 
 
 class VisionEncoder(nn.Module):
@@ -105,7 +105,7 @@ class MLPEncoder(nn.Module):
         return self.net(x)
 
 
-class AttentionControllerV2(nn.Module):
+class AttentionController(nn.Module):
     modality_names = ["vision", "pose", "body", "tactile", "hand_motor", "object", "action"]
 
     def __init__(self, dims: list[int], modality_dim: int = 192, heads: int = 4, workspace_dim: int = 256) -> None:
@@ -136,7 +136,7 @@ class AttentionControllerV2(nn.Module):
         }
 
 
-class RSSMCoreV2(nn.Module):
+class RSSMCore(nn.Module):
     def __init__(self, input_dim: int, state_dim: int) -> None:
         super().__init__()
         self.gru = nn.GRUCell(input_dim, state_dim)
@@ -150,7 +150,7 @@ class RSSMCoreV2(nn.Module):
         return {"state": torch.tanh(h + 0.25 * post), "prior": prior, "posterior": post}
 
 
-class WorkspaceV2(nn.Module):
+class Workspace(nn.Module):
     def __init__(self, rssm_dim: int, workspace_seed_dim: int, workspace_dim: int, thought_dim: int, report_dim: int) -> None:
         super().__init__()
         self.workspace = nn.Sequential(nn.Linear(rssm_dim + workspace_seed_dim, workspace_dim), nn.ReLU(inplace=True), nn.LayerNorm(workspace_dim))
@@ -163,7 +163,7 @@ class WorkspaceV2(nn.Module):
         return {"workspace": w, "thought": thought, "report": self.report(torch.cat([w, thought], dim=-1))}
 
 
-class SelfModelV2(nn.Module):
+class SelfModel(nn.Module):
     def __init__(self, rssm_dim: int, body_latent_dim: int, tactile_dim: int, body_self_dim: int, reflective_dim: int) -> None:
         super().__init__()
         self.body = nn.Sequential(nn.Linear(rssm_dim + body_latent_dim + tactile_dim, body_self_dim), nn.ReLU(inplace=True), nn.LayerNorm(body_self_dim))
@@ -175,7 +175,7 @@ class SelfModelV2(nn.Module):
         return {"body_self": body_self, "reflective_self": reflective}
 
 
-class ObjectRepresentationV2(nn.Module):
+class ObjectRepresentation(nn.Module):
     def __init__(self, workspace_dim: int, body_self_dim: int, tactile_dim: int, vision_dim: int, object_state_dim: int, object_repr_dim: int) -> None:
         super().__init__()
         self.net = nn.Sequential(
@@ -187,7 +187,7 @@ class ObjectRepresentationV2(nn.Module):
         return self.net(torch.cat([workspace, body_self, tactile_latent, vision_latent, object_state_latent], dim=-1))
 
 
-class ReflectiveLoopV2(nn.Module):
+class ReflectiveLoop(nn.Module):
     def __init__(self, workspace_dim: int, thought_dim: int, body_dim: int, object_dim: int, reflective_dim: int) -> None:
         super().__init__()
         self.net = nn.Sequential(
@@ -201,7 +201,7 @@ class ReflectiveLoopV2(nn.Module):
         return {"reflection": reflection, "self_confidence": self.confidence(reflection)}
 
 
-class ImaginationCoreV2(nn.Module):
+class ImaginationCore(nn.Module):
     def __init__(self, rssm_dim: int, workspace_dim: int, thought_dim: int, object_dim: int, tactile_dim: int, action_dim: int, horizon: int = 5) -> None:
         super().__init__()
         self.horizon = horizon
@@ -223,7 +223,7 @@ class ImaginationCoreV2(nn.Module):
         return {"imagined_states": torch.stack(states, dim=1), "imagined_value": torch.cat(values, dim=-1), "imagined_touch": torch.cat(touches, dim=-1)}
 
 
-class ConsciousPlannerV2(nn.Module):
+class ConsciousPlanner(nn.Module):
     def __init__(self, workspace_dim: int, thought_dim: int, reflective_dim: int, object_dim: int, value_dim: int, action_dim: int, embodied_dim: int, hand_motor_dim: int) -> None:
         super().__init__()
         planner_in = workspace_dim + thought_dim + reflective_dim + object_dim + value_dim + 2
@@ -253,7 +253,7 @@ class ConsciousPlannerV2(nn.Module):
         }
 
 
-class DecoderHeadsV2(nn.Module):
+class DecoderHeads(nn.Module):
     def __init__(self, rssm_dim: int, image_channels: int, h: int, w: int) -> None:
         super().__init__()
         bh, bw = max(4, h // 16), max(4, w // 16)
@@ -293,16 +293,16 @@ class ConsciousDreamerCore(nn.Module):
         self.hand_motor_encoder = MLPEncoder(d.hand_motor_dim + d.embodied_dim, l.hand_motor_dim)
         self.object_state_encoder = MLPEncoder(9, l.object_state_dim)
         self.action_embed = nn.Embedding(d.action_dim, l.action_embed_dim)
-        self.attention = AttentionControllerV2([l.vision_dim, l.pose_dim, l.body_dim, l.tactile_dim, l.hand_motor_dim, l.object_state_dim, l.action_embed_dim], l.modality_dim, c.attention_heads, c.workspace_dim)
+        self.attention = AttentionController([l.vision_dim, l.pose_dim, l.body_dim, l.tactile_dim, l.hand_motor_dim, l.object_state_dim, l.action_embed_dim], l.modality_dim, c.attention_heads, c.workspace_dim)
         self.fusion = nn.Sequential(nn.Linear(c.workspace_dim + l.modality_dim, l.fused_dim), nn.ReLU(inplace=True), nn.LayerNorm(l.fused_dim))
-        self.rssm = RSSMCoreV2(l.fused_dim, l.rssm_dim)
-        self.workspace = WorkspaceV2(l.rssm_dim, c.workspace_dim, c.workspace_dim, c.thought_dim, c.report_dim)
-        self.self_model = SelfModelV2(l.rssm_dim, l.body_dim, l.tactile_dim, c.body_self_dim, c.reflective_self_dim)
-        self.object_repr = ObjectRepresentationV2(c.workspace_dim, c.body_self_dim, l.tactile_dim, l.vision_dim, l.object_state_dim, c.object_repr_dim)
-        self.reflective_loop = ReflectiveLoopV2(c.workspace_dim, c.thought_dim, c.body_self_dim, c.object_repr_dim, c.reflective_self_dim)
-        self.imagination = ImaginationCoreV2(l.rssm_dim, c.workspace_dim, c.thought_dim, c.object_repr_dim, l.tactile_dim, d.action_dim, c.imagination_horizon)
-        self.planner = ConsciousPlannerV2(c.workspace_dim, c.thought_dim, c.reflective_self_dim, c.object_repr_dim, c.value_dim, d.action_dim, d.embodied_dim, d.hand_motor_dim)
-        self.decoder = DecoderHeadsV2(l.rssm_dim, d.image_channels, d.image_height, d.image_width)
+        self.rssm = RSSMCore(l.fused_dim, l.rssm_dim)
+        self.workspace = Workspace(l.rssm_dim, c.workspace_dim, c.workspace_dim, c.thought_dim, c.report_dim)
+        self.self_model = SelfModel(l.rssm_dim, l.body_dim, l.tactile_dim, c.body_self_dim, c.reflective_self_dim)
+        self.object_repr = ObjectRepresentation(c.workspace_dim, c.body_self_dim, l.tactile_dim, l.vision_dim, l.object_state_dim, c.object_repr_dim)
+        self.reflective_loop = ReflectiveLoop(c.workspace_dim, c.thought_dim, c.body_self_dim, c.object_repr_dim, c.reflective_self_dim)
+        self.imagination = ImaginationCore(l.rssm_dim, c.workspace_dim, c.thought_dim, c.object_repr_dim, l.tactile_dim, d.action_dim, c.imagination_horizon)
+        self.planner = ConsciousPlanner(c.workspace_dim, c.thought_dim, c.reflective_self_dim, c.object_repr_dim, c.value_dim, d.action_dim, d.embodied_dim, d.hand_motor_dim)
+        self.decoder = DecoderHeads(l.rssm_dim, d.image_channels, d.image_height, d.image_width)
 
     def initial_state(self, batch_size: int, device: torch.device | str) -> Dict[str, torch.Tensor]:
         device = torch.device(device)
@@ -361,7 +361,7 @@ class ConsciousDreamerCore(nn.Module):
         return self.step(*args, **kwargs)
 
 
-def make_v2_full_config_from_world(image_height: int = 128, image_width: int = 192, body_state_dim: int = 49, tactile_dim: int = 42, hand_motor_dim: int = 44, embodied_dim: int = 11, action_dim: int = 24) -> ConsciousDreamerCoreConfig:
+def make_core_config_from_world(image_height: int = 128, image_width: int = 192, body_state_dim: int = 49, tactile_dim: int = 42, hand_motor_dim: int = 44, embodied_dim: int = 11, action_dim: int = 24) -> ConsciousDreamerCoreConfig:
     cfg = ConsciousDreamerCoreConfig()
     cfg.data.image_height = image_height
     cfg.data.image_width = image_width
@@ -373,28 +373,28 @@ def make_v2_full_config_from_world(image_height: int = 128, image_width: int = 1
     return cfg
 
 __all__ = [
-    "DreamerV2DataConfig",
-    "DreamerV2LatentConfig",
-    "ConsciousV2Config",
+    "DreamerDataConfig",
+    "DreamerLatentConfig",
+    "ConsciousConfig",
     "ConsciousDreamerCore",
     "ConsciousDreamerCoreConfig",
     "VisionEncoder",
     "MLPEncoder",
-    "AttentionControllerV2",
-    "RSSMCoreV2",
-    "WorkspaceV2",
-    "SelfModelV2",
-    "ObjectRepresentationV2",
-    "ReflectiveLoopV2",
-    "ImaginationCoreV2",
-    "ConsciousPlannerV2",
-    "DecoderHeadsV2",
-    "make_v2_full_config_from_world",
+    "AttentionController",
+    "RSSMCore",
+    "Workspace",
+    "SelfModel",
+    "ObjectRepresentation",
+    "ReflectiveLoop",
+    "ImaginationCore",
+    "ConsciousPlanner",
+    "DecoderHeads",
+    "make_core_config_from_world",
 ]
 
 
 if __name__ == "__main__":
-    cfg = make_v2_full_config_from_world()
+    cfg = make_core_config_from_world()
     model = ConsciousDreamerCore(cfg)
     state = model.initial_state(1, "cpu")
     out = model.step(

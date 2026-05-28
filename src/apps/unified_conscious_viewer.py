@@ -7,13 +7,13 @@ Legacy V5.7 compatibility module.
 
 This file still provides the V5.7 base classes used by the newer V5.10 runner
 compatibility layer, but model creation now goes through the canonical M5
-ConsciousDreamer API instead of importing versioned V21/V22/V23 names directly.
+ConsciousDreamer API.
 
 Current app-level rule:
     import ConsciousDreamer / ConsciousDreamerConfig from
     src.modules.m05_world_model_attention_workspace.models.conscious_dreamer
 
-Historical implementation files remain inside M5 as internal layers only.
+M5 implementation files remain behind the current public API.
 """
 
 from dataclasses import dataclass, field

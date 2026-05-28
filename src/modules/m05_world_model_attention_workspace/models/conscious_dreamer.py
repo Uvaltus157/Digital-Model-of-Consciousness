@@ -2,15 +2,7 @@ from __future__ import annotations
 
 """Canonical public API for the M5 ConsciousDreamer world model.
 
-Historically M5 grew through implementation layers named V2, V21, V22 and V23:
-
-- V2  : base multimodal Dreamer-style stack;
-- V21 : memory + thought loop;
-- V22 : inner-speech / symbolic report;
-- V23 : object-imagery decoder integration.
-
-The active runtime should not import versioned class names directly. New code
-should import the canonical names from this file:
+Runtime code should import the current M5 model names from this file:
 
     from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer import (
         ConsciousDreamer,
@@ -18,9 +10,7 @@ should import the canonical names from this file:
         make_conscious_dreamer_config_from_world,
     )
 
-The versioned files remain as internal implementation layers and compatibility
-imports only. This keeps checkpoints and older tests safer while giving the app a
-single stable M5 model name.
+This keeps app and runner boundaries on one stable ConsciousDreamer API.
 """
 
 from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_object_imagery import (
@@ -49,7 +39,7 @@ ConsciousDreamerConfig = ConsciousDreamerObjectImageryConfig
 ConsciousDreamerLatest = ConsciousDreamer
 ConsciousDreamerLatestConfig = ConsciousDreamerConfig
 CONSCIOUS_DREAMER_MODEL_VERSION = "M5_CONSCIOUS_DREAMER_CANONICAL_V1"
-CONSCIOUS_DREAMER_IMPLEMENTATION_LAYER = "V23"
+CONSCIOUS_DREAMER_MODEL_ID = "M5_CONSCIOUS_DREAMER"
 
 
 def make_conscious_dreamer_config_from_world(
@@ -67,10 +57,8 @@ def make_conscious_dreamer_config_from_world(
 ) -> ConsciousDreamerConfig:
     """Build the canonical M5 config from explicit world/model dimensions.
 
-    This is the canonical replacement for versioned helpers such as
-    `make_v22_config_from_world()` at app boundaries. It intentionally requires
-    all runtime-owned model dimensions to be passed explicitly, so config files
-    stay the single source of truth.
+    It intentionally requires all runtime-owned model dimensions to be passed
+    explicitly, so config files stay the single source of truth.
     """
     required_dims = {
         "body_state_dim": body_state_dim,
@@ -99,8 +87,8 @@ def make_conscious_dreamer_config_from_world(
     cfg.symbolic_report.phoneme_vocab_size = int(phoneme_vocab_size)
     cfg.symbolic_report.text_vocab_size = int(text_vocab_size)
 
-    # The V23 implementation fixes object-imagery input dimensions in __init__,
-    # but setting image size here keeps config previews deterministic.
+    # The object-imagery layer fixes input dimensions in __init__, but setting
+    # image size here keeps config previews deterministic.
     cfg.object_imagery.image_size = min(int(image_height), int(image_width), 96)
     return cfg
 
@@ -120,5 +108,5 @@ __all__ = [
     "ConsciousDreamerInnerSpeechConfig",
     "make_conscious_dreamer_config_from_world",
     "CONSCIOUS_DREAMER_MODEL_VERSION",
-    "CONSCIOUS_DREAMER_IMPLEMENTATION_LAYER",
+    "CONSCIOUS_DREAMER_MODEL_ID",
 ]

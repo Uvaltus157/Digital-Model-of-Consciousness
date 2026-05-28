@@ -15,7 +15,7 @@ ConsciousDreamer inner-speech layer:
         text_token_ids
         confidence
 
-This model keeps the same step() signature as V2.1.
+This model keeps the same current M5 step() signature.
 """
 
 from dataclasses import dataclass, field
@@ -38,9 +38,7 @@ class ConsciousDreamerInnerSpeechConfig(ConsciousDreamerMemoryThoughtConfig):
 
 
 class ConsciousDreamerInnerSpeech(ConsciousDreamerMemoryThought):
-    """
-    V2.1 + internal symbolic/phoneme/text report pathway.
-    """
+    """Current M5 symbolic/phoneme/text report pathway."""
 
     def __init__(self, cfg: ConsciousDreamerInnerSpeechConfig) -> None:
         super().__init__(cfg)
@@ -99,7 +97,7 @@ class ConsciousDreamerInnerSpeech(ConsciousDreamerMemoryThought):
         return out
 
 
-def make_v22_config_from_world(
+def make_inner_speech_config_from_world(
     image_height=128,
     image_width=192,
     body_state_dim=None,
@@ -124,7 +122,7 @@ def make_v22_config_from_world(
     missing = [k for k, v in required_dims.items() if v is None]
     if missing:
         raise ValueError(
-            "make_v22_config_from_world() does not own model dimensions. "
+            "make_inner_speech_config_from_world() does not own model dimensions. "
             "Read them from runner.yaml / UnifiedV510Config and pass them explicitly. "
             f"Missing: {missing}"
         )
@@ -147,12 +145,12 @@ def make_v22_config_from_world(
 __all__ = [
     "ConsciousDreamerInnerSpeech",
     "ConsciousDreamerInnerSpeechConfig",
-    "make_v22_config_from_world",
+    "make_inner_speech_config_from_world",
 ]
 
 
 if __name__ == "__main__":
-    cfg = make_v22_config_from_world()
+    cfg = make_inner_speech_config_from_world()
     model = ConsciousDreamerInnerSpeech(cfg)
     state = model.initial_state(1, "cpu")
 
