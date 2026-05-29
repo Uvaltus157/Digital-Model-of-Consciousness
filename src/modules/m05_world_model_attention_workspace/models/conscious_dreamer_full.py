@@ -3,18 +3,22 @@ from __future__ import annotations
 """
 conscious_dreamer_full.py
 
-Full ConsciousDreamer core stack for the embodied MuJoCo project.
+Base M5 world-model stack for the embodied MuJoCo project.
 
-Includes:
+M5 is intentionally preconscious:
 - separate multimodal encoders
 - AttentionController
-- ConsciousPlanner
-- ImaginationCore
-- ReflectiveLoop
+- RSSM world state
+- workspace and preconscious thought seed
+- body context, not SelfCore
+- model reflection context, not self-awareness
 - object representation
 - embodied/base/arm action prediction
 - realistic hand motor prediction
 - stable output dictionary contract
+
+True self-binding is owned by M9 SelfCore. True inner speech is owned by M7
+and should be created only after M9 binds focused content to the body/self model.
 """
 
 from dataclasses import dataclass, field
@@ -55,8 +59,8 @@ class DreamerLatentConfig:
 @dataclass
 class ConsciousConfig:
     workspace_dim: int = 256
-    body_self_dim: int = 192
-    reflective_self_dim: int = 192
+    body_context_dim: int = 192
+    model_reflection_dim: int = 192
     thought_dim: int = 192
     value_dim: int = 128
     report_dim: int = 128
@@ -64,6 +68,22 @@ class ConsciousConfig:
     plan_dim: int = 192
     imagination_horizon: int = 5
     attention_heads: int = 4
+
+    @property
+    def body_self_dim(self) -> int:
+        return self.body_context_dim
+
+    @body_self_dim.setter
+    def body_self_dim(self, value: int) -> None:
+        self.body_context_dim = int(value)
+
+    @property
+    def reflective_self_dim(self) -> int:
+        return self.model_reflection_dim
+
+    @reflective_self_dim.setter
+    def reflective_self_dim(self, value: int) -> None:
+        self.model_reflection_dim = int(value)
 
 
 @dataclass
@@ -154,51 +174,54 @@ class Workspace(nn.Module):
     def __init__(self, rssm_dim: int, workspace_seed_dim: int, workspace_dim: int, thought_dim: int, report_dim: int) -> None:
         super().__init__()
         self.workspace = nn.Sequential(nn.Linear(rssm_dim + workspace_seed_dim, workspace_dim), nn.ReLU(inplace=True), nn.LayerNorm(workspace_dim))
-        self.thought = nn.Sequential(nn.Linear(workspace_dim, thought_dim), nn.ReLU(inplace=True), nn.LayerNorm(thought_dim))
+        self.preconscious_seed = nn.Sequential(nn.Linear(workspace_dim, thought_dim), nn.ReLU(inplace=True), nn.LayerNorm(thought_dim))
         self.report = nn.Sequential(nn.Linear(workspace_dim + thought_dim, report_dim), nn.Tanh())
 
     def forward(self, rssm: torch.Tensor, workspace_seed: torch.Tensor) -> Dict[str, torch.Tensor]:
         w = self.workspace(torch.cat([rssm, workspace_seed], dim=-1))
-        thought = self.thought(w)
-        return {"workspace": w, "thought": thought, "report": self.report(torch.cat([w, thought], dim=-1))}
+        seed = self.preconscious_seed(w)
+        return {"workspace": w, "preconscious_seed": seed, "report": self.report(torch.cat([w, seed], dim=-1))}
 
 
-class SelfModel(nn.Module):
-    def __init__(self, rssm_dim: int, body_latent_dim: int, tactile_dim: int, body_self_dim: int, reflective_dim: int) -> None:
+class BodyContextModel(nn.Module):
+    def __init__(self, rssm_dim: int, body_latent_dim: int, tactile_dim: int, body_context_dim: int, model_reflection_dim: int) -> None:
         super().__init__()
-        self.body = nn.Sequential(nn.Linear(rssm_dim + body_latent_dim + tactile_dim, body_self_dim), nn.ReLU(inplace=True), nn.LayerNorm(body_self_dim))
-        self.reflective = nn.Sequential(nn.Linear(rssm_dim + body_self_dim, reflective_dim), nn.ReLU(inplace=True), nn.LayerNorm(reflective_dim))
+        self.body = nn.Sequential(nn.Linear(rssm_dim + body_latent_dim + tactile_dim, body_context_dim), nn.ReLU(inplace=True), nn.LayerNorm(body_context_dim))
+        self.model_reflection = nn.Sequential(nn.Linear(rssm_dim + body_context_dim, model_reflection_dim), nn.ReLU(inplace=True), nn.LayerNorm(model_reflection_dim))
 
     def forward(self, rssm: torch.Tensor, body_latent: torch.Tensor, tactile_latent: torch.Tensor) -> Dict[str, torch.Tensor]:
-        body_self = self.body(torch.cat([rssm, body_latent, tactile_latent], dim=-1))
-        reflective = self.reflective(torch.cat([rssm, body_self], dim=-1))
-        return {"body_self": body_self, "reflective_self": reflective}
+        body_context = self.body(torch.cat([rssm, body_latent, tactile_latent], dim=-1))
+        model_reflection_context = self.model_reflection(torch.cat([rssm, body_context], dim=-1))
+        return {"body_context": body_context, "model_reflection_context": model_reflection_context}
 
 
 class ObjectRepresentation(nn.Module):
-    def __init__(self, workspace_dim: int, body_self_dim: int, tactile_dim: int, vision_dim: int, object_state_dim: int, object_repr_dim: int) -> None:
+    def __init__(self, workspace_dim: int, body_context_dim: int, tactile_dim: int, vision_dim: int, object_state_dim: int, object_repr_dim: int) -> None:
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(workspace_dim + body_self_dim + tactile_dim + vision_dim + object_state_dim, 320),
+            nn.Linear(workspace_dim + body_context_dim + tactile_dim + vision_dim + object_state_dim, 320),
             nn.ReLU(inplace=True), nn.Linear(320, object_repr_dim), nn.LayerNorm(object_repr_dim), nn.ReLU(inplace=True),
         )
 
-    def forward(self, workspace, body_self, tactile_latent, vision_latent, object_state_latent):
-        return self.net(torch.cat([workspace, body_self, tactile_latent, vision_latent, object_state_latent], dim=-1))
+    def forward(self, workspace, body_context, tactile_latent, vision_latent, object_state_latent):
+        return self.net(torch.cat([workspace, body_context, tactile_latent, vision_latent, object_state_latent], dim=-1))
 
 
-class ReflectiveLoop(nn.Module):
-    def __init__(self, workspace_dim: int, thought_dim: int, body_dim: int, object_dim: int, reflective_dim: int) -> None:
+class PreconsciousReflectionLoop(nn.Module):
+    def __init__(self, workspace_dim: int, thought_dim: int, body_dim: int, object_dim: int, model_reflection_dim: int) -> None:
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(workspace_dim + thought_dim + body_dim + object_dim + reflective_dim, 320),
-            nn.ReLU(inplace=True), nn.Linear(320, reflective_dim), nn.LayerNorm(reflective_dim), nn.ReLU(inplace=True),
+            nn.Linear(workspace_dim + thought_dim + body_dim + object_dim + model_reflection_dim, 320),
+            nn.ReLU(inplace=True), nn.Linear(320, model_reflection_dim), nn.LayerNorm(model_reflection_dim), nn.ReLU(inplace=True),
         )
-        self.confidence = nn.Sequential(nn.Linear(reflective_dim, 1), nn.Sigmoid())
+        self.confidence = nn.Sequential(nn.Linear(model_reflection_dim, 1), nn.Sigmoid())
 
-    def forward(self, workspace, thought, body_self, object_repr, reflective_self):
-        reflection = self.net(torch.cat([workspace, thought, body_self, object_repr, reflective_self], dim=-1))
-        return {"reflection": reflection, "self_confidence": self.confidence(reflection)}
+    def forward(self, workspace, preconscious_seed, body_context, object_repr, model_reflection_context):
+        reflection = self.net(torch.cat([workspace, preconscious_seed, body_context, object_repr, model_reflection_context], dim=-1))
+        return {"reflection": reflection, "model_confidence": self.confidence(reflection)}
+
+
+ReflectiveLoop = PreconsciousReflectionLoop
 
 
 class ImaginationCore(nn.Module):
@@ -210,10 +233,10 @@ class ImaginationCore(nn.Module):
         self.value = nn.Sequential(nn.Linear(rssm_dim, 128), nn.ReLU(inplace=True), nn.Linear(128, 1))
         self.touch_pred = nn.Sequential(nn.Linear(rssm_dim, 128), nn.ReLU(inplace=True), nn.Linear(128, 1), nn.Sigmoid())
 
-    def forward(self, rssm, workspace, thought, object_repr, tactile_latent, action_ids):
+    def forward(self, rssm, workspace, preconscious_candidate, object_repr, tactile_latent, action_ids):
         h = rssm
         action_emb = self.action_embed(action_ids.long().reshape(-1))
-        x = torch.cat([workspace, thought, object_repr, tactile_latent, action_emb], dim=-1)
+        x = torch.cat([workspace, preconscious_candidate, object_repr, tactile_latent, action_emb], dim=-1)
         states, values, touches = [], [], []
         for _ in range(self.horizon):
             h = self.cell(x, h)
@@ -224,9 +247,9 @@ class ImaginationCore(nn.Module):
 
 
 class ConsciousPlanner(nn.Module):
-    def __init__(self, workspace_dim: int, thought_dim: int, reflective_dim: int, object_dim: int, value_dim: int, action_dim: int, embodied_dim: int, hand_motor_dim: int) -> None:
+    def __init__(self, workspace_dim: int, thought_dim: int, model_reflection_dim: int, object_dim: int, value_dim: int, action_dim: int, embodied_dim: int, hand_motor_dim: int) -> None:
         super().__init__()
-        planner_in = workspace_dim + thought_dim + reflective_dim + object_dim + value_dim + 2
+        planner_in = workspace_dim + thought_dim + model_reflection_dim + object_dim + value_dim + 2
         self.value_latent = nn.Sequential(nn.Linear(workspace_dim + thought_dim + object_dim, value_dim), nn.ReLU(inplace=True), nn.LayerNorm(value_dim))
         self.action_logits = nn.Linear(planner_in, action_dim)
         self.focus_logits = nn.Linear(planner_in, 8)
@@ -235,9 +258,9 @@ class ConsciousPlanner(nn.Module):
         self.curiosity = nn.Sequential(nn.Linear(planner_in, 1), nn.Sigmoid())
         self.coherence = nn.Sequential(nn.Linear(planner_in, 1), nn.Sigmoid())
 
-    def forward(self, workspace, thought, reflection, object_repr, imagined_value, imagined_touch):
-        value_latent = self.value_latent(torch.cat([workspace, thought, object_repr], dim=-1))
-        x = torch.cat([workspace, thought, reflection, object_repr, value_latent, imagined_value.mean(dim=-1, keepdim=True), imagined_touch.mean(dim=-1, keepdim=True)], dim=-1)
+    def forward(self, workspace, preconscious_candidate, model_reflection, object_repr, imagined_value, imagined_touch):
+        value_latent = self.value_latent(torch.cat([workspace, preconscious_candidate, object_repr], dim=-1))
+        x = torch.cat([workspace, preconscious_candidate, model_reflection, object_repr, value_latent, imagined_value.mean(dim=-1, keepdim=True), imagined_touch.mean(dim=-1, keepdim=True)], dim=-1)
         action_logits = self.action_logits(x)
         focus_logits = self.focus_logits(x)
         return {
@@ -297,11 +320,11 @@ class ConsciousDreamerCore(nn.Module):
         self.fusion = nn.Sequential(nn.Linear(c.workspace_dim + l.modality_dim, l.fused_dim), nn.ReLU(inplace=True), nn.LayerNorm(l.fused_dim))
         self.rssm = RSSMCore(l.fused_dim, l.rssm_dim)
         self.workspace = Workspace(l.rssm_dim, c.workspace_dim, c.workspace_dim, c.thought_dim, c.report_dim)
-        self.self_model = SelfModel(l.rssm_dim, l.body_dim, l.tactile_dim, c.body_self_dim, c.reflective_self_dim)
-        self.object_repr = ObjectRepresentation(c.workspace_dim, c.body_self_dim, l.tactile_dim, l.vision_dim, l.object_state_dim, c.object_repr_dim)
-        self.reflective_loop = ReflectiveLoop(c.workspace_dim, c.thought_dim, c.body_self_dim, c.object_repr_dim, c.reflective_self_dim)
+        self.body_context_model = BodyContextModel(l.rssm_dim, l.body_dim, l.tactile_dim, c.body_context_dim, c.model_reflection_dim)
+        self.object_repr = ObjectRepresentation(c.workspace_dim, c.body_context_dim, l.tactile_dim, l.vision_dim, l.object_state_dim, c.object_repr_dim)
+        self.preconscious_reflection_loop = PreconsciousReflectionLoop(c.workspace_dim, c.thought_dim, c.body_context_dim, c.object_repr_dim, c.model_reflection_dim)
         self.imagination = ImaginationCore(l.rssm_dim, c.workspace_dim, c.thought_dim, c.object_repr_dim, l.tactile_dim, d.action_dim, c.imagination_horizon)
-        self.planner = ConsciousPlanner(c.workspace_dim, c.thought_dim, c.reflective_self_dim, c.object_repr_dim, c.value_dim, d.action_dim, d.embodied_dim, d.hand_motor_dim)
+        self.planner = ConsciousPlanner(c.workspace_dim, c.thought_dim, c.model_reflection_dim, c.object_repr_dim, c.value_dim, d.action_dim, d.embodied_dim, d.hand_motor_dim)
         self.decoder = DecoderHeads(l.rssm_dim, d.image_channels, d.image_height, d.image_width)
 
     def initial_state(self, batch_size: int, device: torch.device | str) -> Dict[str, torch.Tensor]:
@@ -337,20 +360,28 @@ class ConsciousDreamerCore(nn.Module):
         rssm_out = self.rssm(fused, state.get("rssm", self._zeros(left, b, self.cfg.latent.rssm_dim)))
         rssm = rssm_out["state"]
         ws = self.workspace(rssm, attn["workspace_seed"])
-        selves = self.self_model(rssm, body_latent, tactile_latent)
-        obj = self.object_repr(ws["workspace"], selves["body_self"], tactile_latent, vision, object_state_latent)
-        refl = self.reflective_loop(ws["workspace"], ws["thought"], selves["body_self"], obj, selves["reflective_self"])
-        imagined = self.imagination(rssm, ws["workspace"], ws["thought"], obj, tactile_latent, action_ids_in)
-        plan = self.planner(ws["workspace"], ws["thought"], refl["reflection"], obj, imagined["imagined_value"], imagined["imagined_touch"])
+        body_ctx = self.body_context_model(rssm, body_latent, tactile_latent)
+        preconscious_seed = ws["preconscious_seed"]
+        obj = self.object_repr(ws["workspace"], body_ctx["body_context"], tactile_latent, vision, object_state_latent)
+        refl = self.preconscious_reflection_loop(ws["workspace"], preconscious_seed, body_ctx["body_context"], obj, body_ctx["model_reflection_context"])
+        imagined = self.imagination(rssm, ws["workspace"], preconscious_seed, obj, tactile_latent, action_ids_in)
+        plan = self.planner(ws["workspace"], preconscious_seed, refl["reflection"], obj, imagined["imagined_value"], imagined["imagined_touch"])
         decoder = self.decoder(rssm, left.shape[-2:])
         next_state = {"rssm": rssm.detach(), "prev_action_ids": plan["action_ids"].detach(), "prev_embodied_action": plan["embodied_targets"].detach(), "prev_hand_motor": plan["hand_ctrl"].detach()}
         return {
-            "state": next_state, "obs_embed": fused, "rssm": rssm, "prior": rssm_out["prior"], "posterior": rssm_out["posterior"],
+            "state": next_state,
+            "obs_embed": fused,
+            "rssm": rssm,
+            "prior": rssm_out["prior"],
+            "posterior": rssm_out["posterior"],
             "attention": {"tokens": attn["tokens"], "modality_weights": attn["modality_weights"], "attn_matrix": attn["attn_matrix"]},
-            "workspace_out": ws["workspace"], "thoughts": {"thought": ws["thought"]}, "report": ws["report"],
-            "selves": {"body_self": selves["body_self"], "reflective_self": selves["reflective_self"]},
-            "reflection_out": {"reflection": refl["reflection"], "self_confidence": refl["self_confidence"]},
-            "object_repr": obj, "tactile_latent": tactile_latent,
+            "workspace_out": ws["workspace"],
+            "preconscious_thoughts": {"thought_candidate": preconscious_seed, "workspace_seed": preconscious_seed},
+            "preconscious_report": ws["report"],
+            "body_context": body_ctx,
+            "preconscious_reflection_out": {"reflection": refl["reflection"], "model_confidence": refl["model_confidence"]},
+            "object_repr": obj,
+            "tactile_latent": tactile_latent,
             "values": {"value_latent": plan["value_latent"], "curiosity": plan["curiosity"], "coherence": plan["coherence"]},
             "focus": {"focus_logits": plan["focus_logits"], "focus_idx": plan["focus_idx"], "attention_focus_logits": attn["focus_logits"], "attention_focus_idx": attn["focus_idx"]},
             "action_logits": plan["action_logits"], "action_ids": plan["action_ids"], "embodied_targets": plan["embodied_targets"], "hand_ctrl": plan["hand_ctrl"],
@@ -383,8 +414,9 @@ __all__ = [
     "AttentionController",
     "RSSMCore",
     "Workspace",
-    "SelfModel",
+    "BodyContextModel",
     "ObjectRepresentation",
+    "PreconsciousReflectionLoop",
     "ReflectiveLoop",
     "ImaginationCore",
     "ConsciousPlanner",
