@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import torch
 
-from src.modules.m09_self_core.models.self_core import build_self_experience_text, pad_or_trim_selfcore
+from src.modules.m09_self_core.models.self_core import (
+    SelfCore,
+    SelfCoreConfig,
+    build_self_experience_text,
+    pad_or_trim_selfcore,
+)
 
 
 class SelfCoreRuntimeMixin:
@@ -17,6 +22,7 @@ class SelfCoreRuntimeMixin:
             vestibular_dim=24,
             object_latent_dim=self.cfg.self_core.object_latent_dim,
             workspace_dim=self.cfg.self_core.workspace_dim,
+            focus_context_dim=getattr(self.cfg.self_core, "focus_context_dim", self.cfg.self_core.workspace_dim),
             hidden_dim=self.cfg.self_core.hidden_dim,
             self_dim=self.cfg.self_core.self_dim,
         )).to(self.device)
@@ -30,6 +36,75 @@ class SelfCoreRuntimeMixin:
         except Exception as e:
             print(f"[self_core] lazy optimizer attach skipped: {e}")
         print("[self_core] lazy initialized")
+
+
+    def _build_self_core_focus_context(self, out: dict, workspace: torch.Tensor) -> torch.Tensor:
+        """
+        Build the self-bound focus packet from M5 outputs.
+
+        This is the bridge from M5 to M9: the current workspace/focus/thought/
+        object/reflection/planning signals are compressed into one fixed-width
+        focus_context vector. SelfCore then binds this focused content to the
+        latent body/self model.
+        """
+        target_dim = int(getattr(self.cfg.self_core, "focus_context_dim", self.cfg.self_core.workspace_dim))
+        pieces = []
+
+        def add_tensor(x):
+            if torch.is_tensor(x):
+                if x.ndim > 2:
+                    x = x.reshape(x.shape[0], -1)
+                pieces.append(x.float())
+
+        add_tensor(workspace)
+        add_tensor(out.get("object_repr"))
+        add_tensor(out.get("embodied_targets"))
+        add_tensor(out.get("hand_ctrl"))
+        add_tensor(out.get("action_logits"))
+
+        thoughts = out.get("thoughts")
+        if isinstance(thoughts, dict):
+            add_tensor(thoughts.get("thought"))
+            add_tensor(thoughts.get("thought_delta"))
+
+        reflection = out.get("reflection_out")
+        if isinstance(reflection, dict):
+            add_tensor(reflection.get("reflection"))
+            add_tensor(reflection.get("self_confidence"))
+
+        values = out.get("values")
+        if isinstance(values, dict):
+            add_tensor(values.get("value_latent"))
+            add_tensor(values.get("curiosity"))
+            add_tensor(values.get("coherence"))
+
+        focus = out.get("focus")
+        if isinstance(focus, dict):
+            add_tensor(focus.get("focus_logits"))
+            add_tensor(focus.get("attention_focus_logits"))
+            add_tensor(focus.get("focus_idx"))
+            add_tensor(focus.get("attention_focus_idx"))
+
+        attention = out.get("attention")
+        if isinstance(attention, dict):
+            add_tensor(attention.get("modality_weights"))
+            add_tensor(attention.get("attn_matrix"))
+
+        symbolic = out.get("symbolic_report")
+        if isinstance(symbolic, dict):
+            add_tensor(symbolic.get("report_latent"))
+            add_tensor(symbolic.get("confidence"))
+
+        memory = out.get("memory")
+        if isinstance(memory, dict):
+            add_tensor(memory.get("memory_context"))
+
+        if pieces:
+            focus_context = torch.cat(pieces, dim=-1)
+        else:
+            focus_context = torch.zeros(1, target_dim, device=self.device)
+
+        return pad_or_trim_selfcore(focus_context, target_dim, device=self.device)
 
 
     def compute_self_core(self, obs: dict, out: dict):
@@ -61,6 +136,8 @@ class SelfCoreRuntimeMixin:
         if workspace.ndim > 2:
             workspace = workspace.reshape(workspace.shape[0], -1)
 
+        focus_context = self._build_self_core_focus_context(out, workspace)
+
         sc = self.self_core(
             self.self_core_state,
             body_state=body_state,
@@ -69,6 +146,7 @@ class SelfCoreRuntimeMixin:
             vestibular=vestibular,
             object_latent=object_latent,
             workspace=workspace,
+            focus_context=focus_context,
         )
         self.self_core_state = {
             "self_state": sc["self_state"].detach(),
@@ -102,8 +180,8 @@ class SelfCoreRuntimeMixin:
             f"agency={f('agency_score'):.3f} "
             f"ownership={f('body_ownership_score'):.3f} "
             f"continuity={f('self_continuity_score'):.3f} "
+            f"focus_binding={f('focus_binding_score'):.3f} "
             f"uncertainty={f('self_uncertainty'):.3f} "
             f"curiosity={f('self_curiosity'):.3f} | "
             f"{sc.get('self_experience_text', '')}"
         )
-
