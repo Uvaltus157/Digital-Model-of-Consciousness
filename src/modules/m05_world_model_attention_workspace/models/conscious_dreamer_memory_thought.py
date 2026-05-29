@@ -3,25 +3,22 @@ from __future__ import annotations
 """
 conscious_dreamer_memory_thought.py
 
-ConsciousDreamer memory / preconscious-candidate layer:
-- extends the semantic core multimodal architecture
-- adds PreconsciousThoughtLoop
-- adds AutobiographicalMemory
-- keeps the canonical step() API and stable output keys
+M5 memory / preconscious-candidate layer.
 
-Important architecture note:
-    This layer does NOT produce a self-aware conscious thought.
-    It produces a preconscious thought candidate: a latent action/planning seed
-    formed inside M5 before M9 SelfCore binds it to the body/self model.
+Architecture rule:
+    M5 is a preconscious world-model and action-preparation module.
+    It does not create autobiographical memory, self-aware thought, or inner
+    speech. Those appear only after M9 self-binding and M7/M11 access.
 
-    Conscious thought should be understood as:
-        M5 preconscious candidate
-        -> M9 self-binding / subjective meaning
-        -> M11 global access / M7 inner speech
+This layer adds:
+- PreconsciousThoughtLoop
+- PreconsciousEpisodeMemory
+- body_context / model_reflection_context naming
+- preconscious_reflection_out naming
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Dict
 
 import torch
 import torch.nn as nn
@@ -32,9 +29,9 @@ from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_co
     ConsciousDreamerCoreConfig,
     RSSMCore,
     Workspace,
-    SelfModel,
+    BodyContextModel,
     ObjectRepresentation,
-    ReflectiveLoop,
+    PreconsciousReflectionLoop,
     ImaginationCore,
     DecoderHeads,
     VisionEncoder,
@@ -57,11 +54,11 @@ class ConsciousDreamerMemoryThoughtConfig(ConsciousDreamerCoreConfig):
 
 
 class PreconsciousThoughtLoop(nn.Module):
-    def __init__(self, workspace_dim: int, thought_dim: int, reflective_dim: int, object_dim: int, memory_dim: int, steps: int = 4) -> None:
+    def __init__(self, workspace_dim: int, thought_dim: int, reflection_dim: int, object_dim: int, memory_dim: int, steps: int = 4) -> None:
         super().__init__()
         self.steps = int(steps)
         self.drive = nn.Sequential(
-            nn.Linear(workspace_dim + thought_dim + reflective_dim + object_dim + memory_dim, thought_dim),
+            nn.Linear(workspace_dim + thought_dim + reflection_dim + object_dim + memory_dim, thought_dim),
             nn.ReLU(inplace=True),
             nn.LayerNorm(thought_dim),
         )
@@ -85,17 +82,17 @@ class PreconsciousThoughtLoop(nn.Module):
         }
 
 
-# Backward-compatible Python class alias inside the implementation only.
-# Runtime outputs use `preconscious_thoughts`, not `thoughts`.
+# Backward-compatible Python class alias inside implementation only.
 ThoughtLoop = PreconsciousThoughtLoop
 
 
-class AutobiographicalMemory(nn.Module):
+class PreconsciousEpisodeMemory(nn.Module):
     """
-    Simple online episodic memory.
+    Online preconscious episode cache.
 
-    Memory is stored as buffers and updated without gradients.
-    Read path is differentiable through query projection.
+    This is not autobiographical memory. It stores sensorimotor/planning traces
+    before M9 self-binding. True autobiographical memory should be written after
+    self_core.self_bound_context exists.
     """
     def __init__(self, query_dim: int, episode_dim: int, memory_dim: int = 256, slots: int = 256, write_decay: float = 0.985) -> None:
         super().__init__()
@@ -115,9 +112,6 @@ class AutobiographicalMemory(nn.Module):
 
     def read(self, query: torch.Tensor) -> Dict[str, torch.Tensor]:
         q = self.query_proj(query)
-        # Stable snapshot of mutable online memory buffers.
-        # Prevents autograd version errors when life-loop writes memory
-        # while train-thread is in backward().
         mem = self.memory.detach().clone().to(q.device, q.dtype)
         usage = self.usage.detach().clone().to(q.device, q.dtype)
 
@@ -153,15 +147,19 @@ class AutobiographicalMemory(nn.Module):
         self.usage.mul_(0.9995)
 
 
+# Deprecated alias for old imports/checkpoints. New code uses PreconsciousEpisodeMemory.
+AutobiographicalMemory = PreconsciousEpisodeMemory
+
+
 class ConsciousPlanner(nn.Module):
-    def __init__(self, workspace_dim: int, thought_dim: int, reflective_dim: int, object_dim: int, memory_dim: int, value_dim: int, action_dim: int, embodied_dim: int, hand_motor_dim: int) -> None:
+    def __init__(self, workspace_dim: int, thought_dim: int, reflection_dim: int, object_dim: int, memory_dim: int, value_dim: int, action_dim: int, embodied_dim: int, hand_motor_dim: int) -> None:
         super().__init__()
         self.value_latent = nn.Sequential(
             nn.Linear(workspace_dim + thought_dim + object_dim + memory_dim, value_dim),
             nn.ReLU(inplace=True),
             nn.LayerNorm(value_dim),
         )
-        planner_in = workspace_dim + thought_dim + reflective_dim + object_dim + memory_dim + value_dim + 2
+        planner_in = workspace_dim + thought_dim + reflection_dim + object_dim + memory_dim + value_dim + 2
         self.action_logits = nn.Linear(planner_in, action_dim)
         self.focus_logits = nn.Linear(planner_in, 8)
         self.embodied = nn.Sequential(nn.Linear(planner_in, 256), nn.ReLU(inplace=True), nn.Linear(256, embodied_dim), nn.Tanh())
@@ -212,26 +210,25 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
             heads=c.attention_heads,
             workspace_dim=c.workspace_dim,
         )
-
         self.fusion = nn.Sequential(
             nn.Linear(c.workspace_dim + l.modality_dim, l.fused_dim),
             nn.ReLU(inplace=True),
             nn.LayerNorm(l.fused_dim),
         )
-
         self.rssm = RSSMCore(l.fused_dim, l.rssm_dim)
         self.workspace = Workspace(l.rssm_dim, c.workspace_dim, c.workspace_dim, c.thought_dim, c.report_dim)
-        self.self_model = SelfModel(l.rssm_dim, l.body_dim, l.tactile_dim, c.body_self_dim, c.reflective_self_dim)
-        self.object_repr = ObjectRepresentation(c.workspace_dim, c.body_self_dim, l.tactile_dim, l.vision_dim, l.object_state_dim, c.object_repr_dim)
-        self.reflective_loop = ReflectiveLoop(c.workspace_dim, c.thought_dim, c.body_self_dim, c.object_repr_dim, c.reflective_self_dim)
+        self.body_context_model = BodyContextModel(l.rssm_dim, l.body_dim, l.tactile_dim, c.body_context_dim, c.model_reflection_dim)
+        self.object_repr = ObjectRepresentation(c.workspace_dim, c.body_context_dim, l.tactile_dim, l.vision_dim, l.object_state_dim, c.object_repr_dim)
+        self.preconscious_reflection_loop = PreconsciousReflectionLoop(c.workspace_dim, c.thought_dim, c.body_context_dim, c.object_repr_dim, c.model_reflection_dim)
 
-        memory_query_dim = c.workspace_dim + c.thought_dim + c.body_self_dim + c.object_repr_dim
-        episode_dim = c.workspace_dim + c.thought_dim + c.body_self_dim + c.object_repr_dim + l.tactile_dim + d.embodied_dim + d.hand_motor_dim + c.value_dim
-        self.memory = AutobiographicalMemory(memory_query_dim, episode_dim, tm.memory_dim, tm.memory_slots, tm.write_decay)
+        memory_query_dim = c.workspace_dim + c.thought_dim + c.body_context_dim + c.object_repr_dim
+        episode_dim = c.workspace_dim + c.thought_dim + c.body_context_dim + c.object_repr_dim + l.tactile_dim + d.embodied_dim + d.hand_motor_dim + c.value_dim
+        self.preconscious_memory = PreconsciousEpisodeMemory(memory_query_dim, episode_dim, tm.memory_dim, tm.memory_slots, tm.write_decay)
+        self.memory = self.preconscious_memory
 
-        self.thought_loop = PreconsciousThoughtLoop(c.workspace_dim, c.thought_dim, c.reflective_self_dim, c.object_repr_dim, tm.memory_dim, tm.thought_steps)
+        self.thought_loop = PreconsciousThoughtLoop(c.workspace_dim, c.thought_dim, c.model_reflection_dim, c.object_repr_dim, tm.memory_dim, tm.thought_steps)
         self.imagination = ImaginationCore(l.rssm_dim, c.workspace_dim, c.thought_dim, c.object_repr_dim, l.tactile_dim, d.action_dim, c.imagination_horizon)
-        self.planner = ConsciousPlanner(c.workspace_dim, c.thought_dim, c.reflective_self_dim, c.object_repr_dim, tm.memory_dim, c.value_dim, d.action_dim, d.embodied_dim, d.hand_motor_dim)
+        self.planner = ConsciousPlanner(c.workspace_dim, c.thought_dim, c.model_reflection_dim, c.object_repr_dim, tm.memory_dim, c.value_dim, d.action_dim, d.embodied_dim, d.hand_motor_dim)
         self.decoder = DecoderHeads(l.rssm_dim, d.image_channels, d.image_height, d.image_width)
 
     def initial_state(self, batch_size: int, device: torch.device | str) -> Dict[str, torch.Tensor]:
@@ -275,28 +272,30 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
         rssm = rssm_out["state"]
 
         ws = self.workspace(rssm, attn["workspace_seed"])
-        selves = self.self_model(rssm, body_latent, tactile_latent)
-        obj = self.object_repr(ws["workspace"], selves["body_self"], tactile_latent, vision, object_state_latent)
+        body_ctx = self.body_context_model(rssm, body_latent, tactile_latent)
+        body_context = body_ctx["body_context"]
+        model_reflection_context = body_ctx["model_reflection_context"]
+        preconscious_seed = ws["preconscious_seed"]
+        obj = self.object_repr(ws["workspace"], body_context, tactile_latent, vision, object_state_latent)
 
-        refl0 = self.reflective_loop(ws["workspace"], ws["thought"], selves["body_self"], obj, selves["reflective_self"])
+        refl0 = self.preconscious_reflection_loop(ws["workspace"], preconscious_seed, body_context, obj, model_reflection_context)
 
-        mem_query = torch.cat([ws["workspace"], ws["thought"], selves["body_self"], obj], dim=-1)
-        mem_read = self.memory.read(mem_query)
+        mem_query = torch.cat([ws["workspace"], preconscious_seed, body_context, obj], dim=-1)
+        mem_read = self.preconscious_memory.read(mem_query)
         memory_context = mem_read["memory_context"]
 
-        preconscious_loop = self.thought_loop(ws["workspace"], ws["thought"], refl0["reflection"], obj, memory_context)
+        preconscious_loop = self.thought_loop(ws["workspace"], preconscious_seed, refl0["reflection"], obj, memory_context)
         preconscious_candidate = preconscious_loop["candidate"]
 
-        refl = self.reflective_loop(ws["workspace"], preconscious_candidate, selves["body_self"], obj, refl0["reflection"])
+        refl = self.preconscious_reflection_loop(ws["workspace"], preconscious_candidate, body_context, obj, refl0["reflection"])
         imagined = self.imagination(rssm, ws["workspace"], preconscious_candidate, obj, tactile_latent, action_ids_in)
-
         plan = self.planner(ws["workspace"], preconscious_candidate, refl["reflection"], obj, memory_context, imagined["imagined_value"], imagined["imagined_touch"])
         decoder = self.decoder(rssm, left.shape[-2:])
 
         episode = torch.cat([
             ws["workspace"].detach(),
             preconscious_candidate.detach(),
-            selves["body_self"].detach(),
+            body_context.detach(),
             obj.detach(),
             tactile_latent.detach(),
             embodied_action.detach(),
@@ -304,7 +303,7 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
             plan["value_latent"].detach(),
         ], dim=-1)
         if self.cfg.thought_memory.use_memory_write and write_memory:
-            self.memory.write(episode)
+            self.preconscious_memory.write(episode)
 
         next_state = {
             "rssm": rssm.detach(),
@@ -324,27 +323,32 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
                 "modality_weights": attn["modality_weights"],
                 "attn_matrix": attn["attn_matrix"],
             },
+            "preconscious_memory": {
+                "memory_context": memory_context,
+                "memory_weights": mem_read["memory_weights"],
+                "memory_usage": self.preconscious_memory.usage.detach().clone(),
+            },
             "memory": {
                 "memory_context": memory_context,
                 "memory_weights": mem_read["memory_weights"],
-                "memory_usage": self.memory.usage.detach().clone(),
+                "memory_usage": self.preconscious_memory.usage.detach().clone(),
             },
             "workspace_out": ws["workspace"],
             "preconscious_thoughts": {
                 "thought_candidate": preconscious_candidate,
-                "workspace_seed": ws["thought"],
+                "workspace_seed": preconscious_seed,
                 "candidate_sequence": preconscious_loop["candidate_sequence"],
                 "candidate_delta": preconscious_loop["candidate_delta"],
             },
-            "report": ws["report"],
-            "selves": {
-                "body_self": selves["body_self"],
-                "reflective_self": selves["reflective_self"],
+            "preconscious_report": ws["report"],
+            "body_context": {
+                "body_context": body_context,
+                "model_reflection_context": model_reflection_context,
             },
-            "reflection_out": {
+            "preconscious_reflection_out": {
                 "reflection": refl["reflection"],
                 "initial_reflection": refl0["reflection"],
-                "self_confidence": refl["self_confidence"],
+                "model_confidence": refl["model_confidence"],
             },
             "object_repr": obj,
             "tactile_latent": tactile_latent,
@@ -373,8 +377,6 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
 
 def make_memory_thought_config_from_world(image_height=128, image_width=192, body_state_dim=None, tactile_dim=None, hand_motor_dim=None, embodied_dim=None, action_dim=None):
     cfg = ConsciousDreamerMemoryThoughtConfig()
-
-    # runner.yaml is the source of truth for these dimensions.
     required_dims = {
         "body_state_dim": body_state_dim,
         "tactile_dim": tactile_dim,
@@ -389,7 +391,6 @@ def make_memory_thought_config_from_world(image_height=128, image_width=192, bod
             "Read them from runner.yaml / UnifiedV510Config and pass them explicitly. "
             f"Missing: {missing}"
         )
-
     cfg.data.image_height = image_height
     cfg.data.image_width = image_width
     cfg.data.body_state_dim = body_state_dim
@@ -402,6 +403,8 @@ def make_memory_thought_config_from_world(image_height=128, image_width=192, bod
 __all__ = [
     "PreconsciousThoughtLoop",
     "ThoughtLoop",
+    "PreconsciousEpisodeMemory",
+    "AutobiographicalMemory",
     "ConsciousDreamerMemoryThought",
     "ConsciousDreamerMemoryThoughtConfig",
     "make_memory_thought_config_from_world",
