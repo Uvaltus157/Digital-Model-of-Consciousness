@@ -224,6 +224,7 @@ class SelfCoreRuntimeConfig:
     hidden_dim: int = 256
     workspace_dim: int = 256
     object_latent_dim: int = 128
+    focus_context_dim: int = 256
     loss_weight: float = 0.02
     print_every_steps: int = 30
 
@@ -258,27 +259,8 @@ class ManualActionOverrideRuntimeConfig:
 
 
 @dataclass
-class InnerObjectOpen3DConfig:
-    enabled: bool = True
-    window_name: str = "inner object Open3D"
-    width: int = 960
-    height: int = 760
-    update_every_steps: int = 2
-    point_size: float = 5.0
-    voxel_threshold: float = 0.60
-    max_voxel_points: int = 1200
-    show_voxels: bool = True
-    use_internal_color: bool = True
-    max_slots: int = 10
-    slot_spacing: float = 2.6
-    export_dir: str = "exports/inner_object_3d"
-    snapshot_conf_threshold: float = 0.56
-    min_steps_between_snapshots: int = 24
-
-
-@dataclass
 class CameraPreviewConfig:
-    enabled: bool = False
+    enabled: bool = True
     window_name: str = "input sensors visualizer"
     scale: float = 1.25
     show_depth: bool = True
@@ -287,95 +269,39 @@ class CameraPreviewConfig:
     delay_ms: int = 1
 
 
-
 @dataclass
-class EventLatentMemoryConfig:
+class LatentSemanticMapConfig:
     enabled: bool = True
-    max_events: int = 512
-    delta_threshold: float = 0.015
-    action_threshold: float = 0.010
-    contact_threshold: float = 0.010
-    record_in_sleep: bool = True
-    keep_z_snapshots: bool = True
-
-    # Slot vocabulary gives each slot a stable internal word:
-    # SLOT_1 -> OBJ_001, plus latent signature/passport.
-    use_slot_vocabulary: bool = True
-    slot_token_prefix: str = "OBJ"
-
-    # Compose grammar-level sentences from tokens:
-    #   tokens -> roles -> sentence
-    compose_semantic_sentences: bool = True
-    sentence_language: str = "code"  # code/en/ru
-
-    # Level 3: sentence stream -> episodes / scenario memory.
-    use_sentence_memory: bool = True
-    max_sentences: int = 512
-    max_episodes: int = 64
-    episode_gap_steps: int = 25
-    new_episode_on_slot_change: bool = False
-
-    # Level 4: episode/sentence memory -> replayable latent scenario.
-    use_scenario_decoder: bool = True
-    scenario_max_replay_steps: int = 32
-    scenario_interpolate_steps: int = 3
-    scenario_loop: bool = True
-    scenario_decode_in_sleep: bool = True
-
-    # Level 5: trainable code/sentence -> latent dynamics decoder.
-    neural_event_decoder_enabled: bool = True
-    neural_event_decoder_hidden_dim: int = 256
-    neural_event_decoder_loss_weight: float = 0.05
-    neural_event_decoder_max_delta: float = 0.35
-
-
-
-@dataclass
-class EventCodeVisualizerConfig:
-    enabled: bool = True
-    window_name: str = "event code / slot vocabulary"
-    width: int = 1500
+    window_name: str = "latent semantic map"
+    width: int = 1780
     height: int = 980
+    max_history: int = 320
     show_every_steps: int = 1
     delay_ms: int = 1
-    max_slots: int = 10
-    max_events: int = 14
-
-
-@dataclass
-class TetraDynamicSlotDiagnosticConfig:
-    enabled: bool = False
-    file_name: str = "tetra_dynamic_slot_diagnostic.log"
-    reset_on_start: bool = True
+    thumbnail_size: int = 82
+    max_thumbnails: int = 6
+    point_radius: int = 4
+    draw_grid: bool = True
+    follow_inner_world_toggle: bool = False
 
 
 @dataclass
 class CheckpointLoadConfig:
-    # Load and save are intentionally separate so a run can resume from a
-    # checkpoint without overwriting it, or save fresh checkpoints without
-    # restoring old state at startup.
     enabled_load: bool = True
     enabled_save: bool = True
-
-    # Load path: which checkpoint to read on startup.
-    load_path: str = "./checkpoint/last.pt"     # empty => runtime.out_dir / "last.pt"
-
-    # Save path: where periodic/manual checkpoints write last.pt.
-    # Empty => use `load_path`; if both are empty => runtime.out_dir / "last.pt".
+    load_path: str = "./checkpoint/last.pt"
     save_path: str = "./checkpoint/last.pt"
-
-    strict: bool = False    # false is safer while architecture changes
+    strict: bool = False
     load_optimizer: bool = True
     load_counters: bool = True
 
 
 @dataclass
-class EmotionalDriveRuntimeConfig:
+class EmotionalDriveConfig:
     enabled: bool = True
     reward_weight: float = 1.0
     inject_into_env_reward: bool = True
     log_every_steps: int = 25
-
     ema_decay: float = 0.985
     reward_scale: float = 0.15
     w_gap_fill: float = 1.25
@@ -385,71 +311,41 @@ class EmotionalDriveRuntimeConfig:
     w_contact_pleasure: float = 0.35
     w_curiosity: float = 0.25
     w_inner_speech_conf: float = 0.35
+    w_instability: float = 0.40
     w_uncertainty_increase: float = 1.10
     w_coherence_loss: float = 0.85
     w_object_conf_loss: float = 0.75
     w_speech_conf_loss: float = 0.55
     w_alignment_loss: float = 0.70
     w_chaotic_touch: float = 0.45
-    w_instability: float = 0.40
-
-
-@dataclass
-class LatentSemanticPanelConfig:
-    enabled: bool = True
-    window_name: str = "latent semantic map"
-    width: int = 1600
-    height: int = 980
-    max_history: int = 320
-    show_every_steps: int = 1
-    delay_ms: int = 1
-    thumbnail_size: int = 82
-    max_thumbnails: int = 6
-    point_radius: int = 4
-    draw_grid: bool = True
-    follow_inner_world_toggle: bool = True
 
 
 @dataclass
 class ExplorationMotorConfig:
     enabled: bool = True
-
-    # During the beginning the model is often near-zero/deterministic.
-    # This bootstrap motion lets it collect visual/tactile novelty.
     warmup_steps: int = 1500
-
-    # If embodied/hand outputs are almost zero, inject exploratory motion.
     min_embodied_norm: float = 0.03
     min_hand_norm: float = 0.03
-
-    # Strength of exploratory movement.
     base_amp: float = 0.65
     hand_amp: float = 0.18
-
-    # Action cycling helps avoid one discrete action freezing the loop.
     cycle_action_when_stuck: bool = True
     action_cycle_period: int = 45
-
-    # If novelty stays low, stronger search motion starts.
     low_novelty_threshold: float = 0.015
     stuck_boost: float = 1.75
 
 
 @dataclass
 class DynamicAgentRigRuntimeConfig:
-    enabled: bool = False
+    enabled: bool = True
     body_name: str = "agent_rig"
     freejoint_name: str = "agent_rig_free"
-
     max_linear_speed: float = 0.35
     max_vertical_speed: float = 0.45
     max_angular_speed: float = 0.6
-
     linear_kv: float = 10.0
     angular_kv: float = 6.0
     max_force: float = 800.0
     max_torque: float = 70.0
-
     min_z: float = 0.55
     max_z: float = 2.2
     ground_push_k: float = 100.0
@@ -475,21 +371,21 @@ class DynamicAgentRigRuntimeConfig:
     contact_spin_limit: float = 2.0
     contact_spin_deadzone: float = 0.25
     disable_pitch_roll_commands: bool = True
-    contact_active_angular_damping: float = 90.0
+    contact_active_angular_damping: float = 65.0
     contact_active_yaw_damping: float = 18.0
-    contact_active_upright_kp: float = 70.0
+    contact_active_upright_kp: float = 45.0
     contact_active_upright_kd: float = 16.0
     contact_torque_limit: float = 55.0
 
 
 @dataclass
-class BirdBodyRuntimeConfig:
+class BirdBodyConfig:
     enabled: bool = True
-    leg_smoothing: float = 0.20
+    leg_smoothing: float = 0.05
 
 
 @dataclass
-class LegControlHeadConfig:
+class LegControlConfig:
     enabled: bool = True
     leg_motor_dim: int = 18
     hidden_dim: int = 128
@@ -497,47 +393,97 @@ class LegControlHeadConfig:
 
 
 @dataclass
-class UnifiedV510Config:
-    mode: str = "run"
-    novelty: NoveltyConfig = field(default_factory=NoveltyConfig)
-    replay: ReplayConfig = field(default_factory=ReplayConfig)
-    life: LifeConfig = field(default_factory=LifeConfig)
-    train: TrainLoopV510Config = field(default_factory=TrainLoopV510Config)
-    mujoco_world: MujocoWorldConfig = field(default_factory=MujocoWorldConfig)
-    viewer: ViewerConfig = field(default_factory=ViewerConfig)
-    runtime: RuntimeConfig = field(default_factory=lambda: RuntimeConfig(out_dir="runs/unified_conscious_viewer_v5_10"))
-    checkpoint_load: CheckpointLoadConfig = field(default_factory=CheckpointLoadConfig)
-    tetra_dynamic_slot_diagnostic: TetraDynamicSlotDiagnosticConfig = field(default_factory=TetraDynamicSlotDiagnosticConfig)
-    event_code_visualizer: EventCodeVisualizerConfig = field(default_factory=EventCodeVisualizerConfig)
-    event_memory: EventLatentMemoryConfig = field(default_factory=EventLatentMemoryConfig)
-    emotional_drive: EmotionalDriveRuntimeConfig = field(default_factory=EmotionalDriveRuntimeConfig)
-    exploration: ExplorationMotorConfig = field(default_factory=ExplorationMotorConfig)
-    dynamic_agent_rig: DynamicAgentRigRuntimeConfig = field(default_factory=DynamicAgentRigRuntimeConfig)
-    bird_body: BirdBodyRuntimeConfig = field(default_factory=BirdBodyRuntimeConfig)
-    leg_control: LegControlHeadConfig = field(default_factory=LegControlHeadConfig)
-    inner_world: InnerWorldWindowConfig = field(default_factory=InnerWorldWindowConfig)
-    ipc_control: IPCControlConfig = field(default_factory=IPCControlConfig)
-    external_control: ExternalControlConfig = field(default_factory=ExternalControlConfig)
-    camera_preview: CameraPreviewConfig = field(default_factory=CameraPreviewConfig)
-    action_outputs: ActionOutputsWindowConfig = field(default_factory=ActionOutputsWindowConfig)
-    module_debug: ModuleTrainingDebugRuntimeConfig = field(default_factory=ModuleTrainingDebugRuntimeConfig)
-    module_status_ipc: ModuleDebugStatusIPCRuntimeConfig = field(default_factory=ModuleDebugStatusIPCRuntimeConfig)
-    control_startup: ControlStartupConfig = field(default_factory=ControlStartupConfig)
-    sleep_sensors: SleepSensorGateRuntimeConfig = field(default_factory=SleepSensorGateRuntimeConfig)
-    object_image: InnerObjectImageConfig = field(default_factory=InnerObjectImageConfig)
-    object_image_open3d: InnerObjectOpen3DConfig = field(default_factory=InnerObjectOpen3DConfig)
-    latent_semantic_map: LatentSemanticPanelConfig = field(default_factory=LatentSemanticPanelConfig)
-    manual_action_override: ManualActionOverrideRuntimeConfig = field(default_factory=ManualActionOverrideRuntimeConfig)
-    action_trace: ActionSignalTraceConfig = field(default_factory=ActionSignalTraceConfig)
-    vestibular: VestibularRuntimeConfig = field(default_factory=VestibularRuntimeConfig)
-    mocap_flight_bounds: MocapFlightBoundsConfig = field(default_factory=MocapFlightBoundsConfig)
-    self_core: SelfCoreRuntimeConfig = field(default_factory=SelfCoreRuntimeConfig)
-    adaptive_scenario_controller: Dict[str, Any] = field(default_factory=dict)
+class MocapContactConfig:
+    enabled: bool = True
+    central_rig: str = "mocap"
+    preserve_contacts: bool = True
+    notes: str = "agent_rig/cameras are mocap-stabilized; arms/legs/objects keep contacts"
+
+
+@dataclass
+class AgentHeadConfig:
+    enabled: bool = True
+    control_indices: Dict[str, int] = field(default_factory=lambda: {
+        "body_roll": 11,
+        "head_yaw": 12,
+        "head_pitch": 13,
+        "head_roll": 14,
+    })
+    notes: str = "embodied_dim is 15: old body/arms preserved, body roll at 11, head controls at 12:15"
+
+
+@dataclass
+class UnifiedV510Config(RuntimeConfig):
+    mode: str = "train"
+    inner_speech_loss_weight: float = 0.25
 
     action_dim: int = MISSING
     embodied_dim: int = MISSING
     hand_motor_dim: int = MISSING
     tactile_dim: int = MISSING
     body_state_dim: int = MISSING
-    # supervised inner speech bootstrap
-    inner_speech_loss_weight: float = 0.25
+
+    runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
+    mujoco_world: MujocoWorldConfig = field(default_factory=MujocoWorldConfig)
+    viewer: ViewerConfig = field(default_factory=ViewerConfig)
+    life: LifeConfig = field(default_factory=LifeConfig)
+    train: TrainLoopV510Config = field(default_factory=TrainLoopV510Config)
+    replay: ReplayConfig = field(default_factory=ReplayConfig)
+    novelty: NoveltyConfig = field(default_factory=NoveltyConfig)
+    inner_world: InnerWorldWindowConfig = field(default_factory=InnerWorldWindowConfig)
+    camera_preview: CameraPreviewConfig = field(default_factory=CameraPreviewConfig)
+    action_outputs: ActionOutputsWindowConfig = field(default_factory=ActionOutputsWindowConfig)
+    object_image: InnerObjectImageConfig = field(default_factory=InnerObjectImageConfig)
+    ipc_control: IPCControlConfig = field(default_factory=IPCControlConfig)
+    external_control: ExternalControlConfig = field(default_factory=ExternalControlConfig)
+    control_startup: ControlStartupConfig = field(default_factory=ControlStartupConfig)
+    checkpoint_load: CheckpointLoadConfig = field(default_factory=CheckpointLoadConfig)
+    emotional_drive: EmotionalDriveConfig = field(default_factory=EmotionalDriveConfig)
+    exploration: ExplorationMotorConfig = field(default_factory=ExplorationMotorConfig)
+    action_trace: ActionSignalTraceConfig = field(default_factory=ActionSignalTraceConfig)
+    self_core: SelfCoreRuntimeConfig = field(default_factory=SelfCoreRuntimeConfig)
+    vestibular: VestibularRuntimeConfig = field(default_factory=VestibularRuntimeConfig)
+    sleep_sensors: SleepSensorGateRuntimeConfig = field(default_factory=SleepSensorGateRuntimeConfig)
+    module_debug: ModuleTrainingDebugRuntimeConfig = field(default_factory=ModuleTrainingDebugRuntimeConfig)
+    module_status_ipc: ModuleDebugStatusIPCRuntimeConfig = field(default_factory=ModuleDebugStatusIPCRuntimeConfig)
+    dynamic_agent_rig: DynamicAgentRigRuntimeConfig = field(default_factory=DynamicAgentRigRuntimeConfig)
+    bird_body: BirdBodyConfig = field(default_factory=BirdBodyConfig)
+    leg_control: LegControlConfig = field(default_factory=LegControlConfig)
+    mocap_contacts: MocapContactConfig = field(default_factory=MocapContactConfig)
+    mocap_flight_bounds: MocapFlightBoundsConfig = field(default_factory=MocapFlightBoundsConfig)
+    manual_action_override: ManualActionOverrideRuntimeConfig = field(default_factory=ManualActionOverrideRuntimeConfig)
+    latent_semantic_map: LatentSemanticMapConfig = field(default_factory=LatentSemanticMapConfig)
+    agent_head: AgentHeadConfig = field(default_factory=AgentHeadConfig)
+
+
+__all__ = [
+    "MODEL_DIM_KEYS",
+    "_cfg_get",
+    "model_dimensions_from_runner_cfg",
+    "validate_runner_model_dimensions",
+    "UnifiedV510Config",
+    "TrainLoopV510Config",
+    "IPCControlConfig",
+    "ExternalControlConfig",
+    "ActionOutputsWindowConfig",
+    "InnerObjectImageConfig",
+    "ModuleDebugStatusIPCRuntimeConfig",
+    "ControlStartupConfig",
+    "SleepSensorGateRuntimeConfig",
+    "ModuleTrainingDebugRuntimeConfig",
+    "ActionSignalTraceConfig",
+    "SelfCoreRuntimeConfig",
+    "MocapFlightBoundsConfig",
+    "VestibularRuntimeConfig",
+    "ManualActionOverrideRuntimeConfig",
+    "CameraPreviewConfig",
+    "LatentSemanticMapConfig",
+    "CheckpointLoadConfig",
+    "EmotionalDriveConfig",
+    "ExplorationMotorConfig",
+    "DynamicAgentRigRuntimeConfig",
+    "BirdBodyConfig",
+    "LegControlConfig",
+    "MocapContactConfig",
+    "AgentHeadConfig",
+]
