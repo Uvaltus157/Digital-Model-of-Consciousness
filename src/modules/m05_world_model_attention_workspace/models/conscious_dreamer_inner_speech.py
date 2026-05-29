@@ -4,7 +4,7 @@ from __future__ import annotations
 conscious_dreamer_inner_speech.py
 
 ConsciousDreamer inner-speech layer:
-- based on the memory-thought layer
+- based on the memory / preconscious-candidate layer
 - adds built-in InnerSpeechLoop / symbolic report layer
 - each step returns:
     out["symbolic_report"]
@@ -14,6 +14,11 @@ ConsciousDreamer inner-speech layer:
         phoneme_ids
         text_token_ids
         confidence
+
+Architecture note:
+    The M5 input here is a preconscious thought candidate, not yet a
+    self-aware conscious thought. Self-binding is performed later by M9.
+    M7/M11 can then turn self-bound content into conscious inner speech.
 
 This model keeps the same current M5 step() signature.
 """
@@ -38,7 +43,7 @@ class ConsciousDreamerInnerSpeechConfig(ConsciousDreamerMemoryThoughtConfig):
 
 
 class ConsciousDreamerInnerSpeech(ConsciousDreamerMemoryThought):
-    """Current M5 symbolic/phoneme/text report pathway."""
+    """Current M5 symbolic report pathway over preconscious candidates."""
 
     def __init__(self, cfg: ConsciousDreamerInnerSpeechConfig) -> None:
         super().__init__(cfg)
@@ -75,10 +80,22 @@ class ConsciousDreamerInnerSpeech(ConsciousDreamerMemoryThought):
                 dtype=out["workspace_out"].dtype,
             )
 
+        preconscious = out.get("preconscious_thoughts", {})
+        thought_candidate = preconscious.get("thought_candidate")
+        if thought_candidate is None:
+            thought_candidate = preconscious.get("candidate")
+        if thought_candidate is None:
+            thought_candidate = torch.zeros(
+                out["workspace_out"].shape[0],
+                self.cfg.conscious.thought_dim,
+                device=out["workspace_out"].device,
+                dtype=out["workspace_out"].dtype,
+            )
+
         latent = torch.cat(
             [
                 out["workspace_out"],
-                out["thoughts"]["thought"],
+                thought_candidate,
                 out["reflection_out"]["reflection"],
                 out["object_repr"],
                 memory_context,
@@ -174,7 +191,7 @@ if __name__ == "__main__":
     )
 
     print("workspace:", out["workspace_out"].shape)
-    print("thought_sequence:", out["thoughts"]["thought_sequence"].shape)
+    print("candidate_sequence:", out["preconscious_thoughts"]["candidate_sequence"].shape)
     print("symbol_ids:", out["symbolic_report"]["symbol_ids"].shape)
     print("phoneme_ids:", out["symbolic_report"]["phoneme_ids"].shape)
     print("text_token_ids:", out["symbolic_report"]["text_token_ids"].shape)
