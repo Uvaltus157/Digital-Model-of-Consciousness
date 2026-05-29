@@ -4,6 +4,10 @@ from __future__ import annotations
 
 The implementation still lives in `conscious_dreamer_full.py` for backward
 compatibility. New internal M5 code should import the core layer from this file.
+
+Naming rule:
+    M5 owns preconscious world-model / attention / body-context logic only.
+    M9 owns true self-binding. M7 owns true inner speech after M9.
 """
 
 from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_full import (
@@ -20,11 +24,15 @@ from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_fu
     ObjectRepresentation,
     RSSMCore,
     ReflectiveLoop,
-    SelfModel,
+    PreconsciousReflectionLoop,
+    BodyContextModel,
     VisionEncoder,
     Workspace,
     make_core_config_from_world,
 )
+
+# Compatibility alias for old imports. New code should use BodyContextModel.
+SelfModel = BodyContextModel
 
 __all__ = [
     "DreamerDataConfig",
@@ -37,8 +45,10 @@ __all__ = [
     "AttentionController",
     "RSSMCore",
     "Workspace",
+    "BodyContextModel",
     "SelfModel",
     "ObjectRepresentation",
+    "PreconsciousReflectionLoop",
     "ReflectiveLoop",
     "ImaginationCore",
     "ConsciousPlanner",
