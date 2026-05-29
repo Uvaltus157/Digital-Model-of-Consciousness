@@ -444,6 +444,7 @@ self_core:
   hidden_dim: 256
   workspace_dim: 256
   object_latent_dim: 128
+  focus_context_dim: 256
   loss_weight: 0.02
   print_every_steps: 30
 
