@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict
 
+import torch
+
 from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_inner_speech import (
     ConsciousDreamerInnerSpeech,
     ConsciousDreamerInnerSpeechConfig,
@@ -26,10 +28,19 @@ class ConsciousDreamerObjectImagery(ConsciousDreamerInnerSpeech):
         self.object_imagery_decoder = ObjectImageryDecoder(self.cfg.object_imagery)
 
     def build_object_imagery(self, out: Dict):
+        preconscious = out.get("preconscious_thoughts", {})
+        thought_candidate = preconscious.get("thought_candidate")
+        if thought_candidate is None:
+            thought_candidate = torch.zeros(
+                out["workspace_out"].shape[0],
+                self.cfg.conscious.thought_dim,
+                device=out["workspace_out"].device,
+                dtype=out["workspace_out"].dtype,
+            )
         return self.object_imagery_decoder(
             object_repr=out["object_repr"],
             workspace=out["workspace_out"],
-            thought=out["thoughts"]["thought"],
+            thought=thought_candidate,
             reflection=out["reflection_out"]["reflection"],
         )
 
