@@ -42,10 +42,10 @@ class SelfCoreRuntimeMixin:
         """
         Build the self-bound focus packet from M5 outputs.
 
-        This is the bridge from M5 to M9: the current workspace/focus/thought/
-        object/reflection/planning signals are compressed into one fixed-width
-        focus_context vector. SelfCore then binds this focused content to the
-        latent body/self model.
+        This is the bridge from M5 to M9: the current workspace/focus/
+        preconscious-candidate/object/reflection/planning signals are compressed
+        into one fixed-width focus_context vector. SelfCore then binds this
+        focused content to the latent body/self model.
         """
         target_dim = int(getattr(self.cfg.self_core, "focus_context_dim", self.cfg.self_core.workspace_dim))
         pieces = []
@@ -62,10 +62,17 @@ class SelfCoreRuntimeMixin:
         add_tensor(out.get("hand_ctrl"))
         add_tensor(out.get("action_logits"))
 
-        thoughts = out.get("thoughts")
-        if isinstance(thoughts, dict):
-            add_tensor(thoughts.get("thought"))
-            add_tensor(thoughts.get("thought_delta"))
+        preconscious = out.get("preconscious_thoughts")
+        if isinstance(preconscious, dict):
+            add_tensor(preconscious.get("thought_candidate"))
+            add_tensor(preconscious.get("candidate_delta"))
+            add_tensor(preconscious.get("workspace_seed"))
+        else:
+            # Legacy fallback for older checkpoints/runs only.
+            legacy_thoughts = out.get("thoughts")
+            if isinstance(legacy_thoughts, dict):
+                add_tensor(legacy_thoughts.get("thought"))
+                add_tensor(legacy_thoughts.get("thought_delta"))
 
         reflection = out.get("reflection_out")
         if isinstance(reflection, dict):
