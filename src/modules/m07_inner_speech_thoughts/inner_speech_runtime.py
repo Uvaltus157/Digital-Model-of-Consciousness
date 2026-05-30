@@ -59,10 +59,14 @@ class InnerSpeechRuntimeMixin:
         if not torch.is_tensor(active_thought):
             return None
 
+        plan_context = thought_chain.get("plan_context")
+        if not torch.is_tensor(plan_context):
+            plan_context = out.get("plan_context")
+
         self.ensure_inner_speech_ready()
         report = self.inner_speech_decoder(
             active_thought=active_thought,
-            plan_context=thought_chain.get("plan_context") or out.get("plan_context"),
+            plan_context=plan_context,
             self_bound_context=self_core.get("self_bound_context"),
             subjective_affect_state=self_core.get("subjective_affect_state"),
             affect_latents=affect.get("affect_latents"),
