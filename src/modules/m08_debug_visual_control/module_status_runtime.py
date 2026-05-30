@@ -184,6 +184,23 @@ class ModuleStatusRuntimeMixin:
                         except Exception:
                             pass
 
+            inner_diag = getattr(self, "_latest_inner_speech_diagnostics", {})
+            if isinstance(inner_diag, dict):
+                for k in [
+                    "inner_speech_source",
+                    "uses_thought_chain",
+                    "uses_self_bound_context",
+                    "uses_affect_latents",
+                    "thought_chain_planning_readiness",
+                ]:
+                    if k in inner_diag:
+                        payload[k] = inner_diag[k]
+                        if getattr(self, "latest_stats", None) is not None:
+                            try:
+                                self.latest_stats[k] = inner_diag[k]
+                            except Exception:
+                                pass
+
             if getattr(self, "module_status_server", None) is not None:
                 self.module_status_server.update_status(payload)
         except Exception as e:
