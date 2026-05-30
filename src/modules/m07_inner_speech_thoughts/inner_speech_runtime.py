@@ -42,6 +42,18 @@ class InnerSpeechRuntimeMixin:
             print(f"[inner_speech] lazy optimizer attach skipped: {e}")
         print("[inner_speech] lazy initialized")
 
+    def _inner_speech_scalar(self, value, default: float = 0.0) -> float:
+        try:
+            if torch.is_tensor(value):
+                if value.numel() == 0:
+                    return float(default)
+                return float(value.detach().float().reshape(-1)[0].cpu().item())
+            if value is None:
+                return float(default)
+            return float(value)
+        except Exception:
+            return float(default)
+
     def _life_runtime_inner_report(self, obs: dict, out: dict) -> tuple[str, str, float]:
         """
         Runtime report bridge used by LifeRuntimeMixin.life_step().
@@ -52,20 +64,19 @@ class InnerSpeechRuntimeMixin:
         """
         del obs
         report = {}
+        report_key = ""
         for key in ("inner_speech", "conscious_report", "m7_inner_speech", "symbolic_report"):
             value = out.get(key)
             if isinstance(value, dict):
                 report = value
+                report_key = key
                 break
 
         scalar = getattr(self, "_life_runtime_scalar", None)
         if callable(scalar):
             confidence = scalar(report.get("confidence"), 0.0)
         else:
-            try:
-                confidence = float(report.get("confidence", 0.0))
-            except Exception:
-                confidence = 0.0
+            confidence = self._inner_speech_scalar(report.get("confidence"), 0.0)
 
         decoded_report = ""
         for key in ("text", "decoded_text", "report_text"):
@@ -83,6 +94,16 @@ class InnerSpeechRuntimeMixin:
                 decoded_report = str(self.speech_vocab.decode(ids, skip_special=True))
             except Exception:
                 decoded_report = ""
+
+        tc = out.get("thought_chain", {}) if isinstance(out.get("thought_chain"), dict) else {}
+        metrics = tc.get("thought_chain_metrics", {}) if isinstance(tc.get("thought_chain_metrics"), dict) else {}
+        self._latest_inner_speech_diagnostics = {
+            "inner_speech_source": str(report.get("source", report_key)),
+            "uses_thought_chain": bool(self._inner_speech_scalar(report.get("uses_thought_chain"), 0.0) > 0.5),
+            "uses_self_bound_context": bool(self._inner_speech_scalar(report.get("uses_self_bound_context"), 0.0) > 0.5),
+            "uses_affect_latents": bool(self._inner_speech_scalar(report.get("uses_affect_latents"), 0.0) > 0.5),
+            "thought_chain_planning_readiness": self._inner_speech_scalar(metrics.get("planning_readiness"), 0.0),
+        }
 
         target_report = ""
         if hasattr(self, "speech_teacher") and self.speech_teacher is not None:
@@ -141,6 +162,15 @@ class InnerSpeechRuntimeMixin:
         report["uses_self_bound_context"] = torch.tensor([1.0 if torch.is_tensor(self_core.get("self_bound_context")) else 0.0], device=self.device)
         report["uses_affect_latents"] = torch.tensor([1.0 if torch.is_tensor(affect.get("affect_latents")) else 0.0], device=self.device)
         report["uses_thought_chain"] = torch.tensor([1.0 if torch.is_tensor(thought_chain.get("active_thought")) else 0.0], device=self.device)
+
+        metrics = thought_chain.get("thought_chain_metrics", {}) if isinstance(thought_chain.get("thought_chain_metrics"), dict) else {}
+        self._latest_inner_speech_diagnostics = {
+            "inner_speech_source": str(report["source"]),
+            "uses_thought_chain": bool(self._inner_speech_scalar(report.get("uses_thought_chain"), 0.0) > 0.5),
+            "uses_self_bound_context": bool(self._inner_speech_scalar(report.get("uses_self_bound_context"), 0.0) > 0.5),
+            "uses_affect_latents": bool(self._inner_speech_scalar(report.get("uses_affect_latents"), 0.0) > 0.5),
+            "thought_chain_planning_readiness": self._inner_speech_scalar(metrics.get("planning_readiness"), 0.0),
+        }
 
         out["inner_speech"] = report
         out["conscious_report"] = report
