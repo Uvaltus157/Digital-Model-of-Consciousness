@@ -20,6 +20,9 @@ class SemanticActionRuntimeMixin:
             high_doubt_threshold=float(getattr(cfg_obj, "high_doubt_threshold", 0.50)),
             min_action_scale=float(getattr(cfg_obj, "min_action_scale", 0.05)),
             soft_hold_scale=float(getattr(cfg_obj, "soft_hold_scale", 0.25)),
+            explore_threshold=float(getattr(cfg_obj, "explore_threshold", 0.35)),
+            positive_delta_threshold=float(getattr(cfg_obj, "positive_delta_threshold", 0.10)),
+            emergency_threshold=float(getattr(cfg_obj, "emergency_threshold", 0.50)),
         )
         self.semantic_action_grounding = SemanticActionGrounding(cfg)
         print("[semantic_action] initialized")
@@ -33,9 +36,11 @@ class SemanticActionRuntimeMixin:
         manual = bool(getattr(self, "_ipc_manual_actions_enabled", False))
         action = self.semantic_action_grounding.compute(out, manual_override=manual)
         out["conscious_action"] = action
+        out["semantic_action"] = action
 
-        # First M14 bridge: do not replace policy heads. Only soften unsafe or
-        # doubtful conscious actions after M12 has requested hold/verify.
+        # M14 bridge: do not replace policy heads yet. Only soften unsafe or
+        # doubtful conscious actions after M12 has requested hold/verify, while
+        # preserving full semantic intent metadata for downstream modules.
         scale = action.get("applied_action_scale")
         if torch.is_tensor(scale) and not manual:
             for key in ("embodied_targets", "hand_ctrl", "leg_ctrl"):
@@ -70,11 +75,15 @@ class SemanticActionRuntimeMixin:
 
         print(
             f"[semantic_action step={self.global_step}] "
+            f"intent={action.get('semantic_intent', '')} "
+            f"target={action.get('target_source', '')} "
             f"scale={f(action.get('applied_action_scale')):.3f} "
             f"inhibition={f(action.get('action_inhibition')):.3f} "
             f"verify={f(action.get('verify_before_action')):.0f} "
             f"emergency={f(action.get('emergency_mode')):.0f} "
-            f"reason={action.get('reason', '')}"
+            f"outcome={f(action.get('expected_outcome')):.3f} "
+            f"reason={action.get('reason', '')} | "
+            f"{action.get('goal_text', '')}"
         )
 
 
