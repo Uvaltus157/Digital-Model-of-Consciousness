@@ -222,6 +222,15 @@ class SelfCoreRuntimeMixin:
                 if not hasattr(self, "_inner_speech_warned"):
                     print(f"[inner_speech] compute skipped: {e}")
                     self._inner_speech_warned = True
+
+        # Stage-7 bridge: M12 monitors confidence/doubt after M9+M7.
+        if hasattr(self, "compute_metacognition"):
+            try:
+                self.compute_metacognition(obs, out)
+            except Exception as e:
+                if not hasattr(self, "_metacognition_warned"):
+                    print(f"[metacognition] compute skipped: {e}")
+                    self._metacognition_warned = True
         return sc
 
     def maybe_print_self_core_trace(self, out: dict):
