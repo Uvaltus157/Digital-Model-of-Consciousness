@@ -37,15 +37,47 @@ class SelfCoreRuntimeMixin:
             print(f"[self_core] lazy optimizer attach skipped: {e}")
         print("[self_core] lazy initialized")
 
+    def _self_core_first_dict(self, out: dict, *keys: str) -> dict:
+        for key in keys:
+            value = out.get(key)
+            if isinstance(value, dict):
+                return value
+        return {}
+
+    def _self_core_preconscious_reflection(self, out: dict) -> dict:
+        """
+        M9 should bind to model/preconscious reflection, not require an old
+        self-confidence field from the M5 output contract. Keep reflection_out
+        as a compatibility fallback for older checkpoints/runs.
+        """
+        return self._self_core_first_dict(
+            out,
+            "preconscious_reflection_out",
+            "model_reflection",
+            "reflection_out",
+        )
+
+    def _self_core_inner_speech_report(self, out: dict) -> dict:
+        """
+        True inner speech is expected from M7 after self-binding. During the
+        transition, accept old symbolic_report only as a compatibility fallback.
+        """
+        return self._self_core_first_dict(
+            out,
+            "inner_speech",
+            "conscious_report",
+            "m7_inner_speech",
+            "symbolic_report",
+        )
 
     def _build_self_core_focus_context(self, out: dict, workspace: torch.Tensor) -> torch.Tensor:
         """
-        Build the self-bound focus packet from M5 outputs.
+        Build the self-bound focus packet from current runtime outputs.
 
-        This is the bridge from M5 to M9: the current workspace/focus/
-        preconscious-candidate/object/reflection/planning signals are compressed
-        into one fixed-width focus_context vector. SelfCore then binds this
-        focused content to the latent body/self model.
+        This is the bridge from M5 to M9: workspace/focus/candidate/object/
+        model-reflection/planning signals are compressed into one fixed-width
+        focus_context vector. M7 report tensors are optional while M7 is being
+        separated, so missing report fields must not break SelfCore.
         """
         target_dim = int(getattr(self.cfg.self_core, "focus_context_dim", self.cfg.self_core.workspace_dim))
         pieces = []
@@ -68,16 +100,18 @@ class SelfCoreRuntimeMixin:
             add_tensor(preconscious.get("candidate_delta"))
             add_tensor(preconscious.get("workspace_seed"))
         else:
-            # Legacy fallback for older checkpoints/runs only.
+            # Compatibility fallback for older checkpoints/runs only.
             legacy_thoughts = out.get("thoughts")
             if isinstance(legacy_thoughts, dict):
                 add_tensor(legacy_thoughts.get("thought"))
                 add_tensor(legacy_thoughts.get("thought_delta"))
 
-        reflection = out.get("reflection_out")
-        if isinstance(reflection, dict):
-            add_tensor(reflection.get("reflection"))
-            add_tensor(reflection.get("self_confidence"))
+        reflection = self._self_core_preconscious_reflection(out)
+        add_tensor(reflection.get("reflection"))
+        add_tensor(reflection.get("model_confidence"))
+        add_tensor(reflection.get("confidence"))
+        # Old key accepted only as fallback data, not as a required runtime contract.
+        add_tensor(reflection.get("self_confidence"))
 
         values = out.get("values")
         if isinstance(values, dict):
@@ -97,10 +131,9 @@ class SelfCoreRuntimeMixin:
             add_tensor(attention.get("modality_weights"))
             add_tensor(attention.get("attn_matrix"))
 
-        symbolic = out.get("symbolic_report")
-        if isinstance(symbolic, dict):
-            add_tensor(symbolic.get("report_latent"))
-            add_tensor(symbolic.get("confidence"))
+        report = self._self_core_inner_speech_report(out)
+        add_tensor(report.get("report_latent"))
+        add_tensor(report.get("confidence"))
 
         memory = out.get("memory")
         if isinstance(memory, dict):
@@ -112,7 +145,6 @@ class SelfCoreRuntimeMixin:
             focus_context = torch.zeros(1, target_dim, device=self.device)
 
         return pad_or_trim_selfcore(focus_context, target_dim, device=self.device)
-
 
     def compute_self_core(self, obs: dict, out: dict):
         if not self.cfg.self_core.enabled:
@@ -166,7 +198,6 @@ class SelfCoreRuntimeMixin:
         out["self_core"] = sc
         out["self_experience_text"] = sc["self_experience_text"]
         return sc
-
 
     def maybe_print_self_core_trace(self, out: dict):
         if not self.cfg.self_core.enabled:
