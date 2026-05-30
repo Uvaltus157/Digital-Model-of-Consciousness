@@ -42,10 +42,10 @@ class SelfCoreRuntimeMixin:
         """
         Stage-4/5 bridge.
 
-        LifeRuntime still computes emotion later for replay reward. M9 needs
-        affect_latents before self binding, so create the same affect packet here
-        when it is not already present. The later LifeRuntime computation may
-        refresh the legacy emotion scalars, but M9 receives real affect input now.
+        M15 and M9 both need affect_latents before self binding. Create the same
+        affect packet here when it is not already present. EmotionalDrive caches
+        the packet on out["emotion"], so LifeRuntime can reuse it later without a
+        second EMA/progress update.
         """
         affect = out.get("affect")
         if isinstance(affect, dict) and torch.is_tensor(affect.get("affect_latents")):
@@ -62,17 +62,38 @@ class SelfCoreRuntimeMixin:
                 print(f"[self_core] affect precompute skipped: {e}")
                 self._self_core_affect_warned = True
 
+    def _run_pre_self_thought_chain(self, obs: dict, out: dict) -> None:
+        """
+        Correct architecture order:
+            M5 focus_context + M10 affect_latents -> M15 chain search
+            M15 writes best chain back into M5 focus_context
+            M9 self-binds the enhanced focus_context
+        """
+        if not hasattr(self, "compute_thought_chain"):
+            return
+        try:
+            self.compute_thought_chain(obs, out, pre_self_binding=True)
+        except TypeError:
+            # Compatibility with older ThoughtChainRuntimeMixin signature.
+            try:
+                self.compute_thought_chain(obs, out)
+            except Exception as e:
+                if not hasattr(self, "_thought_chain_warned"):
+                    print(f"[thought_chain] pre-self compute skipped: {e}")
+                    self._thought_chain_warned = True
+        except Exception as e:
+            if not hasattr(self, "_thought_chain_warned"):
+                print(f"[thought_chain] pre-self compute skipped: {e}")
+                self._thought_chain_warned = True
+
     def _build_self_core_focus_context(self, out: dict, workspace: torch.Tensor) -> torch.Tensor:
         """
         Read the M5-owned focus_context.
 
         Stage-2 architecture rule:
             M5 owns out["focus_context"].
+            M15 may enhance out["focus_context"] before M9.
             M9 must not manually reconstruct focus from M5 internals.
-
-        If focus_context is absent, return a zero tensor instead of silently
-        rebuilding the old implicit focus packet. That keeps older partial runs
-        from crashing while making missing M5 focus easy to detect in stats.
         """
         target_dim = int(getattr(self.cfg.self_core, "focus_context_dim", self.cfg.self_core.workspace_dim))
         focus_context = out.get("focus_context")
@@ -89,7 +110,7 @@ class SelfCoreRuntimeMixin:
         Read the M10/M11 affect packet.
 
         Stage-4 architecture rule:
-            M9 binds M5 focus_context with M10/M11 affect_latents.
+            M9 binds M5/M15 focus_context with M10/M11 affect_latents.
             M9 should not know the internal emotion scalar formulas.
         """
         target_dim = int(getattr(self.cfg.self_core, "affect_latent_dim", 12))
@@ -108,6 +129,7 @@ class SelfCoreRuntimeMixin:
             return None
         self.ensure_self_core_ready()
         self._ensure_affect_packet_for_self_core(obs, out)
+        self._run_pre_self_thought_chain(obs, out)
 
         body_state = obs.get("body_state", torch.zeros(1, self.cfg.body_state_dim, device=self.device))
         tactile = obs.get("tactile", torch.zeros(1, self.cfg.tactile_dim, device=self.device))
@@ -169,20 +191,7 @@ class SelfCoreRuntimeMixin:
         out["self_core"] = sc
         out["self_experience_text"] = sc["self_experience_text"]
 
-        # Stage-5 bridge: once self-bound context exists, let M15 produce the
-        # active thought chain and plan_context. Kept optional so older runners
-        # without ThoughtChainRuntimeMixin still work.
-        if hasattr(self, "compute_thought_chain"):
-            try:
-                self.compute_thought_chain(obs, out)
-            except Exception as e:
-                if not hasattr(self, "_thought_chain_warned"):
-                    print(f"[thought_chain] compute skipped: {e}")
-                    self._thought_chain_warned = True
-
-        # Stage-6 bridge: M7 verbalizes self-bound thought chains after M15.
-        # This publishes out["inner_speech"] / out["conscious_report"] for
-        # visualizers while keeping legacy symbolic_report optional.
+        # Stage-6 bridge: M7 verbalizes self-bound focus after M9.
         if hasattr(self, "compute_inner_speech"):
             try:
                 self.compute_inner_speech(obs, out)
