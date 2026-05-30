@@ -38,6 +38,30 @@ class SelfCoreRuntimeMixin:
             print(f"[self_core] lazy optimizer attach skipped: {e}")
         print("[self_core] lazy initialized")
 
+    def _ensure_affect_packet_for_self_core(self, obs: dict, out: dict) -> None:
+        """
+        Stage-4/5 bridge.
+
+        LifeRuntime still computes emotion later for replay reward. M9 needs
+        affect_latents before self binding, so create the same affect packet here
+        when it is not already present. The later LifeRuntime computation may
+        refresh the legacy emotion scalars, but M9 receives real affect input now.
+        """
+        affect = out.get("affect")
+        if isinstance(affect, dict) and torch.is_tensor(affect.get("affect_latents")):
+            return
+        if not hasattr(self, "emotional_drive") or self.emotional_drive is None:
+            return
+        try:
+            emotion = self.emotional_drive.compute(out, obs)
+            out["emotion"] = emotion
+            if isinstance(emotion.get("affect"), dict):
+                out["affect"] = emotion["affect"]
+        except Exception as e:
+            if not hasattr(self, "_self_core_affect_warned"):
+                print(f"[self_core] affect precompute skipped: {e}")
+                self._self_core_affect_warned = True
+
     def _build_self_core_focus_context(self, out: dict, workspace: torch.Tensor) -> torch.Tensor:
         """
         Read the M5-owned focus_context.
@@ -83,6 +107,7 @@ class SelfCoreRuntimeMixin:
         if not self.cfg.self_core.enabled:
             return None
         self.ensure_self_core_ready()
+        self._ensure_affect_packet_for_self_core(obs, out)
 
         body_state = obs.get("body_state", torch.zeros(1, self.cfg.body_state_dim, device=self.device))
         tactile = obs.get("tactile", torch.zeros(1, self.cfg.tactile_dim, device=self.device))
@@ -143,6 +168,17 @@ class SelfCoreRuntimeMixin:
         )
         out["self_core"] = sc
         out["self_experience_text"] = sc["self_experience_text"]
+
+        # Stage-5 bridge: once self-bound context exists, let M15 produce the
+        # active thought chain and plan_context. Kept optional so older runners
+        # without ThoughtChainRuntimeMixin still work.
+        if hasattr(self, "compute_thought_chain"):
+            try:
+                self.compute_thought_chain(obs, out)
+            except Exception as e:
+                if not hasattr(self, "_thought_chain_warned"):
+                    print(f"[thought_chain] compute skipped: {e}")
+                    self._thought_chain_warned = True
         return sc
 
     def maybe_print_self_core_trace(self, out: dict):
