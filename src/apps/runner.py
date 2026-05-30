@@ -44,6 +44,7 @@ from src.apps.runner_unified_init import initialize_unified_system_v510
 from src.apps.unified_conscious_viewer import UnifiedSystemV57
 from src.modules.m01_object_imagery.inner_visual_runtime import InnerVisualRuntimeMixin
 from src.modules.m01_object_imagery.runtime import ObjectImageryRuntimeMixin
+from src.modules.m02_event_dream_replay.event_dream_runtime import EventDreamReplayRuntimeMixin
 from src.modules.m03_self_action_causality.action_outputs_window import ActionOutputsMixin
 from src.modules.m03_self_action_causality.action_runtime import ActionRuntimeMixin
 from src.modules.m05_world_model_attention_workspace.tetra_dynamic_slot_diagnostic import TetraDynamicSlotDiagnosticMixin
@@ -78,6 +79,7 @@ class UnifiedSystemV510(
     ActionRuntimeMixin,
     LegBirdRuntimeMixin,
     SelfCoreRuntimeMixin,
+    EventDreamReplayRuntimeMixin,
     ThoughtChainRuntimeMixin,
     GlobalBroadcastRuntimeMixin,
     InnerSpeechRuntimeMixin,
