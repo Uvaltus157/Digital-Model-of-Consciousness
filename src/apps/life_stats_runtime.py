@@ -37,6 +37,7 @@ class LifeStatsRuntimeMixin:
         inner_object = out.get("inner_object", {}) if isinstance(out.get("inner_object"), dict) else {}
         self_core = out.get("self_core", {}) if isinstance(out.get("self_core"), dict) else {}
         metacog = out.get("metacognition", {}) if isinstance(out.get("metacognition"), dict) else {}
+        memory13 = out.get("autobiographical_memory", {}) if isinstance(out.get("autobiographical_memory"), dict) else {}
         conscious_action = out.get("conscious_action", {}) if isinstance(out.get("conscious_action"), dict) else {}
         broadcast = out.get("broadcast", {}) if isinstance(out.get("broadcast"), dict) else {}
         thought_chain = out.get("thought_chain", {}) if isinstance(out.get("thought_chain"), dict) else {}
@@ -144,6 +145,10 @@ class LifeStatsRuntimeMixin:
             "m12_doubt": self._life_tensor_float(metacog.get("doubt"), 0.0),
             "m12_verify": self._life_tensor_float(metacog.get("verification_need"), 0.0),
             "m12_hold": self._life_tensor_float(metacog.get("action_hold"), 0.0),
+            "m13_episode_count": self._life_tensor_float(memory13.get("episode_count", memory13.get("retrieved_episode_count")), 0.0),
+            "m13_retrieval_relevance": self._life_tensor_float(memory13.get("retrieval_relevance"), 0.0),
+            "m13_blended_into_focus": self._life_tensor_bool(memory13.get("blended_into_focus"), False),
+            "m13_last_summary": str(memory13.get("last_summary", memory13.get("summary", ""))),
             "m14_action_scale": self._life_tensor_float(conscious_action.get("applied_action_scale"), 1.0),
             "m14_reason": str(conscious_action.get("reason", "")),
             "m15_best_chain_score": self._life_tensor_float(thought_chain.get("best_chain_score"), 0.0),
@@ -166,6 +171,7 @@ class LifeStatsRuntimeMixin:
             ("maybe_print_inner_speech_trace", (out,), {}),
             ("maybe_print_global_broadcast_trace", (out,), {}),
             ("maybe_print_metacognition_trace", (out,), {}),
+            ("maybe_print_autobiographical_memory_trace", (out,), {}),
             ("maybe_print_semantic_action_trace", (out,), {}),
             ("maybe_print_inner_object_trace", (out,), {}),
             ("maybe_update_inner_world", (obs, out, decoded_report, target_report, inner_report_confidence), {}),
