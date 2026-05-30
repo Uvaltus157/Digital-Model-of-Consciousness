@@ -226,6 +226,13 @@ class LifeRuntimeMixin:
         out = self.apply_manual_leg_action_override(out)
         out["inner_object"] = self.compute_inner_object_image(obs, out)
         out["self_core"] = self.compute_self_core(obs, out)
+        if hasattr(self, "compute_conscious_action"):
+            try:
+                self.compute_conscious_action(obs, out)
+            except Exception as e:
+                if not hasattr(self, "_semantic_action_warned"):
+                    print(f"[semantic_action] compute skipped: {e}")
+                    self._semantic_action_warned = True
         self.maybe_print_self_core_trace(out)
 
         # Emotion must be computed BEFORE replay.add(), otherwise training never sees
@@ -353,49 +360,30 @@ class LifeRuntimeMixin:
             "self_agency": float(out.get("self_core", {}).get("agency_score", torch.zeros(1, device=self.device)).mean().detach().cpu().item()) if isinstance(out.get("self_core"), dict) else 0.0,
             "self_ownership": float(out.get("self_core", {}).get("body_ownership_score", torch.zeros(1, device=self.device)).mean().detach().cpu().item()) if isinstance(out.get("self_core"), dict) else 0.0,
             "self_continuity": float(out.get("self_core", {}).get("self_continuity_score", torch.zeros(1, device=self.device)).mean().detach().cpu().item()) if isinstance(out.get("self_core"), dict) else 0.0,
-            "self_core_present": bool(hasattr(self, "self_core") and self.self_core is not None),
-            "self_core_trainable": int(sum(p.numel() for p in self.self_core.parameters() if p.requires_grad)) if hasattr(self, "self_core") and self.self_core is not None else 0,
-            "flight_z_min": float(self.cfg.mocap_flight_bounds.min_z),
-            "flight_z_max": float(self.cfg.mocap_flight_bounds.max_z),
-            "body_state_dim": int(obs.get("body_state", torch.zeros(1, 0, device=self.device)).shape[-1]),
-            "leg_ctrl_norm": float(out.get("leg_ctrl", self.prev_leg_motor).norm(dim=-1).mean().detach().cpu().item()),
-            "embodied_dim": int(self.cfg.embodied_dim),
-            "touch_sum": float(obs["tactile"].sum().item()),
-            "object_repr_norm": float(out["object_repr"].norm(dim=-1).mean().item()),
-            "memory_used": float(out["memory"]["memory_usage"].sum().item()),
-            "modality_weights": out["attention"]["modality_weights"][0].detach().cpu().numpy(),
-            "sphere": self.world.get_object_pos("sphere"),
         }
 
+        inner_diag = getattr(self, "_latest_inner_speech_diagnostics", {})
+        if isinstance(inner_diag, dict):
+            self.latest_stats.update(inner_diag)
+
         self.write_module_debug_status()
-        # Read IPC again right before drawing, so buttons feel responsive.
-        self.poll_ipc_control_messages()
-        self.update_camera_preview_window(obs)
-        self.update_action_output_window()
-        
-        # Legacy cv2 manual action window removed; PyQt Agent Actions sends IPC instead.
-        self.update_inner_object_window(obs, out)
-        self.update_inner_object_open3d_window(out)
-        self.update_inner_world_window(out)
-        self.update_latent_semantic_window(out)
-
-        if self.global_step % self.cfg.life.report_every_steps == 0:
-            serial = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in self.latest_stats.items()}
-            self.log_event({"step": self.global_step, "event": "life_tick", **serial})
-
-        if hasattr(self, "log_tetra_life_tick_diagnostics"):
-            self.log_tetra_life_tick_diagnostics()
-
-        # Periodic checkpoint save.
-        # This is the missing link for checkpoint_load.save_path:
-        # checkpointing.py knows where to save, but life_step must actually call it.
-        try:
-            self.maybe_save_checkpoint(force=False, owner="life")
-        except AttributeError:
-            # Older CheckpointingMixin without maybe_save_checkpoint.
-            pass
-        except Exception as e:
-            if self.global_step % max(1, self.cfg.life.report_every_steps) == 0:
-                print(f"[checkpoint] periodic save failed: {e}")
+        self.maybe_print_action_signal_trace(out)
+        self.maybe_print_emotional_drive_trace(emotion)
+        self.maybe_print_thought_chain_trace(out)
+        self.maybe_print_inner_speech_trace(out)
+        self.maybe_print_global_broadcast_trace(out)
+        self.maybe_print_metacognition_trace(out)
+        self.maybe_print_semantic_action_trace(out)
+        self.maybe_print_inner_object_trace(out)
+        self.maybe_update_inner_world(obs, out, decoded_report, target_report, inner_report_confidence)
+        self.maybe_update_camera_preview(obs, out, show_window=self.show_camera_preview_window)
+        self.maybe_update_action_outputs(obs, out)
+        self.maybe_update_inner_object_visualizer(obs, out)
+        self.maybe_update_inner_object_open3d(obs, out)
+        self.maybe_update_latent_semantic_map(obs, out)
+        self.maybe_update_static_dynamic_code_visualizer(obs, out)
+        self.maybe_update_event_code_visualizer(obs, out)
+        self.train_once_if_ready()
 
         self.global_step += 1
+        time.sleep(max(0.0, float(self.cfg.life.sleep_sec)))
