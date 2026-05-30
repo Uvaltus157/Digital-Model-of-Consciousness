@@ -243,8 +243,18 @@ class EmotionalDrive:
         }
 
     def compute(self, out: Dict, obs: Optional[Dict] = None) -> Dict[str, torch.Tensor | float | Dict[str, torch.Tensor]]:
+        cached = out.get("emotion") if isinstance(out, dict) else None
+        if isinstance(cached, dict) and bool(cached.get("_emotion_cache_reusable", False)):
+            # M9 may precompute affect before self-binding so it can consume real
+            # affect_latents. LifeRuntime may call compute() again later in the
+            # same step for reward/stat fields; returning the cached packet avoids
+            # a second EMA/progress update for one runtime tick.
+            return cached
+
         if not self.cfg.enabled:
-            return self._zeros(out)
+            zero = self._zeros(out)
+            zero["_emotion_cache_reusable"] = True
+            return zero
 
         obs = obs or {}
 
@@ -415,6 +425,7 @@ class EmotionalDrive:
             "uncertainty": float(uncertainty),
             "touch_sum": float(touch_sum),
             "curiosity": float(curiosity),
+            "_emotion_cache_reusable": True,
         }
 
     def _zeros(self, out: Dict) -> Dict[str, torch.Tensor | float | Dict[str, torch.Tensor]]:
@@ -466,4 +477,5 @@ class EmotionalDrive:
             "uncertainty": 1.0,
             "touch_sum": 0.0,
             "curiosity": 0.0,
+            "_emotion_cache_reusable": True,
         }
