@@ -45,12 +45,15 @@ class GlobalBroadcastRuntimeMixin:
         self.ensure_global_broadcast_ready()
         affect = out.get("affect", {}) if isinstance(out.get("affect"), dict) else {}
         thought_chain = out.get("thought_chain", {}) if isinstance(out.get("thought_chain"), dict) else {}
+        plan_context = thought_chain.get("plan_context")
+        if not torch.is_tensor(plan_context):
+            plan_context = out.get("plan_context")
 
         broadcast = self.global_broadcast_gate(
             focus_context=focus_context,
             raw_focus_context=out.get("raw_focus_context"),
             active_thought=thought_chain.get("active_thought"),
-            plan_context=thought_chain.get("plan_context") or out.get("plan_context"),
+            plan_context=plan_context,
             affect_latents=affect.get("affect_latents"),
             best_chain_score=thought_chain.get("best_chain_score"),
             predicted_affect_delta=thought_chain.get("predicted_affect_delta"),
