@@ -53,6 +53,7 @@ from src.modules.m07_inner_speech_thoughts.inner_speech_runtime import InnerSpee
 from src.modules.m08_debug_visual_control.module_status_runtime import ModuleStatusRuntimeMixin
 from src.modules.m09_self_core.self_core_runtime import SelfCoreRuntimeMixin
 from src.modules.m10_global_conscious_broadcast.broadcast_runtime import GlobalBroadcastRuntimeMixin
+from src.modules.m12_metacognition_monitor.metacognition_runtime import MetacognitionRuntimeMixin
 from src.modules.m15_counterfactual_imagination_planning.thought_chain_runtime import ThoughtChainRuntimeMixin
 from src.platform.ipc.external_control import ExternalControlMixin
 from src.platform.ipc.ipc_runtime import IPCRuntimeMixin
@@ -78,6 +79,7 @@ class UnifiedSystemV510(
     ThoughtChainRuntimeMixin,
     GlobalBroadcastRuntimeMixin,
     InnerSpeechRuntimeMixin,
+    MetacognitionRuntimeMixin,
     InnerVisualRuntimeMixin,
     TrainingRuntimeMixin,
     LifeRuntimeMixin,
