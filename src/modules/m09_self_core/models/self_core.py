@@ -11,11 +11,13 @@ Purpose:
 
 Core idea:
     M9 keeps a latent model of the agent's own body/self-state and binds it to
-    the currently focused M5 context. The M5 focus context contains the active
-    workspace, object, thought, reflection, attention and planning latents that
-    are relevant right now. M9 turns that focused content into self-bound
-    meaning: "this is my perception", "this is my action", "this is affecting
-    me", "this belongs to my current self-state".
+    the currently focused M5 context plus the M10/M11 affect state. The M5 focus
+    context contains the active workspace, object, preconscious candidate,
+    reflection, attention and planning latents that are relevant right now.
+    Affect latents contain valence/arousal/pain/stress/comfort/relief style
+    signals. M9 turns focused content + affect into self-bound meaning:
+    "this is my perception", "this is my action", "this is affecting me",
+    "this belongs to my current self-state".
 
 Inputs:
     body_state
@@ -25,6 +27,7 @@ Inputs:
     object_latent / inner_object z
     workspace latent
     focus_context / focused M5 latent packet
+    affect_latents / M10-M11 affect packet
 
 Outputs:
     self_state
@@ -33,12 +36,14 @@ Outputs:
     body_ownership_score
     self_continuity_score
     focus_binding_score
+    affect_binding_score
     intent_action_match
     prediction_outcome_match
     self_uncertainty
     self_change
     self_curiosity
     subjective_state
+    subjective_affect_state
     self_bound_context
     self_prediction_error
 """
@@ -60,6 +65,7 @@ class SelfCoreConfig:
     object_latent_dim: int = 128
     workspace_dim: int = 256
     focus_context_dim: int = 256
+    affect_latent_dim: int = 12
     hidden_dim: int = 256
     self_dim: int = 128
     subjective_dim: int = 16
@@ -117,6 +123,7 @@ class SelfCore(nn.Module):
             + self.cfg.object_latent_dim
             + self.cfg.workspace_dim
             + self.cfg.focus_context_dim
+            + self.cfg.affect_latent_dim
         )
 
         self.encoder = nn.Sequential(
@@ -157,8 +164,21 @@ class SelfCore(nn.Module):
             nn.Sigmoid(),
         )
 
+        self.affect_binding_head = nn.Sequential(
+            nn.Linear(self.cfg.self_dim + self.cfg.affect_latent_dim + self.cfg.focus_context_dim, self.cfg.hidden_dim),
+            nn.SiLU(),
+            nn.Linear(self.cfg.hidden_dim, 1),
+            nn.Sigmoid(),
+        )
+
         self.subjective_head = nn.Sequential(
-            nn.Linear(self.cfg.self_dim + 7, self.cfg.hidden_dim),
+            nn.Linear(self.cfg.self_dim + 8, self.cfg.hidden_dim),
+            nn.SiLU(),
+            nn.Linear(self.cfg.hidden_dim, self.cfg.subjective_dim),
+        )
+
+        self.subjective_affect_head = nn.Sequential(
+            nn.Linear(self.cfg.self_dim + self.cfg.affect_latent_dim + 4, self.cfg.hidden_dim),
             nn.SiLU(),
             nn.Linear(self.cfg.hidden_dim, self.cfg.subjective_dim),
         )
@@ -184,6 +204,7 @@ class SelfCore(nn.Module):
         object_latent: torch.Tensor,
         workspace: torch.Tensor,
         focus_context: Optional[torch.Tensor] = None,
+        affect_latents: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
         device = next(self.parameters()).device
         cfg = self.cfg
@@ -199,6 +220,10 @@ class SelfCore(nn.Module):
             focus_context = _zeros_like_batch(body_state, cfg.focus_context_dim)
         else:
             focus_context = pad_or_trim_selfcore(focus_context, cfg.focus_context_dim, device=device)
+        if affect_latents is None:
+            affect_latents = _zeros_like_batch(body_state, cfg.affect_latent_dim)
+        else:
+            affect_latents = pad_or_trim_selfcore(affect_latents, cfg.affect_latent_dim, device=device)
 
         action = _match_batch(action, batch_size)
         tactile = _match_batch(tactile, batch_size)
@@ -206,10 +231,11 @@ class SelfCore(nn.Module):
         object_latent = _match_batch(object_latent, batch_size)
         workspace = _match_batch(workspace, batch_size)
         focus_context = _match_batch(focus_context, batch_size)
+        affect_latents = _match_batch(affect_latents, batch_size)
 
         prev_state = prev_state or self.initial_state(batch_size, device)
 
-        x = torch.cat([body_state, action, tactile, vestibular, object_latent, workspace, focus_context], dim=-1)
+        x = torch.cat([body_state, action, tactile, vestibular, object_latent, workspace, focus_context, affect_latents], dim=-1)
         raw_self = self.encoder(x)
 
         prev_self = prev_state.get("self_state", torch.zeros_like(raw_self)).to(raw_self.device)
@@ -260,7 +286,8 @@ class SelfCore(nn.Module):
         continuity = cfg.continuity_decay * prev_continuity + (1.0 - cfg.continuity_decay) * continuity_raw
 
         focus_binding = self.focus_binding_head(torch.cat([self_state, focus_context, object_latent, workspace], dim=-1))
-        self_bound_context = torch.cat([self_state, focus_context], dim=-1)
+        affect_binding = self.affect_binding_head(torch.cat([self_state, affect_latents, focus_context], dim=-1))
+        self_bound_context = torch.cat([self_state, focus_context, affect_latents], dim=-1)
 
         subjective_state = self.subjective_head(torch.cat([
             self_state,
@@ -271,6 +298,15 @@ class SelfCore(nn.Module):
             self_change,
             self_curiosity,
             focus_binding,
+            affect_binding,
+        ], dim=-1))
+        subjective_affect_state = self.subjective_affect_head(torch.cat([
+            self_state,
+            affect_latents,
+            focus_binding,
+            affect_binding,
+            self_uncertainty,
+            self_curiosity,
         ], dim=-1))
 
         return {
@@ -281,14 +317,17 @@ class SelfCore(nn.Module):
             "body_ownership_score": ownership,
             "self_continuity_score": continuity,
             "focus_binding_score": focus_binding,
+            "affect_binding_score": affect_binding,
             "intent_action_match": intent_action_match,
             "prediction_outcome_match": prediction_outcome_match,
             "self_uncertainty": self_uncertainty,
             "self_change": self_change,
             "self_curiosity": self_curiosity,
             "subjective_state": subjective_state,
+            "subjective_affect_state": subjective_affect_state,
             "self_bound_context": self_bound_context,
             "focus_context": focus_context,
+            "affect_latents": affect_latents,
             "self_prediction_error": pred_error,
         }
 
@@ -312,6 +351,7 @@ def build_self_experience_text(out: Dict[str, torch.Tensor]) -> str:
     curiosity = val("self_curiosity")
     change = val("self_change")
     focus_binding = val("focus_binding_score")
+    affect_binding = val("affect_binding_score")
 
     parts = []
     if agency > 0.65:
@@ -341,6 +381,13 @@ def build_self_experience_text(out: Dict[str, torch.Tensor]) -> str:
         parts.append("Focused content is partially self-bound.")
     else:
         parts.append("Focused content is weakly bound to self.")
+
+    if affect_binding > 0.65:
+        parts.append("Affect feels bound to self.")
+    elif affect_binding > 0.35:
+        parts.append("Affect is partially self-bound.")
+    else:
+        parts.append("Affect is weakly bound to self.")
 
     if uncertainty > 0.60:
         parts.append("Uncertainty is high.")
