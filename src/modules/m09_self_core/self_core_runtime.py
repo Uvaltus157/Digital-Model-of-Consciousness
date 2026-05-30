@@ -23,6 +23,7 @@ class SelfCoreRuntimeMixin:
             object_latent_dim=self.cfg.self_core.object_latent_dim,
             workspace_dim=self.cfg.self_core.workspace_dim,
             focus_context_dim=getattr(self.cfg.self_core, "focus_context_dim", self.cfg.self_core.workspace_dim),
+            affect_latent_dim=getattr(self.cfg.self_core, "affect_latent_dim", 12),
             hidden_dim=self.cfg.self_core.hidden_dim,
             self_dim=self.cfg.self_core.self_dim,
         )).to(self.device)
@@ -59,6 +60,25 @@ class SelfCoreRuntimeMixin:
         batch = int(workspace.shape[0]) if torch.is_tensor(workspace) and workspace.ndim >= 1 else 1
         return torch.zeros(batch, target_dim, device=self.device)
 
+    def _build_self_core_affect_latents(self, out: dict, workspace: torch.Tensor) -> torch.Tensor:
+        """
+        Read the M10/M11 affect packet.
+
+        Stage-4 architecture rule:
+            M9 binds M5 focus_context with M10/M11 affect_latents.
+            M9 should not know the internal emotion scalar formulas.
+        """
+        target_dim = int(getattr(self.cfg.self_core, "affect_latent_dim", 12))
+        affect = out.get("affect", {}) if isinstance(out.get("affect"), dict) else {}
+        affect_latents = affect.get("affect_latents")
+        if torch.is_tensor(affect_latents):
+            if affect_latents.ndim > 2:
+                affect_latents = affect_latents.reshape(affect_latents.shape[0], -1)
+            return pad_or_trim_selfcore(affect_latents.float(), target_dim, device=self.device)
+
+        batch = int(workspace.shape[0]) if torch.is_tensor(workspace) and workspace.ndim >= 1 else 1
+        return torch.zeros(batch, target_dim, device=self.device)
+
     def compute_self_core(self, obs: dict, out: dict):
         if not self.cfg.self_core.enabled:
             return None
@@ -89,6 +109,7 @@ class SelfCoreRuntimeMixin:
             workspace = workspace.reshape(workspace.shape[0], -1)
 
         focus_context = self._build_self_core_focus_context(out, workspace)
+        affect_latents = self._build_self_core_affect_latents(out, workspace)
 
         sc = self.self_core(
             self.self_core_state,
@@ -99,6 +120,7 @@ class SelfCoreRuntimeMixin:
             object_latent=object_latent,
             workspace=workspace,
             focus_context=focus_context,
+            affect_latents=affect_latents,
         )
         self.self_core_state = {
             "self_state": sc["self_state"].detach(),
@@ -110,6 +132,11 @@ class SelfCoreRuntimeMixin:
         sc["self_experience_text"] = build_self_experience_text(sc)
         sc["focus_context_present"] = torch.tensor(
             [1.0 if torch.is_tensor(out.get("focus_context")) else 0.0],
+            device=self.device,
+            dtype=sc["self_state"].dtype,
+        )
+        sc["affect_latents_present"] = torch.tensor(
+            [1.0 if torch.is_tensor(out.get("affect", {}).get("affect_latents")) if isinstance(out.get("affect"), dict) else 0.0],
             device=self.device,
             dtype=sc["self_state"].dtype,
         )
@@ -137,7 +164,9 @@ class SelfCoreRuntimeMixin:
             f"ownership={f('body_ownership_score'):.3f} "
             f"continuity={f('self_continuity_score'):.3f} "
             f"focus_binding={f('focus_binding_score'):.3f} "
+            f"affect_binding={f('affect_binding_score'):.3f} "
             f"focus_context_present={f('focus_context_present'):.0f} "
+            f"affect_latents_present={f('affect_latents_present'):.0f} "
             f"uncertainty={f('self_uncertainty'):.3f} "
             f"curiosity={f('self_curiosity'):.3f} | "
             f"{sc.get('self_experience_text', '')}"
