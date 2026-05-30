@@ -33,6 +33,16 @@ class LifeRuntimeMixin(
                 print(f"[semantic_action] compute skipped: {e}")
                 self._semantic_action_warned = True
 
+    def _compute_long_dynamic_memory(self, obs: dict, out: dict) -> None:
+        if not hasattr(self, "compute_long_dynamic_memory"):
+            return
+        try:
+            self.compute_long_dynamic_memory(obs, out)
+        except Exception as e:
+            if not hasattr(self, "_long_dynamic_memory_runtime_warned"):
+                print(f"[long_dynamic_memory] compute skipped: {e}")
+                self._long_dynamic_memory_runtime_warned = True
+
     def _write_autobiographical_episode(self, obs: dict, out: dict) -> None:
         if not hasattr(self, "write_autobiographical_episode"):
             return
@@ -118,6 +128,7 @@ class LifeRuntimeMixin(
         out["leg_ctrl"] = self.compute_leg_control(out)
         out = self.apply_manual_leg_action_override(out)
         out["inner_object"] = self.compute_inner_object_image(obs, out)
+        self._compute_long_dynamic_memory(obs, out)
         out["self_core"] = self.compute_self_core(obs, out)
         self._apply_conscious_action_guard(obs, out)
         self.maybe_print_self_core_trace(out)
