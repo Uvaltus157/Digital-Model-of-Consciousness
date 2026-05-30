@@ -262,6 +262,8 @@ class LifeRuntimeMixin:
 
         emotion = self.emotional_drive.compute(out, obs)
         out["emotion"] = emotion
+        if isinstance(emotion.get("affect"), dict):
+            out["affect"] = emotion["affect"]
         if self.cfg.emotional_drive.inject_into_env_reward:
             obs["reward"] = obs["reward"] + emotion["intrinsic_reward"].detach() * float(self.cfg.emotional_drive.reward_weight)
 
@@ -295,6 +297,9 @@ class LifeRuntimeMixin:
             "multimodal_alignment": float(emotion["multimodal_alignment"]),
             "contact_pleasure": float(emotion["contact_pleasure"]),
             "uncertainty": float(emotion["uncertainty"]),
+            "affect_latent_norm": float(out.get("affect", {}).get("affect_latents", torch.zeros(1, device=self.device)).norm(dim=-1).mean().detach().cpu().item()) if isinstance(out.get("affect"), dict) and torch.is_tensor(out.get("affect", {}).get("affect_latents")) else 0.0,
+            "affect_panic": float(out.get("affect", {}).get("panic_latent", torch.zeros(1, device=self.device)).reshape(-1)[0].detach().cpu().item()) if isinstance(out.get("affect"), dict) and torch.is_tensor(out.get("affect", {}).get("panic_latent")) else 0.0,
+            "affect_comfort": float(out.get("affect", {}).get("comfort_latent", torch.zeros(1, device=self.device)).reshape(-1)[0].detach().cpu().item()) if isinstance(out.get("affect"), dict) and torch.is_tensor(out.get("affect", {}).get("comfort_latent")) else 0.0,
             "exploration_active": bool(out.get("exploration", {}).get("active", False)),
             "exploration_boost": float(out.get("exploration", {}).get("boost", 0.0)),
             "dynamic_rig_enabled": bool(self.dynamic_agent_rig_controller is not None),
