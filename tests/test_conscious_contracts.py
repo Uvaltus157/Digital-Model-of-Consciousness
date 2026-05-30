@@ -218,4 +218,3 @@ def test_emotional_drive_reuses_cached_packet_without_second_ema_update() -> Non
     assert drive.ema_uncertainty == ema_after_first
     assert second["_emotion_cache_reusable"] is True
     assert "affect_latents" in second["affect"]
-}
