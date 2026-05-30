@@ -17,6 +17,13 @@ from src.modules.m10_global_conscious_broadcast.broadcast_gate import (
     GlobalConsciousBroadcastGate,
 )
 from src.modules.m11_motivational_homeostasis.emotional_drive_bivalent import EmotionalDrive
+from src.modules.m12_metacognition_monitor.metacognition_monitor import (
+    MetacognitionMonitor,
+    MetacognitionMonitorConfig,
+)
+from src.modules.m14_semantic_grounding.semantic_action_grounding import (
+    SemanticActionGrounding,
+)
 from src.modules.m15_counterfactual_imagination_planning.thought_chain_controller import (
     ThoughtChainController,
     ThoughtChainControllerConfig,
@@ -155,8 +162,65 @@ def test_m10_selects_global_broadcast_for_self_binding() -> None:
     assert out["selected_source"] in gate.SOURCE_NAMES
 
 
-def test_m15_searches_chain_before_m9_and_enhances_focus_context() -> None:
+def test_m12_monitors_confidence_doubt_and_verification_need() -> None:
     torch.manual_seed(4)
+    cfg = MetacognitionMonitorConfig(
+        self_dim=10,
+        focus_context_dim=16,
+        affect_latent_dim=6,
+        report_latent_dim=8,
+        plan_context_dim=12,
+        hidden_dim=32,
+    )
+    monitor = MetacognitionMonitor(cfg)
+    out = monitor(
+        self_state=torch.randn(1, 10),
+        focus_context=torch.randn(1, 16),
+        affect_latents=torch.randn(1, 6),
+        report_latent=torch.randn(1, 8),
+        plan_context=torch.randn(1, 12),
+        scalar_features=torch.tensor([[0.5, 0.5, 0.4, 0.5, 0.5, 0.6, 0.7, 0.2, 1.0, 0.0, 0.8, 0.8]]),
+    )
+
+    assert out["metacognitive_confidence"].shape == (1, 1)
+    assert out["doubt"].shape == (1, 1)
+    assert out["verification_need"].shape == (1, 1)
+    assert out["action_hold"].shape == (1, 1)
+    assert out["should_verify"].shape == (1, 1)
+    assert out["should_hold_action"].shape == (1, 1)
+    assert out["high_doubt"].shape == (1, 1)
+
+
+def test_m14_softens_action_when_metacognition_requests_hold() -> None:
+    guard = SemanticActionGrounding()
+    out = {
+        "metacognition": {
+            "action_hold": torch.tensor([[0.9]]),
+            "verification_need": torch.tensor([[0.8]]),
+            "doubt": torch.tensor([[0.9]]),
+            "should_hold_action": torch.tensor([[1.0]]),
+            "should_verify": torch.tensor([[1.0]]),
+            "high_doubt": torch.tensor([[1.0]]),
+        },
+        "thought_chain": {
+            "no_viable_chain": torch.tensor([[0.0]]),
+            "predicted_affect_delta": torch.tensor([[0.2]]),
+            "best_chain_score": torch.tensor([[0.6]]),
+        },
+        "affect": {"panic_latent": torch.tensor([[0.0]])},
+        "broadcast": {"urgency": torch.tensor([[0.4]])},
+    }
+
+    action = guard.compute(out)
+
+    assert action["applied_action_scale"].shape == (1, 1)
+    assert float(action["applied_action_scale"].item()) <= 0.25
+    assert float(action["verify_before_action"].item()) == 1.0
+    assert action["reason"] in {"verify_before_action", "metacognitive_hold"}
+
+
+def test_m15_searches_chain_before_m9_and_enhances_focus_context() -> None:
+    torch.manual_seed(5)
     cfg = ThoughtChainControllerConfig(
         self_bound_context_dim=20,
         subjective_affect_dim=5,
@@ -193,7 +257,7 @@ def test_m15_searches_chain_before_m9_and_enhances_focus_context() -> None:
 
 
 def test_m7_verbalizes_self_bound_thought_inputs() -> None:
-    torch.manual_seed(5)
+    torch.manual_seed(6)
     cfg = InnerSpeechDecoderConfig(
         active_thought_dim=10,
         plan_context_dim=12,
