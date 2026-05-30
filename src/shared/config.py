@@ -254,7 +254,7 @@ class ManualActionOverrideRuntimeConfig:
     max_linear: float = 2.0
     max_angular: float = 1.5
     width: int = 760
-    height: 480
+    height: int = 480
     show_every_steps: int = 1
 
 
