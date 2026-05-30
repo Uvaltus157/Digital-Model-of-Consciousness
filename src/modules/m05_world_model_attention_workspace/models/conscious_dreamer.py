@@ -10,7 +10,9 @@ Runtime code should import the current M5 model names from this file:
         make_conscious_dreamer_config_from_world,
     )
 
-This keeps app and runner boundaries on one stable ConsciousDreamer API.
+M5 is the shared preconscious world-model / attention / focus field. It does
+not own true inner speech. M7 should generate inner speech only after M9 binds
+M5 focus_context and M10 affect_latents to self.
 """
 
 from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_object_imagery import (
@@ -25,10 +27,6 @@ from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_me
     ConsciousDreamerMemoryThought,
     ConsciousDreamerMemoryThoughtConfig,
 )
-from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_inner_speech import (
-    ConsciousDreamerInnerSpeech,
-    ConsciousDreamerInnerSpeechConfig,
-)
 
 
 # Canonical public names used by runner/app code.
@@ -38,8 +36,8 @@ ConsciousDreamerConfig = ConsciousDreamerObjectImageryConfig
 # Explicit latest aliases for diagnostics/documentation.
 ConsciousDreamerLatest = ConsciousDreamer
 ConsciousDreamerLatestConfig = ConsciousDreamerConfig
-CONSCIOUS_DREAMER_MODEL_VERSION = "M5_CONSCIOUS_DREAMER_CANONICAL_V1"
-CONSCIOUS_DREAMER_MODEL_ID = "M5_CONSCIOUS_DREAMER"
+CONSCIOUS_DREAMER_MODEL_VERSION = "M5_PRECONSCIOUS_WORLD_MODEL_CANONICAL_V2"
+CONSCIOUS_DREAMER_MODEL_ID = "M5_PRECONSCIOUS_WORLD_MODEL"
 
 
 def make_conscious_dreamer_config_from_world(
@@ -57,8 +55,8 @@ def make_conscious_dreamer_config_from_world(
 ) -> ConsciousDreamerConfig:
     """Build the canonical M5 config from explicit world/model dimensions.
 
-    It intentionally requires all runtime-owned model dimensions to be passed
-    explicitly, so config files stay the single source of truth.
+    Symbol/text vocab args are accepted for API compatibility only. They are no
+    longer applied to canonical M5 because inner speech belongs to M7 after M9.
     """
     required_dims = {
         "body_state_dim": body_state_dim,
@@ -83,10 +81,6 @@ def make_conscious_dreamer_config_from_world(
     cfg.data.embodied_dim = int(embodied_dim)
     cfg.data.action_dim = int(action_dim)
 
-    cfg.symbolic_report.symbol_vocab_size = int(symbol_vocab_size)
-    cfg.symbolic_report.phoneme_vocab_size = int(phoneme_vocab_size)
-    cfg.symbolic_report.text_vocab_size = int(text_vocab_size)
-
     # The object-imagery layer fixes input dimensions in __init__, but setting
     # image size here keeps config previews deterministic.
     cfg.object_imagery.image_size = min(int(image_height), int(image_width), 96)
@@ -104,8 +98,6 @@ __all__ = [
     "ConsciousDreamerCoreConfig",
     "ConsciousDreamerMemoryThought",
     "ConsciousDreamerMemoryThoughtConfig",
-    "ConsciousDreamerInnerSpeech",
-    "ConsciousDreamerInnerSpeechConfig",
     "make_conscious_dreamer_config_from_world",
     "CONSCIOUS_DREAMER_MODEL_VERSION",
     "CONSCIOUS_DREAMER_MODEL_ID",
