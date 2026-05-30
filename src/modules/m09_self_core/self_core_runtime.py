@@ -42,8 +42,8 @@ class SelfCoreRuntimeMixin:
         """
         Stage-4/5 bridge.
 
-        M13/M2/M15, M10 and M9 need affect_latents before self binding. Create the
-        same affect packet here when it is not already present. EmotionalDrive
+        M4/M13/M2/M15, M10 and M9 need affect_latents before self binding. Create
+        the same affect packet here when it is not already present. EmotionalDrive
         caches the packet on out["emotion"], so LifeRuntime can reuse it later
         without a second EMA/progress update.
         """
@@ -62,13 +62,26 @@ class SelfCoreRuntimeMixin:
                 print(f"[self_core] affect precompute skipped: {e}")
                 self._self_core_affect_warned = True
 
+    def _run_pre_self_long_dynamic_memory(self, obs: dict, out: dict) -> None:
+        """M4 identity context is blended before M13/M2/M15 retrieval/search."""
+        del obs
+        if not hasattr(self, "blend_long_dynamic_memory_into_focus"):
+            return
+        try:
+            self.blend_long_dynamic_memory_into_focus(out)
+        except Exception as e:
+            if not hasattr(self, "_long_dynamic_pre_self_warned"):
+                print(f"[long_dynamic_memory] pre-self blend skipped: {e}")
+                self._long_dynamic_pre_self_warned = True
+
     def _run_pre_self_autobiographical_retrieval(self, obs: dict, out: dict) -> None:
         """
         M13 pre-self retrieval.
 
-        Runs after M11 affect packet is available and before M2/M15. It may blend
-        retrieved autobiographical context into M5 focus_context, so event replay
-        and chain search can use past self-relevant episodes.
+        Runs after M4 identity context and M11 affect packet are available and
+        before M2/M15. It may blend retrieved autobiographical context into M5
+        focus_context, so event replay and chain search can use past self-relevant
+        episodes.
         """
         if not hasattr(self, "compute_autobiographical_retrieval"):
             return
@@ -99,8 +112,8 @@ class SelfCoreRuntimeMixin:
     def _run_pre_self_thought_chain(self, obs: dict, out: dict) -> None:
         """
         Correct architecture order:
-            M5 focus_context + M11 affect_latents + M13 memory + M2 replay
-            -> M15 chain search
+            M5 focus_context + M11 affect_latents + M4 dynamic identity
+            + M13 memory + M2 replay -> M15 chain search
             M15 writes best chain back into M5 focus_context
             M10 selects/broadcasts conscious-access material
             M9 self-binds the broadcast focus_context
@@ -141,12 +154,13 @@ class SelfCoreRuntimeMixin:
 
     def _build_self_core_focus_context(self, out: dict, workspace: torch.Tensor) -> torch.Tensor:
         """
-        Read the M5/M13/M2/M15/M10-owned focus_context.
+        Read the M5/M4/M13/M2/M15/M10-owned focus_context.
 
-        M5 creates the focus_context. M13 may blend retrieved memory into it.
-        M2 may blend event/dream replay into it. M15 may enhance it with the best
-        chain. M10 may replace it with broadcast_latent. M9 must not manually
-        reconstruct focus from lower-level internals.
+        M5 creates the focus_context. M4 may blend stable dynamic identity into it.
+        M13 may blend retrieved memory into it. M2 may blend event/dream replay
+        into it. M15 may enhance it with the best chain. M10 may replace it with
+        broadcast_latent. M9 must not manually reconstruct focus from lower-level
+        internals.
         """
         target_dim = int(getattr(self.cfg.self_core, "focus_context_dim", self.cfg.self_core.workspace_dim))
         focus_context = out.get("focus_context")
@@ -181,6 +195,7 @@ class SelfCoreRuntimeMixin:
             return None
         self.ensure_self_core_ready()
         self._ensure_affect_packet_for_self_core(obs, out)
+        self._run_pre_self_long_dynamic_memory(obs, out)
         self._run_pre_self_autobiographical_retrieval(obs, out)
         self._run_pre_self_event_dream_replay(obs, out)
         self._run_pre_self_thought_chain(obs, out)
@@ -240,6 +255,12 @@ class SelfCoreRuntimeMixin:
         affect = out.get("affect", {}) if isinstance(out.get("affect"), dict) else {}
         sc["affect_latents_present"] = torch.tensor(
             [1.0 if torch.is_tensor(affect.get("affect_latents")) else 0.0],
+            device=self.device,
+            dtype=sc["self_state"].dtype,
+        )
+        long_dynamic = out.get("long_dynamic_memory", {}) if isinstance(out.get("long_dynamic_memory"), dict) else {}
+        sc["long_dynamic_memory_present"] = torch.tensor(
+            [1.0 if torch.is_tensor(long_dynamic.get("dynamic_identity_context")) else 0.0],
             device=self.device,
             dtype=sc["self_state"].dtype,
         )
@@ -306,6 +327,7 @@ class SelfCoreRuntimeMixin:
             f"affect_binding={f('affect_binding_score'):.3f} "
             f"focus_context_present={f('focus_context_present'):.0f} "
             f"affect_latents_present={f('affect_latents_present'):.0f} "
+            f"long_dynamic_present={f('long_dynamic_memory_present'):.0f} "
             f"replay_present={f('event_dream_replay_present'):.0f} "
             f"broadcast_present={f('broadcast_present'):.0f} "
             f"memory_present={f('autobiographical_memory_present'):.0f} "
