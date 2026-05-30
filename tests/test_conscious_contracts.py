@@ -21,6 +21,10 @@ from src.modules.m12_metacognition_monitor.metacognition_monitor import (
     MetacognitionMonitor,
     MetacognitionMonitorConfig,
 )
+from src.modules.m13_autobiographical_memory.autobiographical_memory import (
+    AutobiographicalMemory,
+    AutobiographicalMemoryConfig,
+)
 from src.modules.m14_semantic_grounding.semantic_action_grounding import (
     SemanticActionGrounding,
 )
@@ -191,6 +195,32 @@ def test_m12_monitors_confidence_doubt_and_verification_need() -> None:
     assert out["high_doubt"].shape == (1, 1)
 
 
+def test_m13_writes_and_retrieves_autobiographical_episode() -> None:
+    torch.manual_seed(5)
+    memory = AutobiographicalMemory(AutobiographicalMemoryConfig(memory_dim=16, max_episodes=8, retrieval_topk=1))
+    out = {
+        "focus_context": torch.randn(1, 16),
+        "workspace_out": torch.randn(1, 16),
+        "object_repr": torch.randn(1, 16),
+        "affect": {"affect_latents": torch.randn(1, 6), "panic_latent": torch.tensor([[0.2]])},
+        "emotion": {"emotional_valence": 0.4, "emotional_arousal": 0.5},
+        "metacognition": {"doubt": torch.tensor([[0.1]])},
+        "conscious_action": {"reason": "action_allowed"},
+        "thought_chain": {"plan_context": torch.randn(1, 12), "best_chain_score": torch.tensor([[0.8]])},
+        "broadcast": {"broadcast_latent": torch.randn(1, 16), "selected_source": "m15_focus"},
+    }
+
+    write = memory.write_episode(obs={}, out=out, global_step=7)
+    retrieved = memory.retrieve(out)
+
+    assert write["episode_written"].shape == (1,)
+    assert float(write["episode_count"].item()) == 1.0
+    assert retrieved["retrieved_context"].shape == (1, 16)
+    assert retrieved["retrieval_relevance"].shape == (1, 1)
+    assert float(retrieved["retrieved_episode_count"].item()) == 1.0
+    assert "step=7" in write["last_summary"]
+
+
 def test_m14_softens_action_when_metacognition_requests_hold() -> None:
     guard = SemanticActionGrounding()
     out = {
@@ -220,7 +250,7 @@ def test_m14_softens_action_when_metacognition_requests_hold() -> None:
 
 
 def test_m15_searches_chain_before_m9_and_enhances_focus_context() -> None:
-    torch.manual_seed(5)
+    torch.manual_seed(6)
     cfg = ThoughtChainControllerConfig(
         self_bound_context_dim=20,
         subjective_affect_dim=5,
@@ -257,7 +287,7 @@ def test_m15_searches_chain_before_m9_and_enhances_focus_context() -> None:
 
 
 def test_m7_verbalizes_self_bound_thought_inputs() -> None:
-    torch.manual_seed(6)
+    torch.manual_seed(7)
     cfg = InnerSpeechDecoderConfig(
         active_thought_dim=10,
         plan_context_dim=12,
