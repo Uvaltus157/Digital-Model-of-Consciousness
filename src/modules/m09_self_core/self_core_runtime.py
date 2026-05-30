@@ -179,6 +179,17 @@ class SelfCoreRuntimeMixin:
                 if not hasattr(self, "_thought_chain_warned"):
                     print(f"[thought_chain] compute skipped: {e}")
                     self._thought_chain_warned = True
+
+        # Stage-6 bridge: M7 verbalizes self-bound thought chains after M15.
+        # This publishes out["inner_speech"] / out["conscious_report"] for
+        # visualizers while keeping legacy symbolic_report optional.
+        if hasattr(self, "compute_inner_speech"):
+            try:
+                self.compute_inner_speech(obs, out)
+            except Exception as e:
+                if not hasattr(self, "_inner_speech_warned"):
+                    print(f"[inner_speech] compute skipped: {e}")
+                    self._inner_speech_warned = True
         return sc
 
     def maybe_print_self_core_trace(self, out: dict):
