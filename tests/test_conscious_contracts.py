@@ -1,0 +1,221 @@
+from __future__ import annotations
+
+import torch
+
+from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_memory_thought import (
+    ConsciousDreamerMemoryThought,
+    ConsciousDreamerMemoryThoughtConfig,
+)
+from src.modules.m07_inner_speech_thoughts.inner_speech_decoder import (
+    InnerSpeechDecoder,
+    InnerSpeechDecoderConfig,
+    render_inner_speech_text,
+)
+from src.modules.m09_self_core.models.self_core import SelfCore, SelfCoreConfig
+from src.modules.m11_motivational_homeostasis.emotional_drive_bivalent import EmotionalDrive
+from src.modules.m15_counterfactual_imagination_planning.thought_chain_controller import (
+    ThoughtChainController,
+    ThoughtChainControllerConfig,
+)
+
+
+def _small_m5_config() -> ConsciousDreamerMemoryThoughtConfig:
+    cfg = ConsciousDreamerMemoryThoughtConfig()
+    cfg.data.image_height = 16
+    cfg.data.image_width = 16
+    cfg.data.pose_dim = 7
+    cfg.data.body_state_dim = 8
+    cfg.data.tactile_dim = 5
+    cfg.data.hand_motor_dim = 4
+    cfg.data.embodied_dim = 3
+    cfg.data.action_dim = 6
+
+    cfg.latent.vision_dim = 8
+    cfg.latent.pose_dim = 4
+    cfg.latent.body_dim = 4
+    cfg.latent.tactile_dim = 4
+    cfg.latent.hand_motor_dim = 4
+    cfg.latent.object_state_dim = 4
+    cfg.latent.action_embed_dim = 4
+    cfg.latent.modality_dim = 8
+    cfg.latent.fused_dim = 16
+    cfg.latent.rssm_dim = 16
+
+    cfg.conscious.workspace_dim = 12
+    cfg.conscious.body_context_dim = 10
+    cfg.conscious.model_reflection_dim = 10
+    cfg.conscious.thought_dim = 8
+    cfg.conscious.value_dim = 6
+    cfg.conscious.report_dim = 6
+    cfg.conscious.object_repr_dim = 7
+    cfg.conscious.imagination_horizon = 2
+    cfg.conscious.attention_heads = 2
+
+    cfg.thought_memory.thought_steps = 2
+    cfg.thought_memory.memory_slots = 8
+    cfg.thought_memory.memory_dim = 9
+    return cfg
+
+
+def test_m5_outputs_owned_focus_context() -> None:
+    torch.manual_seed(1)
+    cfg = _small_m5_config()
+    model = ConsciousDreamerMemoryThought(cfg)
+    state = model.initial_state(batch_size=1, device="cpu")
+
+    out = model.step(
+        left=torch.randn(1, 3, 16, 16),
+        right=torch.randn(1, 3, 16, 16),
+        depth=torch.randn(1, 1, 16, 16),
+        pose=torch.randn(1, 7),
+        body_state=torch.randn(1, cfg.data.body_state_dim),
+        tactile=torch.randn(1, cfg.data.tactile_dim),
+        hand_motor=torch.randn(1, cfg.data.hand_motor_dim),
+        embodied_action=torch.randn(1, cfg.data.embodied_dim),
+        object_state=torch.randn(1, 9),
+        state=state,
+        write_memory=False,
+    )
+
+    assert "focus_context" in out
+    assert out["focus_context"].ndim == 2
+    assert out["focus_context"].shape[0] == 1
+    assert out["focus_context"].shape[-1] > cfg.conscious.workspace_dim
+    assert "symbolic_report" not in out
+
+
+def test_m9_binds_focus_context_and_affect_latents() -> None:
+    torch.manual_seed(2)
+    cfg = SelfCoreConfig(
+        body_state_dim=8,
+        action_dim=3,
+        tactile_dim=5,
+        vestibular_dim=4,
+        object_latent_dim=7,
+        workspace_dim=12,
+        focus_context_dim=16,
+        affect_latent_dim=6,
+        hidden_dim=32,
+        self_dim=10,
+        subjective_dim=5,
+    )
+    model = SelfCore(cfg)
+    prev = model.initial_state(batch_size=1, device="cpu")
+
+    out = model(
+        prev,
+        body_state=torch.randn(1, 8),
+        action=torch.randn(1, 3),
+        tactile=torch.randn(1, 5),
+        vestibular=torch.randn(1, 4),
+        object_latent=torch.randn(1, 7),
+        workspace=torch.randn(1, 12),
+        focus_context=torch.randn(1, 16),
+        affect_latents=torch.randn(1, 6),
+    )
+
+    assert out["self_bound_context"].shape == (1, cfg.self_dim + cfg.focus_context_dim + cfg.affect_latent_dim)
+    assert out["affect_binding_score"].shape == (1, 1)
+    assert out["subjective_affect_state"].shape == (1, cfg.subjective_dim)
+    assert out["affect_latents"].shape == (1, cfg.affect_latent_dim)
+
+
+def test_m15_creates_active_thought_chain_and_plan_context() -> None:
+    torch.manual_seed(3)
+    cfg = ThoughtChainControllerConfig(
+        self_bound_context_dim=20,
+        subjective_affect_dim=5,
+        focus_context_dim=16,
+        affect_latent_dim=6,
+        hidden_dim=32,
+        thought_dim=10,
+        plan_context_dim=12,
+        chain_len=3,
+    )
+    model = ThoughtChainController(cfg)
+
+    out = model(
+        self_bound_context=torch.randn(1, 20),
+        subjective_affect_state=torch.randn(1, 5),
+        focus_context=torch.randn(1, 16),
+        affect_latents=torch.randn(1, 6),
+    )
+
+    assert out["active_thought_chain"].shape == (1, cfg.chain_len, cfg.thought_dim)
+    assert out["candidate_thought_chain"].shape == (1, cfg.chain_len, cfg.thought_dim)
+    assert out["active_thought"].shape == (1, cfg.thought_dim)
+    assert out["plan_context"].shape == (1, cfg.plan_context_dim)
+    assert set(out["thought_chain_metrics"].keys()) == {
+        "stability",
+        "urgency",
+        "self_relevance",
+        "planning_readiness",
+    }
+
+
+def test_m7_verbalizes_self_bound_thought_inputs() -> None:
+    torch.manual_seed(4)
+    cfg = InnerSpeechDecoderConfig(
+        active_thought_dim=10,
+        plan_context_dim=12,
+        self_bound_context_dim=20,
+        subjective_affect_dim=5,
+        affect_latent_dim=6,
+        hidden_dim=32,
+        report_latent_dim=8,
+        vocab_size=32,
+        max_tokens=6,
+    )
+    model = InnerSpeechDecoder(cfg)
+
+    out = model(
+        active_thought=torch.randn(1, 10),
+        plan_context=torch.randn(1, 12),
+        self_bound_context=torch.randn(1, 20),
+        subjective_affect_state=torch.randn(1, 5),
+        affect_latents=torch.randn(1, 6),
+    )
+
+    assert out["report_latent"].shape == (1, cfg.report_latent_dim)
+    assert out["confidence"].shape == (1, 1)
+    assert out["text_token_ids"].shape == (1, cfg.max_tokens)
+
+    text = render_inner_speech_text(
+        self_core={
+            "agency_score": torch.tensor([[0.8]]),
+            "body_ownership_score": torch.tensor([[0.7]]),
+            "self_continuity_score": torch.tensor([[0.7]]),
+            "focus_binding_score": torch.tensor([[0.8]]),
+            "affect_binding_score": torch.tensor([[0.7]]),
+        },
+        thought_chain={"thought_chain_metrics": {"planning_readiness": torch.tensor([[0.8]])}},
+        affect={"comfort_latent": torch.tensor([[0.6]]), "panic_latent": torch.tensor([[0.1]]), "valence": torch.tensor([[0.3]])},
+        confidence=0.5,
+    )
+    assert "I am causing this action" in text
+    assert "I can form a plan" in text
+
+
+def test_emotional_drive_reuses_cached_packet_without_second_ema_update() -> None:
+    drive = EmotionalDrive()
+    out = {
+        "values": {"coherence": torch.tensor([[0.5]]), "curiosity": torch.tensor([[0.2]])},
+        "workspace_out": torch.randn(1, 12),
+        "object_repr": torch.randn(1, 7),
+        "preconscious_thoughts": {"thought_candidate": torch.randn(1, 8)},
+        "memory": {"memory_context": torch.randn(1, 9)},
+        "preconscious_reflection_out": {"model_confidence": torch.tensor([[0.4]])},
+    }
+    obs = {"tactile": torch.zeros(1, 5)}
+
+    first = drive.compute(out, obs)
+    out["emotion"] = first
+    ema_after_first = drive.ema_uncertainty
+
+    second = drive.compute(out, obs)
+
+    assert second is first
+    assert drive.ema_uncertainty == ema_after_first
+    assert second["_emotion_cache_reusable"] is True
+    assert "affect_latents" in second["affect"]
+}
