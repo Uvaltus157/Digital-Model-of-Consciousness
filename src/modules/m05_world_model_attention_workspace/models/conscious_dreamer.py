@@ -33,10 +33,10 @@ from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_me
 ConsciousDreamer = ConsciousDreamerObjectImagery
 ConsciousDreamerConfig = ConsciousDreamerObjectImageryConfig
 
-# Explicit latest aliases for diagnostics/documentation.
+# Explicit aliases for diagnostics/documentation without versioned naming.
 ConsciousDreamerLatest = ConsciousDreamer
 ConsciousDreamerLatestConfig = ConsciousDreamerConfig
-CONSCIOUS_DREAMER_MODEL_VERSION = "M5_PRECONSCIOUS_WORLD_MODEL_CANONICAL_V2"
+CONSCIOUS_DREAMER_MODEL_FLAVOR = "M5_PRECONSCIOUS_WORLD_MODEL_CANONICAL"
 CONSCIOUS_DREAMER_MODEL_ID = "M5_PRECONSCIOUS_WORLD_MODEL"
 
 
@@ -99,6 +99,6 @@ __all__ = [
     "ConsciousDreamerMemoryThought",
     "ConsciousDreamerMemoryThoughtConfig",
     "make_conscious_dreamer_config_from_world",
-    "CONSCIOUS_DREAMER_MODEL_VERSION",
+    "CONSCIOUS_DREAMER_MODEL_FLAVOR",
     "CONSCIOUS_DREAMER_MODEL_ID",
 ]
