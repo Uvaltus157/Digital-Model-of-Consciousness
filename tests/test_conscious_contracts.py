@@ -120,7 +120,7 @@ def test_m9_binds_focus_context_and_affect_latents() -> None:
     assert out["affect_latents"].shape == (1, cfg.affect_latent_dim)
 
 
-def test_m15_creates_active_thought_chain_and_plan_context() -> None:
+def test_m15_searches_chain_before_m9_and_enhances_focus_context() -> None:
     torch.manual_seed(3)
     cfg = ThoughtChainControllerConfig(
         self_bound_context_dim=20,
@@ -135,8 +135,6 @@ def test_m15_creates_active_thought_chain_and_plan_context() -> None:
     model = ThoughtChainController(cfg)
 
     out = model(
-        self_bound_context=torch.randn(1, 20),
-        subjective_affect_state=torch.randn(1, 5),
         focus_context=torch.randn(1, 16),
         affect_latents=torch.randn(1, 6),
     )
@@ -145,6 +143,12 @@ def test_m15_creates_active_thought_chain_and_plan_context() -> None:
     assert out["candidate_thought_chain"].shape == (1, cfg.chain_len, cfg.thought_dim)
     assert out["active_thought"].shape == (1, cfg.thought_dim)
     assert out["plan_context"].shape == (1, cfg.plan_context_dim)
+    assert out["enhanced_focus_context"].shape == (1, cfg.focus_context_dim)
+    assert out["best_chain"].shape == (1, cfg.chain_len, cfg.thought_dim)
+    assert out["best_chain_score"].shape == (1, 1)
+    assert out["predicted_affect_delta"].shape == (1, 1)
+    assert out["no_viable_chain"].shape == (1, 1)
+    assert out["panic_trigger"].shape == (1, 1)
     assert set(out["thought_chain_metrics"].keys()) == {
         "stability",
         "urgency",
