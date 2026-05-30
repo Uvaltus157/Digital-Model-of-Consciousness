@@ -135,8 +135,9 @@ class SelfCoreRuntimeMixin:
             device=self.device,
             dtype=sc["self_state"].dtype,
         )
+        affect = out.get("affect", {}) if isinstance(out.get("affect"), dict) else {}
         sc["affect_latents_present"] = torch.tensor(
-            [1.0 if torch.is_tensor(out.get("affect", {}).get("affect_latents")) if isinstance(out.get("affect"), dict) else 0.0],
+            [1.0 if torch.is_tensor(affect.get("affect_latents")) else 0.0],
             device=self.device,
             dtype=sc["self_state"].dtype,
         )
