@@ -15,7 +15,7 @@ long-term memory backend without changing the out["autobiographical_memory"]
 contract.
 """
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Dict, List, Optional
 
 import torch
@@ -83,6 +83,51 @@ class AutobiographicalMemory:
         self.cfg = cfg or AutobiographicalMemoryConfig()
         self.episodes: List[Dict] = []
         self.write_count: int = 0
+
+    def state_dict(self) -> Dict:
+        """Serializable runtime state for checkpointing."""
+        safe_episodes: List[Dict] = []
+        for ep in self.episodes[-int(self.cfg.max_episodes):]:
+            item = dict(ep)
+            vector = item.get("vector")
+            if torch.is_tensor(vector):
+                item["vector"] = vector.detach().cpu().float()
+            else:
+                item["vector"] = torch.as_tensor(vector or [], dtype=torch.float32).detach().cpu()
+            safe_episodes.append(item)
+        return {
+            "version": "m13_autobiographical_memory_v1",
+            "config": asdict(self.cfg),
+            "episodes": safe_episodes,
+            "write_count": int(self.write_count),
+        }
+
+    def load_state_dict(self, state: Dict) -> None:
+        """Load checkpointed runtime state.
+
+        This intentionally tolerates older/partial payloads. Episode vectors are
+        padded/trimmed to current cfg.memory_dim so changed configs remain usable.
+        """
+        if not isinstance(state, dict):
+            return
+        cfg_state = state.get("config")
+        if isinstance(cfg_state, dict):
+            for key, value in cfg_state.items():
+                if hasattr(self.cfg, key):
+                    try:
+                        setattr(self.cfg, key, value)
+                    except Exception:
+                        pass
+        loaded: List[Dict] = []
+        for ep in state.get("episodes", []) or []:
+            if not isinstance(ep, dict):
+                continue
+            item = dict(ep)
+            vector = pad_or_trim_episode(item.get("vector"), int(self.cfg.memory_dim), device=torch.device("cpu")).reshape(-1).detach().cpu()
+            item["vector"] = vector
+            loaded.append(item)
+        self.episodes = loaded[-int(self.cfg.max_episodes):]
+        self.write_count = int(state.get("write_count", len(self.episodes)) or 0)
 
     def _device_from(self, out: Dict) -> torch.device:
         tensor = _first_tensor(
