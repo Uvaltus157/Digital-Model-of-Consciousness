@@ -12,6 +12,10 @@ from src.modules.m07_inner_speech_thoughts.inner_speech_decoder import (
     render_inner_speech_text,
 )
 from src.modules.m09_self_core.models.self_core import SelfCore, SelfCoreConfig
+from src.modules.m10_global_conscious_broadcast.broadcast_gate import (
+    GlobalBroadcastConfig,
+    GlobalConsciousBroadcastGate,
+)
 from src.modules.m11_motivational_homeostasis.emotional_drive_bivalent import EmotionalDrive
 from src.modules.m15_counterfactual_imagination_planning.thought_chain_controller import (
     ThoughtChainController,
@@ -120,8 +124,39 @@ def test_m9_binds_focus_context_and_affect_latents() -> None:
     assert out["affect_latents"].shape == (1, cfg.affect_latent_dim)
 
 
-def test_m15_searches_chain_before_m9_and_enhances_focus_context() -> None:
+def test_m10_selects_global_broadcast_for_self_binding() -> None:
     torch.manual_seed(3)
+    cfg = GlobalBroadcastConfig(
+        focus_context_dim=16,
+        affect_latent_dim=6,
+        thought_dim=10,
+        plan_context_dim=12,
+        hidden_dim=32,
+    )
+    gate = GlobalConsciousBroadcastGate(cfg)
+
+    out = gate(
+        focus_context=torch.randn(1, 16),
+        raw_focus_context=torch.randn(1, 16),
+        active_thought=torch.randn(1, 10),
+        plan_context=torch.randn(1, 12),
+        affect_latents=torch.randn(1, 6),
+        best_chain_score=torch.tensor([[0.7]]),
+        predicted_affect_delta=torch.tensor([[0.4]]),
+        no_viable_chain=torch.tensor([[0.0]]),
+        panic_trigger=torch.tensor([[0.0]]),
+    )
+
+    assert out["broadcast_latent"].shape == (1, cfg.focus_context_dim)
+    assert out["source_logits"].shape == (1, 4)
+    assert out["source_weights"].shape == (1, 4)
+    assert out["priority"].shape == (1, 1)
+    assert out["broadcast_gate"].shape == (1, 1)
+    assert out["selected_source"] in gate.SOURCE_NAMES
+
+
+def test_m15_searches_chain_before_m9_and_enhances_focus_context() -> None:
+    torch.manual_seed(4)
     cfg = ThoughtChainControllerConfig(
         self_bound_context_dim=20,
         subjective_affect_dim=5,
@@ -158,7 +193,7 @@ def test_m15_searches_chain_before_m9_and_enhances_focus_context() -> None:
 
 
 def test_m7_verbalizes_self_bound_thought_inputs() -> None:
-    torch.manual_seed(4)
+    torch.manual_seed(5)
     cfg = InnerSpeechDecoderConfig(
         active_thought_dim=10,
         plan_context_dim=12,
