@@ -33,6 +33,16 @@ class LifeRuntimeMixin(
                 print(f"[semantic_action] compute skipped: {e}")
                 self._semantic_action_warned = True
 
+    def _write_autobiographical_episode(self, obs: dict, out: dict) -> None:
+        if not hasattr(self, "write_autobiographical_episode"):
+            return
+        try:
+            self.write_autobiographical_episode(obs, out)
+        except Exception as e:
+            if not hasattr(self, "_autobiographical_write_warned"):
+                print(f"[autobiographical_memory] write skipped: {e}")
+                self._autobiographical_write_warned = True
+
     def life_step(self) -> None:
         if hasattr(self, "log_tetra_live_step_started"):
             self.log_tetra_live_step_started()
@@ -151,6 +161,8 @@ class LifeRuntimeMixin(
             out["affect"] = emotion["affect"]
         if self.cfg.emotional_drive.inject_into_env_reward:
             obs["reward"] = obs["reward"] + emotion["intrinsic_reward"].detach() * float(self.cfg.emotional_drive.reward_weight)
+
+        self._write_autobiographical_episode(obs, out)
 
         self_confidence = self._life_runtime_self_confidence(out)
         self.latest_stats = self.build_latest_life_stats(
