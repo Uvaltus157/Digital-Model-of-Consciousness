@@ -67,7 +67,6 @@ class InnerObjectImageConfig:
     hidden_dim: int = 256
     image_size: int = 64
     tactile_dim: int = MISSING
-    # Self-supervised object decoder training.
     decoder_loss_enabled: bool = True
     decoder_loss_weight: float = 0.20
     decoder_rgb_weight: float = 1.00
@@ -75,26 +74,20 @@ class InnerObjectImageConfig:
     decoder_mask_weight: float = 0.50
     decoder_conf_weight: float = 0.10
     decoder_use_geometry_objectness: bool = True
-    # 3D
     point_count: int = 128
     voxel_res: int = 16
-    # Multi-slot object memory / proposals
     num_slots: int = 10
     max_object_proposals: int = 10
     include_ground_proposal: bool = True
     proposal_slot_lock: bool = True
-    # Sleep / dream mode
     sleep_decode_from_memory: bool = True
-    sleep_freeze_object_slots: bool = False  # deprecated: memory is live; dream_mode handles full sleep
+    sleep_freeze_object_slots: bool = False
     sleep_skip_decoder_loss: bool = True
     dream_latent_dynamics: bool = True
     dream_strength: float = 0.025
     dream_cycle_slots: bool = False
     dream_slot_cycle_steps: int = 90
     dream_empty_confidence_threshold: float = 0.05
-
-    # Step 2B: configurable Gaussian renderer backend / preview.
-    # Values: "torch_lowres" | "cuda_3dgs" | "auto"
     slot_gaussian_renderer_backend: str = "auto"
     slot_gaussian_cuda_allow_fallback: bool = True
     slot_gaussian_image_size: int = 64
@@ -104,39 +97,27 @@ class InnerObjectImageConfig:
     slot_gaussian_train_steps_per_update: int = 1
     slot_gaussian_depth_weight: float = 0.35
     slot_gaussian_preview_every_steps: int = 1
-
-    # Step 3A: per-slot 4D timeline over Gaussian states.
     slot_4d_timeline_enabled: bool = True
     slot_4d_timeline_max_frames: int = 256
     slot_4d_sample_points: int = 128
-
-    # Step 3B: neural deformation field over Step-3A timelines.
     slot_4d_deformation_enabled: bool = True
     slot_4d_deformation_hidden_dim: int = 96
     slot_4d_deformation_lr: float = 0.002
     slot_4d_deformation_train_steps_per_update: int = 1
     slot_4d_deformation_min_frames: int = 2
     slot_4d_deformation_delta_reg_weight: float = 0.0001
-
-    # Step 3C: deformation-aware 4D playback preview.
     slot_4d_playback_enabled: bool = True
     slot_4d_playback_period_steps: int = 120
     slot_4d_playback_strength: float = 1.0
-
-    # Step 3F: separate Open3D Slot Viewer export.
     slot_4d_open3d_export_enabled: bool = True
     slot_4d_open3d_export_path: str = "./checkpoint/slot_viewer/slot_4d_open3d_latest.npz"
     slot_4d_open3d_sample_points: int = 4096
     slot_4d_open3d_min_interval_sec: float = 0.05
-
-    # Step 3H: JSON-RPC live stream for Inner Object Open3D.
     slot_4d_open3d_transport: str = "jsonrpc"
     slot_4d_jsonrpc_enabled: bool = True
     slot_4d_jsonrpc_host: str = "127.0.0.1"
     slot_4d_jsonrpc_port: int = 8771
     slot_4d_jsonrpc_sample_points: int = 4096
-
-    # Step 4D/4E: persistent object memory / recall diagnostics.
     slot_object_memory_enabled: bool = True
     slot_object_memory_root: str = "./checkpoint/slot_memory"
     slot_object_memory_match_threshold: float = 0.30
@@ -169,12 +150,6 @@ class ControlStartupConfig:
 @dataclass
 class SleepSensorGateRuntimeConfig:
     enabled: bool = True
-    # Startup mode:
-    #   "config"   -> use explicit video/contact/imu booleans below
-    #   "active"   -> video/contact/imu ON
-    #   "sleep"    -> video/contact/imu OFF
-    #   "blind"    -> video OFF, contact/imu ON
-    #   "body_only"-> video/contact OFF, imu ON
     startup_state: str = "config"
     video_sensor_enabled: bool = True
     contact_sensor_enabled: bool = True
@@ -188,14 +163,6 @@ class ModuleTrainingDebugRuntimeConfig:
     width: int = 760
     height: int = 520
     show_every_steps: int = 2
-
-    # Startup training mode for each subsystem.
-    #
-    # Values:
-    #   "train"   -> module participates in optimizer/train step
-    #   "passive" -> module is used in life/forward, but parameters are frozen
-    #
-    # This replaces the old train_core_model/train_world_model/... booleans.
     module_modes: Dict[str, str] = field(default_factory=lambda: {
         "world_model": "train",
         "object_imagery": "train",
@@ -205,6 +172,7 @@ class ModuleTrainingDebugRuntimeConfig:
         "leg_control": "train",
         "self_core": "train",
         "inner_speech": "train",
+        "thought_chain": "train",
     })
 
 
@@ -226,6 +194,16 @@ class SelfCoreRuntimeConfig:
     focus_context_dim: int = 256
     affect_latent_dim: int = 12
     loss_weight: float = 0.02
+    print_every_steps: int = 30
+
+
+@dataclass
+class ThoughtChainRuntimeConfig:
+    enabled: bool = True
+    hidden_dim: int = 256
+    thought_dim: int = 128
+    plan_context_dim: int = 256
+    chain_len: int = 4
     print_every_steps: int = 30
 
 
@@ -442,6 +420,7 @@ class UnifiedV510Config(RuntimeConfig):
     exploration: ExplorationMotorConfig = field(default_factory=ExplorationMotorConfig)
     action_trace: ActionSignalTraceConfig = field(default_factory=ActionSignalTraceConfig)
     self_core: SelfCoreRuntimeConfig = field(default_factory=SelfCoreRuntimeConfig)
+    thought_chain: ThoughtChainRuntimeConfig = field(default_factory=ThoughtChainRuntimeConfig)
     vestibular: VestibularRuntimeConfig = field(default_factory=VestibularRuntimeConfig)
     sleep_sensors: SleepSensorGateRuntimeConfig = field(default_factory=SleepSensorGateRuntimeConfig)
     module_debug: ModuleTrainingDebugRuntimeConfig = field(default_factory=ModuleTrainingDebugRuntimeConfig)
@@ -473,6 +452,7 @@ __all__ = [
     "ModuleTrainingDebugRuntimeConfig",
     "ActionSignalTraceConfig",
     "SelfCoreRuntimeConfig",
+    "ThoughtChainRuntimeConfig",
     "MocapFlightBoundsConfig",
     "VestibularRuntimeConfig",
     "ManualActionOverrideRuntimeConfig",
