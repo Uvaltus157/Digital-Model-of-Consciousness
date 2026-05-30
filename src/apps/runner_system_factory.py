@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-"""System factory for the V5.10 slim runner path.
+"""System factory for the slim unified runner path.
 
-This module centralizes the construction and post-construction normalization of
-`UnifiedSystemV510`. The heavy system class still lives in `src/apps/runner.py`,
-but the entrypoint no longer needs to know the full startup sequence.
+This module centralizes construction and post-construction normalization of the
+unified runtime. The heavy system class lives in `src/apps/runner.py`, but the
+entrypoint no longer needs to know the full startup sequence.
 """
 
 from dataclasses import dataclass
-from typing import Any, Optional, Type
+from typing import Any, Type
 
 from src.apps.runner_modes import apply_runner_mode
 from src.apps.runner_runtime_state import RuntimeStateSnapshot, apply_runtime_state
@@ -40,11 +40,11 @@ def build_unified_system(
     *,
     return_context: bool = False,
 ) -> Any | tuple[Any, BuiltSystemContext]:
-    """Build and normalize a V5.10 unified system.
+    """Build and normalize the unified runtime system.
 
     The order is important and mirrors the current slim entrypoint:
 
-    1. construct heavy runtime class;
+    1. construct runtime class;
     2. normalize runtime bookkeeping;
     3. normalize startup/window/sensor flags;
     4. ensure app-level services;
