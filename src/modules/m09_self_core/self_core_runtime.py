@@ -42,7 +42,7 @@ class SelfCoreRuntimeMixin:
         """
         Stage-4/5 bridge.
 
-        M15 and M9 both need affect_latents before self binding. Create the same
+        M15, M10 and M9 need affect_latents before self binding. Create the same
         affect packet here when it is not already present. EmotionalDrive caches
         the packet on out["emotion"], so LifeRuntime can reuse it later without a
         second EMA/progress update.
@@ -65,9 +65,10 @@ class SelfCoreRuntimeMixin:
     def _run_pre_self_thought_chain(self, obs: dict, out: dict) -> None:
         """
         Correct architecture order:
-            M5 focus_context + M10 affect_latents -> M15 chain search
+            M5 focus_context + M11 affect_latents -> M15 chain search
             M15 writes best chain back into M5 focus_context
-            M9 self-binds the enhanced focus_context
+            M10 selects/broadcasts conscious-access material
+            M9 self-binds the broadcast focus_context
         """
         if not hasattr(self, "compute_thought_chain"):
             return
@@ -86,14 +87,30 @@ class SelfCoreRuntimeMixin:
                 print(f"[thought_chain] pre-self compute skipped: {e}")
                 self._thought_chain_warned = True
 
+    def _run_pre_self_global_broadcast(self, obs: dict, out: dict) -> None:
+        """
+        M10 global conscious broadcast gate.
+
+        Runs after M15 chain search and before M9 self-binding. It writes
+        out["broadcast"] and replaces out["focus_context"] with the selected
+        broadcast_latent used by M9.
+        """
+        if not hasattr(self, "compute_global_broadcast"):
+            return
+        try:
+            self.compute_global_broadcast(obs, out)
+        except Exception as e:
+            if not hasattr(self, "_global_broadcast_warned"):
+                print(f"[global_broadcast] pre-self compute skipped: {e}")
+                self._global_broadcast_warned = True
+
     def _build_self_core_focus_context(self, out: dict, workspace: torch.Tensor) -> torch.Tensor:
         """
-        Read the M5-owned focus_context.
+        Read the M5/M15/M10-owned focus_context.
 
-        Stage-2 architecture rule:
-            M5 owns out["focus_context"].
-            M15 may enhance out["focus_context"] before M9.
-            M9 must not manually reconstruct focus from M5 internals.
+        M5 creates the focus_context. M15 may enhance it with the best chain.
+        M10 may replace it with broadcast_latent. M9 must not manually reconstruct
+        focus from lower-level internals.
         """
         target_dim = int(getattr(self.cfg.self_core, "focus_context_dim", self.cfg.self_core.workspace_dim))
         focus_context = out.get("focus_context")
@@ -107,11 +124,10 @@ class SelfCoreRuntimeMixin:
 
     def _build_self_core_affect_latents(self, out: dict, workspace: torch.Tensor) -> torch.Tensor:
         """
-        Read the M10/M11 affect packet.
+        Read the M11 affect packet.
 
-        Stage-4 architecture rule:
-            M9 binds M5/M15 focus_context with M10/M11 affect_latents.
-            M9 should not know the internal emotion scalar formulas.
+        M9 binds M10 broadcast/focus_context with M11 affect_latents.
+        M9 should not know the internal emotion scalar formulas.
         """
         target_dim = int(getattr(self.cfg.self_core, "affect_latent_dim", 12))
         affect = out.get("affect", {}) if isinstance(out.get("affect"), dict) else {}
@@ -130,6 +146,7 @@ class SelfCoreRuntimeMixin:
         self.ensure_self_core_ready()
         self._ensure_affect_packet_for_self_core(obs, out)
         self._run_pre_self_thought_chain(obs, out)
+        self._run_pre_self_global_broadcast(obs, out)
 
         body_state = obs.get("body_state", torch.zeros(1, self.cfg.body_state_dim, device=self.device))
         tactile = obs.get("tactile", torch.zeros(1, self.cfg.tactile_dim, device=self.device))
@@ -188,6 +205,12 @@ class SelfCoreRuntimeMixin:
             device=self.device,
             dtype=sc["self_state"].dtype,
         )
+        bc = out.get("broadcast", {}) if isinstance(out.get("broadcast"), dict) else {}
+        sc["broadcast_present"] = torch.tensor(
+            [1.0 if torch.is_tensor(bc.get("broadcast_latent")) else 0.0],
+            device=self.device,
+            dtype=sc["self_state"].dtype,
+        )
         out["self_core"] = sc
         out["self_experience_text"] = sc["self_experience_text"]
 
@@ -224,6 +247,7 @@ class SelfCoreRuntimeMixin:
             f"affect_binding={f('affect_binding_score'):.3f} "
             f"focus_context_present={f('focus_context_present'):.0f} "
             f"affect_latents_present={f('affect_latents_present'):.0f} "
+            f"broadcast_present={f('broadcast_present'):.0f} "
             f"uncertainty={f('self_uncertainty'):.3f} "
             f"curiosity={f('self_curiosity'):.3f} | "
             f"{sc.get('self_experience_text', '')}"
