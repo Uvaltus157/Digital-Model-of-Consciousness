@@ -83,14 +83,14 @@ class CheckpointingMixin:
 
     def build_checkpoint_payload(self) -> dict:
         """
-        Full checkpoint: weights + runtime object-slot memory.
+        Full checkpoint: weights + runtime object-slot/autobiographical memory.
 
         A stable slot is runtime memory, not only model weights.
         The important fields are inside self.inner_object_state:
             z_obj_slots, confidence_slots, slot_age, active_slot_index, dream_tick
         """
         payload = {
-            "version": "v5_10_inner_object_memory_checkpoint",
+            "version": "v5_10_runtime_memory_checkpoint",
             "model": self.model.state_dict() if hasattr(self, "model") else {},
             "optimizer": self.optimizer.state_dict() if hasattr(self, "optimizer") else None,
             "global_step": int(getattr(self, "global_step", 0)),
@@ -104,6 +104,12 @@ class CheckpointingMixin:
             payload["inner_object_state"] = self._detach_to_cpu_tree(self.inner_object_state)
         if hasattr(self, "inner_object_slot_snapshots"):
             payload["inner_object_slot_snapshots"] = self._detach_to_cpu_tree(self.inner_object_slot_snapshots)
+
+        if hasattr(self, "autobiographical_memory") and self.autobiographical_memory is not None:
+            try:
+                payload["autobiographical_memory"] = self._detach_to_cpu_tree(self.autobiographical_memory.state_dict())
+            except Exception as e:
+                print(f"[checkpoint] autobiographical_memory not saved: {e}")
 
         if hasattr(self, "event_latent_memory") and self.event_latent_memory is not None:
             try:
@@ -167,10 +173,10 @@ class CheckpointingMixin:
 
     def save_checkpoint(self, path=None) -> bool:
         """
-        Save checkpoint with model weights + object-slot memory.
+        Save checkpoint with model weights + runtime memory.
 
         Safety:
-            - periodic saving is owned by life_step(), not train_loop();
+            - periodic saving is owned by life_step(), not train_loop;
             - this method is still protected by a lock;
             - file write is atomic: write *.tmp first, then os.replace(tmp, final).
 
@@ -198,7 +204,8 @@ class CheckpointingMixin:
                     f"[checkpoint] saved: {path} | "
                     f"global_step={payload.get('global_step', 0)} "
                     f"train_steps={payload.get('train_steps', 0)} "
-                    f"inner_object_state={'yes' if 'inner_object_state' in payload else 'no'}"
+                    f"inner_object_state={'yes' if 'inner_object_state' in payload else 'no'} "
+                    f"autobiographical_memory={'yes' if 'autobiographical_memory' in payload else 'no'}"
                 )
                 return True
 
@@ -325,6 +332,17 @@ class CheckpointingMixin:
                         print(f"[checkpoint] inner_object_slot_snapshots loaded: {len(self.inner_object_slot_snapshots)}")
                     except Exception as e:
                         print(f"[checkpoint] inner_object_slot_snapshots not loaded: {e}")
+
+                if "autobiographical_memory" in ckpt:
+                    try:
+                        if hasattr(self, "ensure_autobiographical_memory_ready"):
+                            self.ensure_autobiographical_memory_ready()
+                        if hasattr(self, "autobiographical_memory") and self.autobiographical_memory is not None:
+                            self.autobiographical_memory.load_state_dict(ckpt["autobiographical_memory"])
+                            episodes = len(getattr(self.autobiographical_memory, "episodes", []))
+                            print(f"[checkpoint] autobiographical_memory loaded: {episodes} episodes")
+                    except Exception as e:
+                        print(f"[checkpoint] autobiographical_memory not loaded: {e}")
 
                 if "event_latent_memory" in ckpt:
                     try:
