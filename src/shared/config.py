@@ -208,6 +208,16 @@ class ThoughtChainRuntimeConfig:
 
 
 @dataclass
+class InnerSpeechRuntimeConfig:
+    enabled: bool = True
+    hidden_dim: int = 256
+    report_latent_dim: int = 128
+    vocab_size: int = 2048
+    max_tokens: int = 24
+    print_every_steps: int = 30
+
+
+@dataclass
 class MocapFlightBoundsConfig:
     enabled: bool = True
     min_z: float = 0.1
@@ -421,6 +431,7 @@ class UnifiedV510Config(RuntimeConfig):
     action_trace: ActionSignalTraceConfig = field(default_factory=ActionSignalTraceConfig)
     self_core: SelfCoreRuntimeConfig = field(default_factory=SelfCoreRuntimeConfig)
     thought_chain: ThoughtChainRuntimeConfig = field(default_factory=ThoughtChainRuntimeConfig)
+    inner_speech: InnerSpeechRuntimeConfig = field(default_factory=InnerSpeechRuntimeConfig)
     vestibular: VestibularRuntimeConfig = field(default_factory=VestibularRuntimeConfig)
     sleep_sensors: SleepSensorGateRuntimeConfig = field(default_factory=SleepSensorGateRuntimeConfig)
     module_debug: ModuleTrainingDebugRuntimeConfig = field(default_factory=ModuleTrainingDebugRuntimeConfig)
@@ -453,6 +464,7 @@ __all__ = [
     "ActionSignalTraceConfig",
     "SelfCoreRuntimeConfig",
     "ThoughtChainRuntimeConfig",
+    "InnerSpeechRuntimeConfig",
     "MocapFlightBoundsConfig",
     "VestibularRuntimeConfig",
     "ManualActionOverrideRuntimeConfig",
