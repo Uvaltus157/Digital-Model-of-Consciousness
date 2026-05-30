@@ -85,6 +85,7 @@ class InnerSpeechRuntimeMixin:
         )
         report["text"] = text
         report["decoded_text"] = text
+        report["report_text"] = text
         report["source"] = "m7_self_bound_thought_chain" if isinstance(thought_chain, dict) and torch.is_tensor(thought_chain.get("active_thought")) else "m7_compat_preconscious_fallback"
         report["uses_self_bound_context"] = torch.tensor([1.0 if torch.is_tensor(self_core.get("self_bound_context")) else 0.0], device=self.device)
         report["uses_affect_latents"] = torch.tensor([1.0 if torch.is_tensor(affect.get("affect_latents")) else 0.0], device=self.device)
@@ -92,6 +93,9 @@ class InnerSpeechRuntimeMixin:
 
         out["inner_speech"] = report
         out["conscious_report"] = report
+        # Compatibility output only: old visualizers/life_runtime may still read
+        # symbolic_report, but M7 no longer uses symbolic_report as input.
+        out["symbolic_report"] = report
         out["decoded_report"] = text
         return report
 
