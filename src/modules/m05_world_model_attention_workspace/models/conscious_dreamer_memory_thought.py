@@ -15,6 +15,7 @@ This layer adds:
 - PreconsciousEpisodeMemory
 - body_context / model_reflection_context naming
 - preconscious_reflection_out naming
+- focus_context owned by M5
 """
 
 from dataclasses import dataclass, field
@@ -243,6 +244,70 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
     def _zeros(self, ref: torch.Tensor, *shape: int) -> torch.Tensor:
         return torch.zeros(*shape, device=ref.device, dtype=ref.dtype)
 
+    def build_focus_context(
+        self,
+        *,
+        workspace: torch.Tensor,
+        preconscious_seed: torch.Tensor,
+        preconscious_candidate: torch.Tensor,
+        candidate_delta: torch.Tensor,
+        body_context: torch.Tensor,
+        model_reflection_context: torch.Tensor,
+        reflection: torch.Tensor,
+        object_repr: torch.Tensor,
+        tactile_latent: torch.Tensor,
+        memory_context: torch.Tensor,
+        value_latent: torch.Tensor,
+        curiosity: torch.Tensor,
+        coherence: torch.Tensor,
+        focus_logits: torch.Tensor,
+        action_logits: torch.Tensor,
+        modality_weights: torch.Tensor,
+        imagined_value: torch.Tensor,
+        imagined_touch: torch.Tensor,
+        embodied_targets: torch.Tensor,
+        hand_ctrl: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        M5-owned focus field.
+
+        M9 must not manually reconstruct focus from M5 internals. Downstream
+        self-binding receives this single tensor as out["focus_context"]. M15 can
+        later add/replace active thought-chain content by modifying this field at
+        the M5 focus boundary rather than sending thought latents directly to M9.
+        """
+        parts = [
+            workspace,
+            preconscious_seed,
+            preconscious_candidate,
+            candidate_delta,
+            body_context,
+            model_reflection_context,
+            reflection,
+            object_repr,
+            tactile_latent,
+            memory_context,
+            value_latent,
+            curiosity,
+            coherence,
+            focus_logits,
+            action_logits,
+            modality_weights,
+            imagined_value,
+            imagined_touch,
+            embodied_targets,
+            hand_ctrl,
+        ]
+        flat_parts = []
+        for part in parts:
+            if torch.is_tensor(part):
+                if part.ndim > 2:
+                    part = part.reshape(part.shape[0], -1)
+                flat_parts.append(part.float())
+        if not flat_parts:
+            return torch.zeros(workspace.shape[0], self.cfg.conscious.workspace_dim, device=workspace.device, dtype=workspace.dtype)
+        return torch.cat(flat_parts, dim=-1)
+
     def step(self, left, right, pose, body_state, state, tactile=None, hand_motor=None, embodied_action=None, depth=None, object_state=None, action_override=None, write_memory: bool = True) -> Dict:
         b = left.shape[0]
         d = self.cfg.data
@@ -292,6 +357,29 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
         plan = self.planner(ws["workspace"], preconscious_candidate, refl["reflection"], obj, memory_context, imagined["imagined_value"], imagined["imagined_touch"])
         decoder = self.decoder(rssm, left.shape[-2:])
 
+        focus_context = self.build_focus_context(
+            workspace=ws["workspace"],
+            preconscious_seed=preconscious_seed,
+            preconscious_candidate=preconscious_candidate,
+            candidate_delta=preconscious_loop["candidate_delta"],
+            body_context=body_context,
+            model_reflection_context=model_reflection_context,
+            reflection=refl["reflection"],
+            object_repr=obj,
+            tactile_latent=tactile_latent,
+            memory_context=memory_context,
+            value_latent=plan["value_latent"],
+            curiosity=plan["curiosity"],
+            coherence=plan["coherence"],
+            focus_logits=plan["focus_logits"],
+            action_logits=plan["action_logits"],
+            modality_weights=attn["modality_weights"],
+            imagined_value=imagined["imagined_value"],
+            imagined_touch=imagined["imagined_touch"],
+            embodied_targets=plan["embodied_targets"],
+            hand_ctrl=plan["hand_ctrl"],
+        )
+
         episode = torch.cat([
             ws["workspace"].detach(),
             preconscious_candidate.detach(),
@@ -334,6 +422,7 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
                 "memory_usage": self.preconscious_memory.usage.detach().clone(),
             },
             "workspace_out": ws["workspace"],
+            "focus_context": focus_context,
             "preconscious_thoughts": {
                 "thought_candidate": preconscious_candidate,
                 "workspace_seed": preconscious_seed,
