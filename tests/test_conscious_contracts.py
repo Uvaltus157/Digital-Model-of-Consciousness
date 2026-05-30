@@ -221,9 +221,10 @@ def test_m13_writes_and_retrieves_autobiographical_episode() -> None:
     assert "step=7" in write["last_summary"]
 
 
-def test_m14_softens_action_when_metacognition_requests_hold() -> None:
+def test_m14_softens_action_and_outputs_semantic_intent() -> None:
     guard = SemanticActionGrounding()
     out = {
+        "decoded_report": "I should check before acting",
         "metacognition": {
             "action_hold": torch.tensor([[0.9]]),
             "verification_need": torch.tensor([[0.8]]),
@@ -237,8 +238,17 @@ def test_m14_softens_action_when_metacognition_requests_hold() -> None:
             "predicted_affect_delta": torch.tensor([[0.2]]),
             "best_chain_score": torch.tensor([[0.6]]),
         },
-        "affect": {"panic_latent": torch.tensor([[0.0]])},
-        "broadcast": {"urgency": torch.tensor([[0.4]])},
+        "affect": {
+            "panic_latent": torch.tensor([[0.0]]),
+            "fear_latent": torch.tensor([[0.0]]),
+            "stress_latent": torch.tensor([[0.0]]),
+            "curiosity_latent": torch.tensor([[0.3]]),
+            "comfort_latent": torch.tensor([[0.1]]),
+        },
+        "broadcast": {"urgency": torch.tensor([[0.4]]), "priority": torch.tensor([[0.7]]), "selected_source": "m15_focus"},
+        "autobiographical_memory": {"retrieval_relevance": torch.tensor([[0.4]]), "summary": "step=1 source=m15_focus"},
+        "self_core": {"agency_score": torch.tensor([[0.7]])},
+        "inner_speech": {"confidence": torch.tensor([[0.6]])},
     }
 
     action = guard.compute(out)
@@ -247,6 +257,13 @@ def test_m14_softens_action_when_metacognition_requests_hold() -> None:
     assert float(action["applied_action_scale"].item()) <= 0.25
     assert float(action["verify_before_action"].item()) == 1.0
     assert action["reason"] in {"verify_before_action", "metacognitive_hold"}
+    assert action["semantic_intent"] in guard.INTENT_ORDER
+    assert action["semantic_intent_scores"].shape == (1, len(guard.INTENT_ORDER))
+    assert action["semantic_confidence"].shape == (1, 1)
+    assert action["grounding_confidence"].shape == (1, 1)
+    assert action["expected_outcome"].shape == (1, 1)
+    assert isinstance(action["goal_text"], str) and action["goal_text"]
+    assert action["target_source"] == "m15_focus"
 
 
 def test_m15_searches_chain_before_m9_and_enhances_focus_context() -> None:
