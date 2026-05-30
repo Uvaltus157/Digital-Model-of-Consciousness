@@ -40,33 +40,43 @@ class ThoughtChainRuntimeMixin:
             print(f"[thought_chain] lazy optimizer attach skipped: {e}")
         print("[thought_chain] lazy initialized")
 
-    def compute_thought_chain(self, obs: dict, out: dict):
+    def compute_thought_chain(self, obs: dict, out: dict, *, pre_self_binding: bool = True):
         del obs
         if not bool(getattr(getattr(self.cfg, "thought_chain", None), "enabled", True)):
             return None
 
-        self_core = out.get("self_core", {}) if isinstance(out.get("self_core"), dict) else {}
-        self_bound_context = self_core.get("self_bound_context")
-        if not torch.is_tensor(self_bound_context):
+        focus_context = out.get("focus_context")
+        if not torch.is_tensor(focus_context):
             return None
 
         self.ensure_thought_chain_ready()
 
         affect = out.get("affect", {}) if isinstance(out.get("affect"), dict) else {}
+        self_core = out.get("self_core", {}) if isinstance(out.get("self_core"), dict) else {}
+
         thought_chain = self.thought_chain_controller(
-            self_bound_context=self_bound_context,
-            subjective_affect_state=self_core.get("subjective_affect_state"),
-            focus_context=out.get("focus_context"),
+            focus_context=focus_context,
             affect_latents=affect.get("affect_latents"),
+            self_bound_context=None if pre_self_binding else self_core.get("self_bound_context"),
+            subjective_affect_state=None if pre_self_binding else self_core.get("subjective_affect_state"),
         )
         thought_chain["source_present"] = {
-            "self_bound_context": torch.tensor([1.0], device=self.device),
-            "subjective_affect_state": torch.tensor([1.0 if torch.is_tensor(self_core.get("subjective_affect_state")) else 0.0], device=self.device),
-            "focus_context": torch.tensor([1.0 if torch.is_tensor(out.get("focus_context")) else 0.0], device=self.device),
+            "focus_context": torch.tensor([1.0 if torch.is_tensor(focus_context) else 0.0], device=self.device),
             "affect_latents": torch.tensor([1.0 if torch.is_tensor(affect.get("affect_latents")) else 0.0], device=self.device),
+            "self_bound_context": torch.tensor([1.0 if (not pre_self_binding and torch.is_tensor(self_core.get("self_bound_context"))) else 0.0], device=self.device),
+            "subjective_affect_state": torch.tensor([1.0 if (not pre_self_binding and torch.is_tensor(self_core.get("subjective_affect_state"))) else 0.0], device=self.device),
         }
+        thought_chain["stage"] = "pre_self_binding" if pre_self_binding else "post_self_binding"
+
         out["thought_chain"] = thought_chain
+        out["active_thought"] = thought_chain.get("active_thought_packet", {})
         out["plan_context"] = thought_chain["plan_context"]
+
+        enhanced_focus = thought_chain.get("enhanced_focus_context")
+        if pre_self_binding and torch.is_tensor(enhanced_focus):
+            out["raw_focus_context"] = focus_context
+            out["focus_context"] = enhanced_focus
+            out["focus_context_source"] = "m15_enhanced_best_chain"
         return thought_chain
 
     def maybe_print_thought_chain_trace(self, out: dict) -> None:
@@ -91,9 +101,13 @@ class ThoughtChainRuntimeMixin:
 
         print(
             f"[thought_chain step={self.global_step}] "
+            f"stage={tc.get('stage', '')} "
+            f"best={f(tc.get('best_chain_score')):.3f} "
+            f"affect_delta={f(tc.get('predicted_affect_delta')):.3f} "
+            f"panic={f(tc.get('panic_trigger')):.0f} "
+            f"no_viable={f(tc.get('no_viable_chain')):.0f} "
             f"stability={f(metrics.get('stability')):.3f} "
             f"urgency={f(metrics.get('urgency')):.3f} "
-            f"self_relevance={f(metrics.get('self_relevance')):.3f} "
             f"planning_readiness={f(metrics.get('planning_readiness')):.3f} "
             f"plan_norm={f(tc.get('plan_context').norm(dim=-1).mean() if torch.is_tensor(tc.get('plan_context')) else None):.3f}"
         )
