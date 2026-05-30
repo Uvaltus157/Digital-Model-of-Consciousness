@@ -51,6 +51,7 @@ from src.modules.m06_learning_sleep_consolidation.sleep_sensors import SleepSens
 from src.modules.m06_learning_sleep_consolidation.training_runtime import TrainingRuntimeMixin
 from src.modules.m08_debug_visual_control.module_status_runtime import ModuleStatusRuntimeMixin
 from src.modules.m09_self_core.self_core_runtime import SelfCoreRuntimeMixin
+from src.modules.m15_counterfactual_imagination_planning.thought_chain_runtime import ThoughtChainRuntimeMixin
 from src.platform.ipc.external_control import ExternalControlMixin
 from src.platform.ipc.ipc_runtime import IPCRuntimeMixin
 from src.platform.mujoco_world.camera_preview_window import CameraPreviewMixin
@@ -72,6 +73,7 @@ class UnifiedSystemV510(
     ActionRuntimeMixin,
     LegBirdRuntimeMixin,
     SelfCoreRuntimeMixin,
+    ThoughtChainRuntimeMixin,
     InnerVisualRuntimeMixin,
     TrainingRuntimeMixin,
     LifeRuntimeMixin,
