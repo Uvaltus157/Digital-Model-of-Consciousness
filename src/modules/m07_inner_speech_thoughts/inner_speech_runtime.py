@@ -42,6 +42,57 @@ class InnerSpeechRuntimeMixin:
             print(f"[inner_speech] lazy optimizer attach skipped: {e}")
         print("[inner_speech] lazy initialized")
 
+    def _life_runtime_inner_report(self, obs: dict, out: dict) -> tuple[str, str, float]:
+        """
+        Runtime report bridge used by LifeRuntimeMixin.life_step().
+
+        Because InnerSpeechRuntimeMixin appears before LifeRuntimeMixin in the
+        UnifiedSystemV510 MRO, this method overrides the legacy helper. Prefer
+        self-bound M7 outputs and keep symbolic_report only as a final fallback.
+        """
+        del obs
+        report = {}
+        for key in ("inner_speech", "conscious_report", "m7_inner_speech", "symbolic_report"):
+            value = out.get(key)
+            if isinstance(value, dict):
+                report = value
+                break
+
+        scalar = getattr(self, "_life_runtime_scalar", None)
+        if callable(scalar):
+            confidence = scalar(report.get("confidence"), 0.0)
+        else:
+            try:
+                confidence = float(report.get("confidence", 0.0))
+            except Exception:
+                confidence = 0.0
+
+        decoded_report = ""
+        for key in ("text", "decoded_text", "report_text"):
+            value = report.get(key)
+            if value:
+                decoded_report = str(value)
+                break
+
+        token_ids = report.get("text_token_ids")
+        if not decoded_report and token_ids is not None and hasattr(self, "speech_vocab") and self.speech_vocab is not None:
+            try:
+                ids = token_ids
+                if torch.is_tensor(ids) and ids.ndim > 1:
+                    ids = ids[0]
+                decoded_report = str(self.speech_vocab.decode(ids, skip_special=True))
+            except Exception:
+                decoded_report = ""
+
+        target_report = ""
+        if hasattr(self, "speech_teacher") and self.speech_teacher is not None:
+            try:
+                target_report = str(self.speech_teacher.build_report({}, out))
+            except Exception:
+                target_report = ""
+
+        return decoded_report, target_report, confidence
+
     def compute_inner_speech(self, obs: dict, out: dict):
         del obs
         if not bool(getattr(getattr(self.cfg, "inner_speech", None), "enabled", True)):
