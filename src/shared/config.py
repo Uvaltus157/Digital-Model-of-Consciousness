@@ -11,7 +11,6 @@ from src.shared.model_dimensions import (
     model_dimensions_from_runner_cfg,
     validate_runner_model_dimensions,
 )
-
 from src.apps.unified_conscious_viewer import (
     InnerWorldWindowConfig,
     NoveltyConfig,
@@ -225,6 +224,7 @@ class SelfCoreRuntimeConfig:
     workspace_dim: int = 256
     object_latent_dim: int = 128
     focus_context_dim: int = 256
+    affect_latent_dim: int = 12
     loss_weight: float = 0.02
     print_every_steps: int = 30
 
@@ -254,7 +254,7 @@ class ManualActionOverrideRuntimeConfig:
     max_linear: float = 2.0
     max_angular: float = 1.5
     width: int = 760
-    height: int = 480
+    height: 480
     show_every_steps: int = 1
 
 
