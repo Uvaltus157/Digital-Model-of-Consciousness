@@ -1,6 +1,6 @@
 from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer import (
+    CONSCIOUS_DREAMER_MODEL_FLAVOR,
     CONSCIOUS_DREAMER_MODEL_ID,
-    CONSCIOUS_DREAMER_MODEL_VERSION,
     ConsciousDreamer,
     ConsciousDreamerConfig,
     ConsciousDreamerLatest,
@@ -15,10 +15,6 @@ from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_me
     ConsciousDreamerMemoryThought,
     ConsciousDreamerMemoryThoughtConfig,
 )
-from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_inner_speech import (
-    ConsciousDreamerInnerSpeech,
-    ConsciousDreamerInnerSpeechConfig,
-)
 from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_object_imagery import (
     ConsciousDreamerObjectImagery,
     ConsciousDreamerObjectImageryConfig,
@@ -31,13 +27,11 @@ __all__ = [
     "ConsciousDreamerCoreConfig",
     "ConsciousDreamerMemoryThought",
     "ConsciousDreamerMemoryThoughtConfig",
-    "ConsciousDreamerInnerSpeech",
-    "ConsciousDreamerInnerSpeechConfig",
     "ConsciousDreamerObjectImagery",
     "ConsciousDreamerObjectImageryConfig",
     "ConsciousDreamerLatest",
     "ConsciousDreamerLatestConfig",
     "make_conscious_dreamer_config_from_world",
-    "CONSCIOUS_DREAMER_MODEL_VERSION",
+    "CONSCIOUS_DREAMER_MODEL_FLAVOR",
     "CONSCIOUS_DREAMER_MODEL_ID",
 ]
