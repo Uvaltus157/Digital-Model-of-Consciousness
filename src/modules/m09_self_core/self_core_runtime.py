@@ -42,7 +42,7 @@ class SelfCoreRuntimeMixin:
         """
         Stage-4/5 bridge.
 
-        M15, M10 and M9 need affect_latents before self binding. Create the same
+        M13/M15, M10 and M9 need affect_latents before self binding. Create the same
         affect packet here when it is not already present. EmotionalDrive caches
         the packet on out["emotion"], so LifeRuntime can reuse it later without a
         second EMA/progress update.
@@ -62,10 +62,27 @@ class SelfCoreRuntimeMixin:
                 print(f"[self_core] affect precompute skipped: {e}")
                 self._self_core_affect_warned = True
 
+    def _run_pre_self_autobiographical_retrieval(self, obs: dict, out: dict) -> None:
+        """
+        M13 pre-self retrieval.
+
+        Runs after M11 affect packet is available and before M15. It may blend a
+        retrieved autobiographical context into M5 focus_context, so M15 searches
+        chains with past self-relevant episodes available.
+        """
+        if not hasattr(self, "compute_autobiographical_retrieval"):
+            return
+        try:
+            self.compute_autobiographical_retrieval(obs, out)
+        except Exception as e:
+            if not hasattr(self, "_autobiographical_retrieval_warned"):
+                print(f"[autobiographical_memory] pre-self retrieval skipped: {e}")
+                self._autobiographical_retrieval_warned = True
+
     def _run_pre_self_thought_chain(self, obs: dict, out: dict) -> None:
         """
         Correct architecture order:
-            M5 focus_context + M11 affect_latents -> M15 chain search
+            M5 focus_context + M11 affect_latents + M13 memory -> M15 chain search
             M15 writes best chain back into M5 focus_context
             M10 selects/broadcasts conscious-access material
             M9 self-binds the broadcast focus_context
@@ -106,11 +123,12 @@ class SelfCoreRuntimeMixin:
 
     def _build_self_core_focus_context(self, out: dict, workspace: torch.Tensor) -> torch.Tensor:
         """
-        Read the M5/M15/M10-owned focus_context.
+        Read the M5/M13/M15/M10-owned focus_context.
 
-        M5 creates the focus_context. M15 may enhance it with the best chain.
-        M10 may replace it with broadcast_latent. M9 must not manually reconstruct
-        focus from lower-level internals.
+        M5 creates the focus_context. M13 may blend retrieved memory into it.
+        M15 may enhance it with the best chain. M10 may replace it with
+        broadcast_latent. M9 must not manually reconstruct focus from lower-level
+        internals.
         """
         target_dim = int(getattr(self.cfg.self_core, "focus_context_dim", self.cfg.self_core.workspace_dim))
         focus_context = out.get("focus_context")
@@ -145,6 +163,7 @@ class SelfCoreRuntimeMixin:
             return None
         self.ensure_self_core_ready()
         self._ensure_affect_packet_for_self_core(obs, out)
+        self._run_pre_self_autobiographical_retrieval(obs, out)
         self._run_pre_self_thought_chain(obs, out)
         self._run_pre_self_global_broadcast(obs, out)
 
@@ -211,6 +230,12 @@ class SelfCoreRuntimeMixin:
             device=self.device,
             dtype=sc["self_state"].dtype,
         )
+        memory = out.get("autobiographical_memory", {}) if isinstance(out.get("autobiographical_memory"), dict) else {}
+        sc["autobiographical_memory_present"] = torch.tensor(
+            [1.0 if torch.is_tensor(memory.get("retrieved_context")) else 0.0],
+            device=self.device,
+            dtype=sc["self_state"].dtype,
+        )
         out["self_core"] = sc
         out["self_experience_text"] = sc["self_experience_text"]
 
@@ -257,6 +282,7 @@ class SelfCoreRuntimeMixin:
             f"focus_context_present={f('focus_context_present'):.0f} "
             f"affect_latents_present={f('affect_latents_present'):.0f} "
             f"broadcast_present={f('broadcast_present'):.0f} "
+            f"memory_present={f('autobiographical_memory_present'):.0f} "
             f"uncertainty={f('self_uncertainty'):.3f} "
             f"curiosity={f('self_curiosity'):.3f} | "
             f"{sc.get('self_experience_text', '')}"
