@@ -41,7 +41,7 @@ from src.apps.runner_optimizer import rebuild_optimizer_from_trainable_modules_f
 from src.apps.runner_teachers import load_inner_speech_teacher_from_config
 from src.apps.runner_training_flags import resolve_module_training_flags_for_system
 from src.apps.runner_unified_init import initialize_unified_system_v510
-from src.apps.unified_conscious_viewer import UnifiedSystemV57
+from src.apps.unified_runtime_base import UnifiedRuntimeBase
 from src.modules.m01_object_imagery.inner_visual_runtime import InnerVisualRuntimeMixin
 from src.modules.m01_object_imagery.runtime import ObjectImageryRuntimeMixin
 from src.modules.m02_event_dream_replay.event_dream_runtime import EventDreamReplayRuntimeMixin
@@ -94,7 +94,7 @@ class UnifiedSystem(
     TrainingRuntimeMixin,
     LifeRuntimeMixin,
     TetraDynamicSlotDiagnosticMixin,
-    UnifiedSystemV57,
+    UnifiedRuntimeBase,
 ):
     """Unified DMoC runtime assembled from mixins and extracted app helpers."""
 
