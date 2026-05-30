@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-"""Slim compatibility module for the V5.10 unified system.
+"""Slim compatibility module for the unified DMoC runtime.
 
 The previous version of this file contained the Hydra entrypoint, the full
-`UnifiedSystemV510.__init__`, the outer run loop, config filtering, teacher
-loading, optimizer rebuild logic, service startup and hover safety patching.
+runtime `__init__`, the outer run loop, config filtering, teacher loading,
+optimizer rebuild logic, service startup and hover safety patching.
 
 Those responsibilities now live in small app-level modules:
 
 - `runner_entry.py`             — Hydra entrypoint
 - `runner_config.py`            — config filtering / structured merge
 - `runner_system_factory.py`    — construction and post-construction sequence
-- `runner_unified_init.py`      — extracted `UnifiedSystemV510.__init__`
+- `runner_unified_init.py`      — extracted runtime `__init__`
 - `runner_loop.py`              — outer life loop
 - `runner_teachers.py`          — inner-speech teacher loading
 - `runner_training_flags.py`    — module train/passive flags
@@ -21,8 +21,8 @@ Those responsibilities now live in small app-level modules:
 - `runner_runtime_state.py`     — mutable runtime bookkeeping
 - `runner_startup_state.py`     — startup/window/sensor flags
 
-This file intentionally keeps the public import path
-`src.apps.runner.UnifiedSystemV510` stable for legacy code.
+The primary public runtime class is now `UnifiedSystem`. The legacy name
+`UnifiedSystemV510` is kept as an alias so older imports do not break.
 """
 
 import os
@@ -69,7 +69,7 @@ from src.shared.config import UnifiedV510Config
 from src.apps.life_runtime import LifeRuntimeMixin
 
 
-class UnifiedSystemV510(
+class UnifiedSystem(
     CameraPreviewMixin,
     ActionOutputsMixin,
     SleepSensorsMixin,
@@ -96,13 +96,17 @@ class UnifiedSystemV510(
     TetraDynamicSlotDiagnosticMixin,
     UnifiedSystemV57,
 ):
-    """V5.10 runtime assembled from mixins and extracted app helpers."""
+    """Unified DMoC runtime assembled from mixins and extracted app helpers."""
 
     __init__ = initialize_unified_system_v510
     run = run_unified_life_loop
     resolve_module_training_flags_from_config = resolve_module_training_flags_for_system
     _force_hover_flight_runtime_config = force_hover_flight_runtime_config_for_system
     rebuild_optimizer_from_trainable_modules = rebuild_optimizer_from_trainable_modules_for_system
+
+
+# Legacy alias for old imports. New code should import UnifiedSystem.
+UnifiedSystemV510 = UnifiedSystem
 
 
 os.environ.setdefault("PROJECT_ROOT", str(Path(__file__).resolve().parents[2]))
@@ -116,6 +120,7 @@ def main() -> None:
 
 
 __all__ = [
+    "UnifiedSystem",
     "UnifiedSystemV510",
     "UnifiedV510Config",
     "load_inner_speech_teacher_from_config",
