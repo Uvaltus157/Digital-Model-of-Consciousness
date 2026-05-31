@@ -9,7 +9,7 @@ This module extracts the service-startup boundary from the heavy runner:
 - initial external-control flags;
 - sensor-preview metadata initialization.
 
-The heavy `UnifiedSystemV510.__init__` still starts these services today. The
+`UnifiedSystem.__init__` still starts these services today. The
 slim entrypoint calls `ensure_runner_services()` after construction. The helper
 is idempotent: it starts a server only if the corresponding attribute is absent
 or `None`, then re-applies lightweight metadata/flag initialization hooks.

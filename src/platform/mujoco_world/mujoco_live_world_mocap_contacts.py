@@ -164,9 +164,22 @@ class MujocoLiveWorldMocapContacts(MujocoLiveWorldV57):
         This avoids the previous forward/right/up construction where roll/pitch
         could look swapped depending on body axes.
         """
-        yaw = np.deg2rad(float(getattr(self, "yaw_deg", 0.0)))
-        pitch = np.deg2rad(float(getattr(self, "pitch_deg", 0.0)))
-        roll = np.deg2rad(float(getattr(self, "roll_deg", 0.0)))
+        yaw_deg = float(getattr(self, "yaw_deg", 0.0))
+        pitch_deg = float(getattr(self, "pitch_deg", 0.0))
+        roll_deg = float(getattr(self, "roll_deg", 0.0))
+        if not np.isfinite(yaw_deg):
+            yaw_deg = 0.0
+            self.yaw_deg = yaw_deg
+        if not np.isfinite(pitch_deg):
+            pitch_deg = 0.0
+            self.pitch_deg = pitch_deg
+        if not np.isfinite(roll_deg):
+            roll_deg = 0.0
+            self.roll_deg = roll_deg
+
+        yaw = np.deg2rad(yaw_deg)
+        pitch = np.deg2rad(pitch_deg)
+        roll = np.deg2rad(roll_deg)
 
         q_yaw = self._axis_angle_quat([0.0, 0.0, 1.0], yaw)
         q_pitch = self._axis_angle_quat([0.0, 1.0, 0.0], pitch)
@@ -178,6 +191,8 @@ class MujocoLiveWorldMocapContacts(MujocoLiveWorldV57):
     def _clamp_flight_zone(self):
         # Keep mocap-controlled body inside a safe vertical flight corridor.
         try:
+            if not np.all(np.isfinite(np.asarray(self.cam_pos, dtype=np.float64))):
+                self.cam_pos[:] = np.asarray(getattr(self.cfg, "start_pos", [-3.0, -3.0, 2.2]), dtype=np.float64)
             self.cam_pos[2] = float(np.clip(float(self.cam_pos[2]), self.min_flight_z, self.max_flight_z))
         except Exception:
             pass

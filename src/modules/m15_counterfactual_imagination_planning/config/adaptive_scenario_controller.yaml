@@ -11,6 +11,19 @@
 # src/modules/m15_counterfactual_imagination_planning/adaptive_scenario_controller.py will read this section first,
 # and fall back to root-level keys for compatibility with older patches.
 
+tetra_dynamic_slot_diagnostic:
+  enabled: true
+  file_name: tetra_dynamic_slot_diagnostic.log
+  reset_on_start: true
+
+thought_chain:
+  enabled: true
+  hidden_dim: 256
+  thought_dim: 128
+  plan_context_dim: 256
+  chain_len: 4
+  print_every_steps: 30
+
 adaptive_scenario_controller:
   enabled: true
 

@@ -254,6 +254,7 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
         self.preset_buttons: Dict[str, QtWidgets.QPushButton] = {}
         self.active_preset_key = ""
         self.syncing_from_runner = False
+        self.local_edit_until = 0.0
         self.last_runner_status: Dict = {}
         self.last_status_ok = False
         self.rotate_tetra_checkbox: QtWidgets.QCheckBox | None = None
@@ -510,11 +511,21 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
         del blocker
         self.refresh_enabled_state()
 
+    def _ensure_override_checked(self) -> None:
+        if self.enable_override.isChecked():
+            return
+        blocker = QtCore.QSignalBlocker(self.enable_override)
+        self.enable_override.setChecked(True)
+        del blocker
+        self.refresh_enabled_state()
+
     def _sync_group_from_runner(self, group: str, values) -> None:
         try:
             vals = [float(v) for v in values]
         except Exception:
             return
+        if group == "leg":
+            vals = self._runtime_leg_to_ui(vals)
 
         prefix = group + "."
         keys = [k for k in self.sliders if k.startswith(prefix)]
@@ -543,6 +554,8 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
         return ""
 
     def _reset_runner_driven_ui(self) -> None:
+        if time.time() < float(getattr(self, "local_edit_until", 0.0)):
+            return
         self._clear_active_preset()
         self._set_override_checked_from_runner(False)
 
@@ -565,18 +578,20 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
         self.last_runner_status = data
         self.status_ipc_pill.set_state("green", "STATUS IPC: receiving")
 
-        self.syncing_from_runner = True
-        try:
-            self._set_override_checked_from_runner(bool(data.get("manual_actions_enabled", False)))
-            self._sync_group_from_runner("body", data.get("manual_body_action", []))
-            self._sync_group_from_runner("arm", data.get("manual_arm_action", []))
-            self._sync_group_from_runner("hand", data.get("manual_hand_action", []))
-            self._sync_group_from_runner("leg", data.get("manual_leg_action", []))
+        local_edit_active = time.time() < float(getattr(self, "local_edit_until", 0.0))
+        if not local_edit_active:
+            self.syncing_from_runner = True
+            try:
+                self._set_override_checked_from_runner(bool(data.get("manual_actions_enabled", False)))
+                self._sync_group_from_runner("body", data.get("manual_body_action", []))
+                self._sync_group_from_runner("arm", data.get("manual_arm_action", []))
+                self._sync_group_from_runner("hand", data.get("manual_hand_action", []))
+                self._sync_group_from_runner("leg", data.get("manual_leg_action", []))
 
-            preset_key = self._preset_key_from_runner_status(data)
-            self._set_active_preset(preset_key)
-        finally:
-            self.syncing_from_runner = False
+                preset_key = self._preset_key_from_runner_status(data)
+                self._set_active_preset(preset_key)
+            finally:
+                self.syncing_from_runner = False
 
         scenario = data.get("adaptive_scenario_status", {})
         phase = scenario.get("phase", "") if isinstance(scenario, dict) else ""
@@ -622,6 +637,13 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
         UI stays as a control panel. Motion logic lives in the adaptive controller,
         not in this PyQt window.
         """
+        try:
+            if self.send_timer.isActive():
+                self.send_timer.stop()
+        except Exception:
+            pass
+        self.local_edit_until = time.time() + 1.2
+
         if not self.enable_override.isChecked():
             blocker = QtCore.QSignalBlocker(self.enable_override)
             self.enable_override.setChecked(True)
@@ -633,24 +655,37 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
             self.current_port(),
             make_action_message(action, **payload),
         )
-        if mark_active:
+        if ok and mark_active:
             self._set_active_preset(str(active_key or action))
+        if not ok:
+            self._clear_active_preset()
+            self._set_override_checked_from_runner(False)
         self.status.setText(
             f"{time.strftime('%H:%M:%S')} command={action} sent ok={ok} | "
-            f"cmd={self.host}:{self.port} | status={self.status_host}:{self.status_port}"
+            + ("" if ok else "command IPC unavailable; start runner first | ")
+            + f"cmd={self.host}:{self.port} | status={self.status_host}:{self.status_port}"
         )
 
     def stop_floating_object_scenario(self):
+        try:
+            if self.send_timer.isActive():
+                self.send_timer.stop()
+        except Exception:
+            pass
+        self.local_edit_until = time.time() + 1.2
+
         ok = send_ipc_message(
             self.current_host(),
             self.current_port(),
             make_action_message("stop_fly_to_tetrahedron_inspect"),
         )
         self._set_active_preset("")
-        self._set_override_checked_from_runner(False)
+        if ok:
+            self._set_override_checked_from_runner(False)
         self.status.setText(
             f"{time.strftime('%H:%M:%S')} floating object inspect stopped ok={ok} | "
-            f"cmd={self.host}:{self.port} | status={self.status_host}:{self.status_port}"
+            + ("" if ok else "command IPC unavailable; start runner first | ")
+            + f"cmd={self.host}:{self.port} | status={self.status_host}:{self.status_port}"
         )
 
     def gesture_neutral_hands(self):
@@ -763,6 +798,7 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
     def _override_toggled(self, checked: bool):
         if self.syncing_from_runner:
             return
+        self.local_edit_until = time.time() + 1.2
         self.refresh_enabled_state()
         if checked:
             # When entering manual mode, send a clean neutral command immediately.
@@ -773,16 +809,20 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
             self.queue_send()
 
     def refresh_enabled_state(self):
-        en = bool(self.enable_override.isChecked())
+        # Sliders must stay interactive even while override is OFF: the first
+        # local edit auto-enables override in _slider_changed().
+        en = True
         for s in self.sliders.values():
             s.set_enabled_soft(en)
 
     def _slider_changed(self):
         if self.syncing_from_runner:
             return
+        self._ensure_override_checked()
+        self.local_edit_until = time.time() + 1.2
         self._clear_active_preset()
         if self.send_live.isChecked():
-            self.queue_send()
+            self.send_actions()
 
     def queue_send(self):
         if bool(getattr(self, "_closing", False)):
@@ -820,23 +860,58 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
         # Preserve original dict insertion order.
         return [float(self.sliders[k].value()) for k in keys]
 
+    def _swap_leg_sides(self, values) -> List[float]:
+        vals = [float(v) for v in values]
+        if len(vals) != 18:
+            return vals
+        return vals[9:18] + vals[0:9]
+
+    def _invert_leg_knees(self, values) -> List[float]:
+        vals = [float(v) for v in values]
+        if len(vals) != 18:
+            return vals
+        vals[2] = -vals[2]
+        vals[11] = -vals[11]
+        return vals
+
+    def _ui_leg_to_runtime(self, values) -> List[float]:
+        # MuJoCo knee joints use negative qpos for flexion. Keep UI intuitive:
+        # positive knee slider means bend/flex, then adapt to runtime order.
+        return self._invert_leg_knees(self._swap_leg_sides(values))
+
+    def _runtime_leg_to_ui(self, values) -> List[float]:
+        return self._swap_leg_sides(self._invert_leg_knees(values))
+
     def payload(self):
         return {
             "manual_actions_enabled": bool(self.enable_override.isChecked()),
             "manual_body_action": self.values_for_group("body"),
             "manual_arm_action": self.values_for_group("arm"),
             "manual_hand_action": self.values_for_group("hand"),
-            "manual_leg_action": self.values_for_group("leg"),
+            "manual_leg_action": self._ui_leg_to_runtime(self.values_for_group("leg")),
         }
 
     def send_actions(self):
-        msg = make_set_state_message(**self.payload())
+        self.local_edit_until = time.time() + 1.2
+        payload = self.payload()
+        msg = make_set_state_message(**payload)
         ok = send_ipc_message(self.current_host(), self.current_port(), msg)
+        if not ok:
+            self._clear_active_preset()
+            self._set_override_checked_from_runner(False)
         state = "ON" if self.enable_override.isChecked() else "OFF"
+        body_vals = payload["manual_body_action"]
+        arm_vals = payload["manual_arm_action"]
+        hand_vals = payload["manual_hand_action"]
+        leg_vals = payload["manual_leg_action"]
         self.status.setText(
             f"{time.strftime('%H:%M:%S')} sent ok={ok} | override={state} | "
-            f"cmd={self.host}:{self.port} | status={self.status_host}:{self.status_port} | "
-            f"body={len(self.values_for_group('body'))} arm={len(self.values_for_group('arm'))} hand={len(self.values_for_group('hand'))} leg={len(self.values_for_group('leg'))}"
+            + ("" if ok else "command IPC unavailable; start runner first | ")
+            + f"cmd={self.host}:{self.port} | status={self.status_host}:{self.status_port} | "
+            f"body={len(body_vals)} max={max([abs(v) for v in body_vals] or [0.0]):.2f} | "
+            f"arm={len(arm_vals)} max={max([abs(v) for v in arm_vals] or [0.0]):.2f} | "
+            f"hand={len(hand_vals)} min/max={min(hand_vals or [0.0]):.2f}/{max(hand_vals or [0.0]):.2f} | "
+            f"leg={len(leg_vals)} max={max([abs(v) for v in leg_vals] or [0.0]):.2f}"
         )
 
     def level_agent(self):
@@ -850,13 +925,16 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
             manual_body_action=self.values_for_group("body"),
             manual_arm_action=self.values_for_group("arm"),
             manual_hand_action=self.values_for_group("hand"),
-            manual_leg_action=self.values_for_group("leg"),
+            manual_leg_action=self._ui_leg_to_runtime(self.values_for_group("leg")),
             level_agent_pose=True,
         )
         ok = send_ipc_message(self.current_host(), self.current_port(), msg)
+        if not ok:
+            self._set_override_checked_from_runner(False)
         self.status.setText(
             f"{time.strftime('%H:%M:%S')} level_agent sent ok={ok} | "
-            f"cmd={self.host}:{self.port} | status={self.status_host}:{self.status_port}"
+            + ("" if ok else "command IPC unavailable; start runner first | ")
+            + f"cmd={self.host}:{self.port} | status={self.status_host}:{self.status_port}"
         )
 
     def set_neutral_pose(self, send: bool = True):
@@ -867,8 +945,8 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
             hands = 0.5 direct hand_ctrl neutral
             legs = 0
         """
-        for slider in self.sliders.values():
-            slider.set_value(0.0)
+        for key, slider in self.sliders.items():
+            slider.set_value(0.5 if key.startswith("hand.") else 0.0)
         if send:
             self.queue_send()
 
@@ -885,17 +963,26 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
         self.queue_send()
 
     def zero_group(self, group: str):
+        self._ensure_override_checked()
+        self.local_edit_until = time.time() + 1.2
+        self._clear_active_preset()
         prefix = group + "."
         for key, slider in self.sliders.items():
             if key.startswith(prefix):
+                blocker = QtCore.QSignalBlocker(slider)
                 slider.set_zero()
-        self.queue_send()
+                del blocker
+        self.send_actions()
 
     def zero_all(self):
+        self._ensure_override_checked()
+        self.local_edit_until = time.time() + 1.2
         self._clear_active_preset()
         for slider in self.sliders.values():
+            blocker = QtCore.QSignalBlocker(slider)
             slider.set_zero()
-        self.queue_send()
+            del blocker
+        self.send_actions()
 
     def closeEvent(self, event):
         self.shutdown_timers()

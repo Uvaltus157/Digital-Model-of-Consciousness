@@ -1,0 +1,10 @@
+long_dynamic_memory:
+  enabled: true
+  context_dim: 256
+  focus_blend: 0.18
+  blend_into_focus: true
+  stability_threshold: 0.12
+  novelty_threshold: 0.35
+  use_passport_manager: true
+  use_event_memory: true
+  print_every_steps: 30

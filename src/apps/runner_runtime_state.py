@@ -5,7 +5,7 @@ from __future__ import annotations
 This module extracts simple counters, paths and mutable runtime bookkeeping from
 the heavy runner into a small, dependency-light helper.
 
-For now `UnifiedSystemV510.__init__` still performs the original assignments.
+For now `UnifiedSystem.__init__` still performs the original assignments.
 The slim entrypoint reapplies the same initialization after construction so this
 helper becomes tested and explicit before a later direct edit of the large
 runtime file.

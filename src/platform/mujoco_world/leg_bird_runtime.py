@@ -118,11 +118,10 @@ class LegBirdRuntimeMixin:
             leg_raw = np.zeros(n, dtype=np.float64)
             leg_raw[:ctrl.size] = ctrl
 
-        alpha = float(self.cfg.bird_body.leg_smoothing)
+        alpha = 0.75 if bool(getattr(self.world, "manual_control_active", False)) else float(self.cfg.bird_body.leg_smoothing)
         leg_raw = np.clip(leg_raw, -1.0, 1.0)
         self.prev_bird_leg_ctrl = (1.0 - alpha) * self.prev_bird_leg_ctrl + alpha * leg_raw
 
         for aid, value in zip(self.bird_leg_act_ids, self.prev_bird_leg_ctrl):
             if aid >= 0:
                 self.world.data.ctrl[aid] = float(value)
-

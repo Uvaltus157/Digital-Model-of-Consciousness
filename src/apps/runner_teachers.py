@@ -3,7 +3,7 @@ from __future__ import annotations
 """Teacher loading helpers for the V5.10 runner.
 
 This module is dependency-light and is part of the gradual runner unload.
-The heavy runtime module still owns `UnifiedSystemV510`, but the Hydra
+The runtime module owns `UnifiedSystem`, but the Hydra
 entrypoint patches the runtime to use this extracted helper.
 """
 

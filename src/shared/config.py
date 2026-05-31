@@ -124,6 +124,25 @@ class InnerObjectImageConfig:
 
 
 @dataclass
+class InnerObjectOpen3DConfig:
+    enabled: bool = True
+    window_name: str = "inner object Open3D"
+    width: int = 960
+    height: int = 820
+    update_every_steps: int = 2
+    point_size: float = 5.0
+    voxel_threshold: float = 0.60
+    max_voxel_points: int = 1200
+    show_voxels: bool = True
+    use_internal_color: bool = True
+    max_slots: int = 10
+    slot_spacing: float = 2.6
+    export_dir: str = "exports/inner_object_3d"
+    snapshot_conf_threshold: float = 0.56
+    min_steps_between_snapshots: int = 24
+
+
+@dataclass
 class ModuleDebugStatusIPCRuntimeConfig:
     enabled: bool = True
     host: str = "127.0.0.1"
@@ -185,6 +204,13 @@ class ActionSignalTraceConfig:
 
 
 @dataclass
+class TetraDynamicSlotDiagnosticConfig:
+    enabled: bool = True
+    file_name: str = "tetra_dynamic_slot_diagnostic.log"
+    reset_on_start: bool = True
+
+
+@dataclass
 class SelfCoreRuntimeConfig:
     enabled: bool = True
     self_dim: int = 128
@@ -204,6 +230,90 @@ class ThoughtChainRuntimeConfig:
     thought_dim: int = 128
     plan_context_dim: int = 256
     chain_len: int = 4
+    print_every_steps: int = 30
+
+
+@dataclass
+class EventDreamReplayRuntimeConfig:
+    enabled: bool = True
+    replay_context_dim: int = 256
+    event_code_dim: int = 8
+    replay_threshold: float = 0.35
+    focus_blend: float = 0.15
+    blend_replay_into_focus: bool = True
+    use_m13_context: bool = True
+    use_event_memory: bool = True
+    max_recent_events_scan: int = 16
+    print_every_steps: int = 30
+
+
+@dataclass
+class EventCodeVisualizerRuntimeConfig:
+    enabled: bool = True
+    window_name: str = "event code / slot vocabulary"
+    width: int = 1500
+    height: int = 980
+    show_every_steps: int = 1
+    delay_ms: int = 1
+    max_slots: int = 10
+    max_events: int = 14
+
+
+@dataclass
+class LongDynamicMemoryRuntimeConfig:
+    enabled: bool = True
+    context_dim: int = 256
+    focus_blend: float = 0.18
+    blend_into_focus: bool = True
+    stability_threshold: float = 0.12
+    novelty_threshold: float = 0.35
+    use_passport_manager: bool = True
+    use_event_memory: bool = True
+    print_every_steps: int = 30
+
+
+@dataclass
+class GlobalBroadcastRuntimeConfig:
+    enabled: bool = True
+    hidden_dim: int = 256
+    broadcast_threshold: float = 0.35
+    print_every_steps: int = 30
+
+
+@dataclass
+class MetacognitionRuntimeConfig:
+    enabled: bool = True
+    hidden_dim: int = 256
+    verification_threshold: float = 0.55
+    doubt_threshold: float = 0.50
+    action_hold_threshold: float = 0.70
+    print_every_steps: int = 30
+
+
+@dataclass
+class AutobiographicalMemoryRuntimeConfig:
+    enabled: bool = True
+    memory_dim: int = 256
+    max_episodes: int = 512
+    retrieval_topk: int = 3
+    write_every_steps: int = 1
+    blend_retrieved_into_focus: bool = True
+    focus_blend: float = 0.20
+    min_relevance_for_blend: float = 0.05
+    print_every_steps: int = 30
+
+
+@dataclass
+class SemanticActionRuntimeConfig:
+    enabled: bool = True
+    hold_threshold: float = 0.70
+    verify_threshold: float = 0.55
+    high_doubt_threshold: float = 0.50
+    min_action_scale: float = 0.05
+    soft_hold_scale: float = 0.25
+    explore_threshold: float = 0.35
+    positive_delta_threshold: float = 0.10
+    emergency_threshold: float = 0.50
     print_every_steps: int = 30
 
 
@@ -422,6 +532,7 @@ class UnifiedV510Config(RuntimeConfig):
     camera_preview: CameraPreviewConfig = field(default_factory=CameraPreviewConfig)
     action_outputs: ActionOutputsWindowConfig = field(default_factory=ActionOutputsWindowConfig)
     object_image: InnerObjectImageConfig = field(default_factory=InnerObjectImageConfig)
+    object_image_open3d: InnerObjectOpen3DConfig = field(default_factory=InnerObjectOpen3DConfig)
     ipc_control: IPCControlConfig = field(default_factory=IPCControlConfig)
     external_control: ExternalControlConfig = field(default_factory=ExternalControlConfig)
     control_startup: ControlStartupConfig = field(default_factory=ControlStartupConfig)
@@ -429,8 +540,17 @@ class UnifiedV510Config(RuntimeConfig):
     emotional_drive: EmotionalDriveConfig = field(default_factory=EmotionalDriveConfig)
     exploration: ExplorationMotorConfig = field(default_factory=ExplorationMotorConfig)
     action_trace: ActionSignalTraceConfig = field(default_factory=ActionSignalTraceConfig)
+    tetra_dynamic_slot_diagnostic: TetraDynamicSlotDiagnosticConfig = field(default_factory=TetraDynamicSlotDiagnosticConfig)
+    adaptive_scenario_controller: Dict[str, Any] = field(default_factory=dict)
     self_core: SelfCoreRuntimeConfig = field(default_factory=SelfCoreRuntimeConfig)
     thought_chain: ThoughtChainRuntimeConfig = field(default_factory=ThoughtChainRuntimeConfig)
+    event_dream_replay: EventDreamReplayRuntimeConfig = field(default_factory=EventDreamReplayRuntimeConfig)
+    event_code_visualizer: EventCodeVisualizerRuntimeConfig = field(default_factory=EventCodeVisualizerRuntimeConfig)
+    long_dynamic_memory: LongDynamicMemoryRuntimeConfig = field(default_factory=LongDynamicMemoryRuntimeConfig)
+    global_broadcast: GlobalBroadcastRuntimeConfig = field(default_factory=GlobalBroadcastRuntimeConfig)
+    metacognition: MetacognitionRuntimeConfig = field(default_factory=MetacognitionRuntimeConfig)
+    autobiographical_memory: AutobiographicalMemoryRuntimeConfig = field(default_factory=AutobiographicalMemoryRuntimeConfig)
+    semantic_action: SemanticActionRuntimeConfig = field(default_factory=SemanticActionRuntimeConfig)
     inner_speech: InnerSpeechRuntimeConfig = field(default_factory=InnerSpeechRuntimeConfig)
     vestibular: VestibularRuntimeConfig = field(default_factory=VestibularRuntimeConfig)
     sleep_sensors: SleepSensorGateRuntimeConfig = field(default_factory=SleepSensorGateRuntimeConfig)
@@ -457,13 +577,22 @@ __all__ = [
     "ExternalControlConfig",
     "ActionOutputsWindowConfig",
     "InnerObjectImageConfig",
+    "InnerObjectOpen3DConfig",
     "ModuleDebugStatusIPCRuntimeConfig",
     "ControlStartupConfig",
     "SleepSensorGateRuntimeConfig",
     "ModuleTrainingDebugRuntimeConfig",
     "ActionSignalTraceConfig",
+    "TetraDynamicSlotDiagnosticConfig",
     "SelfCoreRuntimeConfig",
     "ThoughtChainRuntimeConfig",
+    "EventDreamReplayRuntimeConfig",
+    "EventCodeVisualizerRuntimeConfig",
+    "LongDynamicMemoryRuntimeConfig",
+    "GlobalBroadcastRuntimeConfig",
+    "MetacognitionRuntimeConfig",
+    "AutobiographicalMemoryRuntimeConfig",
+    "SemanticActionRuntimeConfig",
     "InnerSpeechRuntimeConfig",
     "MocapFlightBoundsConfig",
     "VestibularRuntimeConfig",

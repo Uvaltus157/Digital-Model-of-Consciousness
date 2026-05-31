@@ -5,7 +5,7 @@ from __future__ import annotations
 This module extracts the simple startup flag/sensor/window-state assignment
 logic from the heavy runner into a dependency-light helper.
 
-For now the heavy `UnifiedSystemV510.__init__` still performs the original
+For now `UnifiedSystem.__init__` still performs the original
 assignments. The slim entrypoint reapplies the same state after construction so
 this helper becomes the tested source of truth before a later direct edit of the
 large runner file.

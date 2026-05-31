@@ -64,7 +64,7 @@ def rebuild_optimizer_from_trainable_modules_for_system(
     system: Any,
     optimizer_factory: Optional[Callable[..., Any]] = None,
 ) -> OptimizerRebuildSnapshot:
-    """Method-compatible optimizer rebuild for `UnifiedSystemV510` instances."""
+    """Method-compatible optimizer rebuild for `UnifiedSystem` instances."""
     named_params = collect_trainable_named_parameters(getattr(system, "module_training_gate", None))
     params = [param for _name, param in named_params]
     lr = float(getattr(system.cfg.train, "lr", 0.0))

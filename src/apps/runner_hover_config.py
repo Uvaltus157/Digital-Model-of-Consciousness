@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Flight-safe hover configuration patch for the V5.10 runner.
 
-This extracts `UnifiedSystemV510._force_hover_flight_runtime_config()` from the
+This extracts `UnifiedSystem._force_hover_flight_runtime_config()` from the
 large runner into a small app-level helper. The values are intentionally the
 same safety clamps used by the previous runner implementation.
 """
@@ -33,7 +33,7 @@ def apply_hover_flight_runtime_config(cfg: Any) -> None:
 
 
 def force_hover_flight_runtime_config_for_system(system: Any) -> None:
-    """Method-compatible wrapper for `UnifiedSystemV510` instances."""
+    """Method-compatible wrapper for `UnifiedSystem` instances."""
     try:
         apply_hover_flight_runtime_config(system.cfg)
     except Exception as e:

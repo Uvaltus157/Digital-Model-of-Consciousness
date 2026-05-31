@@ -192,7 +192,15 @@ class MujocoLiveWorldV57:
 
     def _apply_embodied_base_and_arm(self, embodied: np.ndarray) -> None:
         embodied = np.asarray(embodied, dtype=np.float64).reshape(self.embodied_dim)
+        embodied = np.nan_to_num(embodied, nan=0.0, posinf=0.0, neginf=0.0)
         self.latest_embodied = embodied.astype(np.float32)
+
+        if not np.all(np.isfinite(self.cam_pos)):
+            self.cam_pos = np.asarray(self.cfg.start_pos, dtype=np.float64)
+        if not np.isfinite(float(self.yaw_deg)):
+            self.yaw_deg = float(self.cfg.start_yaw_deg)
+        if not np.isfinite(float(self.pitch_deg)):
+            self.pitch_deg = float(self.cfg.start_pitch_deg)
 
         base = embodied[:5]
         arm_raw = embodied[5:11]
@@ -203,16 +211,17 @@ class MujocoLiveWorldV57:
         right = right / (np.linalg.norm(right) + 1e-9)
         up = np.cross(right, forward)
         up = up / (np.linalg.norm(up) + 1e-9)
+        manual_gain = 2.5 if bool(getattr(self, "manual_control_active", False)) else 1.0
 
         self.cam_pos = (
             self.cam_pos
-            + forward * (base[0] * self.cfg.base.move_gain)
-            + right * (base[1] * self.cfg.base.move_gain)
-            + up * (base[2] * self.cfg.base.lift_gain)
+            + forward * (base[0] * self.cfg.base.move_gain * manual_gain)
+            + right * (base[1] * self.cfg.base.move_gain * manual_gain)
+            + up * (base[2] * self.cfg.base.lift_gain * manual_gain)
         )
-        self.yaw_deg += float(base[3]) * self.cfg.base.yaw_gain_deg
+        self.yaw_deg += float(base[3]) * self.cfg.base.yaw_gain_deg * manual_gain
         self.pitch_deg = float(np.clip(
-            self.pitch_deg + float(base[4]) * self.cfg.base.pitch_gain_deg,
+            self.pitch_deg + float(base[4]) * self.cfg.base.pitch_gain_deg * manual_gain,
             -self.cfg.base.pitch_limit_deg,
             self.cfg.base.pitch_limit_deg,
         ))
@@ -227,7 +236,8 @@ class MujocoLiveWorldV57:
         ], dtype=np.float64)
         arm01 = np.clip((arm_raw + 1.0) * 0.5, 0.0, 1.0)
         arm_ctrl = ranges[:, 0] + arm01 * (ranges[:, 1] - ranges[:, 0])
-        self.prev_arm_ctrl = 0.75 * self.prev_arm_ctrl + 0.25 * arm_ctrl
+        arm_alpha = 0.75 if bool(getattr(self, "manual_control_active", False)) else 0.25
+        self.prev_arm_ctrl = (1.0 - arm_alpha) * self.prev_arm_ctrl + arm_alpha * arm_ctrl
 
         keys = [
             "left_shoulder_yaw",
@@ -257,7 +267,8 @@ class MujocoLiveWorldV57:
 
     def observe(self, action_id: int, embodied_targets: np.ndarray, hand_controls: np.ndarray):
         self._apply_embodied_base_and_arm(embodied_targets)
-        self.hand_bridge.apply(self.data, hand_controls, smoothing=0.25)
+        hand_smoothing = 0.75 if bool(getattr(self, "manual_control_active", False)) else 0.25
+        self.hand_bridge.apply(self.data, hand_controls, smoothing=hand_smoothing)
         self.latest_hand_ctrl = np.asarray(hand_controls, dtype=np.float32).reshape(self.hand_motor_dim)
 
         self._update_rig_pose()

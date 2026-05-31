@@ -27,6 +27,47 @@ class LifeStatsRuntimeMixin:
     def _life_tensor_bool(self, value, default: bool = False) -> bool:
         return bool(self._life_tensor_float(value, 1.0 if default else 0.0) > 0.5)
 
+    def maybe_update_inner_world(
+        self,
+        obs: dict,
+        out: dict,
+        decoded_report: str,
+        target_report: str,
+        inner_report_confidence: float,
+    ) -> None:
+        out["decoded_report"] = decoded_report
+        out["target_report"] = target_report
+        self.update_inner_world_window(out)
+
+    def maybe_update_camera_preview(self, obs: dict, out: dict, *, show_window: bool = True) -> None:
+        if not show_window:
+            return
+        self.update_camera_preview_window(obs)
+
+    def maybe_update_action_outputs(self, obs: dict, out: dict) -> None:
+        self.update_action_output_window()
+
+    def maybe_update_inner_object_visualizer(self, obs: dict, out: dict) -> None:
+        # This method also owns the event-code visualizer, because both need the
+        # current inner-object packet and share the same lazy compute path.
+        self.update_inner_object_window(obs, out)
+
+    def maybe_update_inner_object_open3d(self, obs: dict, out: dict) -> None:
+        self.update_inner_object_open3d_window(out)
+
+    def maybe_update_latent_semantic_map(self, obs: dict, out: dict) -> None:
+        self.update_latent_semantic_window(out)
+
+    def maybe_update_static_dynamic_code_visualizer(self, obs: dict, out: dict) -> None:
+        obj = out.get("inner_object")
+        if isinstance(obj, dict):
+            out["inner_object"] = self.update_static_dynamic_code_visualizer(obj)
+
+    def maybe_update_event_code_visualizer(self, obs: dict, out: dict) -> None:
+        # Event-code drawing is handled in maybe_update_inner_object_visualizer()
+        # to avoid rendering the same frame twice in one life step.
+        return
+
     def build_latest_life_stats(
         self,
         *,
@@ -113,7 +154,9 @@ class LifeStatsRuntimeMixin:
             if self.global_step % max(1, self.cfg.life.report_every_steps) == 0:
                 print(f"[checkpoint] periodic save failed: {e}")
 
-        self.train_once_if_ready()
+        train_once_if_ready = getattr(self, "train_once_if_ready", None)
+        if callable(train_once_if_ready):
+            train_once_if_ready()
 
 
 __all__ = ["LifeStatsRuntimeMixin"]

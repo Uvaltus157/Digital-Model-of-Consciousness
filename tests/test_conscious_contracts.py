@@ -1,7 +1,24 @@
 from __future__ import annotations
 
+import ast
+from collections import deque
+from pathlib import Path
+from types import SimpleNamespace
+
 import torch
 
+from src.modules.m02_event_dream_replay.event_dream_replay import (
+    EventDreamReplay,
+    EventDreamReplayConfig,
+)
+from src.modules.m04_long_dynamic_memory.dynamic_object_passport import (
+    DynamicObjectPassportConfig,
+    DynamicObjectPassportManager,
+)
+from src.modules.m04_long_dynamic_memory.long_dynamic_memory import (
+    LongDynamicMemory,
+    LongDynamicMemoryConfig,
+)
 from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_memory_thought import (
     ConsciousDreamerMemoryThought,
     ConsciousDreamerMemoryThoughtConfig,
@@ -32,6 +49,52 @@ from src.modules.m15_counterfactual_imagination_planning.thought_chain_controlle
     ThoughtChainController,
     ThoughtChainControllerConfig,
 )
+
+
+def test_unified_system_is_primary_runtime_class_source_contract() -> None:
+    source = Path("src/apps/runner.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+
+    class_names = {node.name for node in tree.body if isinstance(node, ast.ClassDef)}
+    assert "UnifiedSystem" in class_names
+
+    alias_found = False
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        for target in node.targets:
+            if (
+                isinstance(target, ast.Name)
+                and target.id == "UnifiedSystemV510"
+                and isinstance(node.value, ast.Name)
+                and node.value.id == "UnifiedSystem"
+            ):
+                alias_found = True
+    assert alias_found
+
+    unified = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "UnifiedSystem")
+    base_names = [base.id for base in unified.bases if isinstance(base, ast.Name)]
+    assert "UnifiedRuntimeBase" in base_names
+    assert "UnifiedSystemV57" not in base_names
+
+
+def test_unified_system_has_current_runtime_methods_source_contract() -> None:
+    source = Path("src/apps/runner.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    unified = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "UnifiedSystem")
+    base_names = [base.id for base in unified.bases if isinstance(base, ast.Name)]
+
+    required_mixins = {
+        "LongDynamicMemoryRuntimeMixin",
+        "EventDreamReplayRuntimeMixin",
+        "AutobiographicalMemoryRuntimeMixin",
+        "ThoughtChainRuntimeMixin",
+        "GlobalBroadcastRuntimeMixin",
+        "InnerSpeechRuntimeMixin",
+        "MetacognitionRuntimeMixin",
+        "SemanticActionRuntimeMixin",
+    }
+    assert required_mixins.issubset(set(base_names))
 
 
 def _small_m5_config() -> ConsciousDreamerMemoryThoughtConfig:
@@ -301,6 +364,99 @@ def test_m15_searches_chain_before_m9_and_enhances_focus_context() -> None:
         "self_relevance",
         "planning_readiness",
     }
+
+
+def test_m4_m13_m2_m15_share_focus_context_dimension() -> None:
+    torch.manual_seed(8)
+    focus_dim = 16
+    focus_context = torch.randn(1, focus_dim)
+    affect = {
+        "affect_latents": torch.randn(1, 6),
+        "panic_latent": torch.tensor([[0.1]]),
+        "stress_latent": torch.tensor([[0.2]]),
+        "curiosity_latent": torch.tensor([[0.8]]),
+    }
+    out = {
+        "focus_context": focus_context,
+        "workspace_out": torch.randn(1, focus_dim),
+        "object_repr": torch.randn(1, focus_dim),
+        "values": {"coherence": torch.tensor([[0.5]]), "curiosity": torch.tensor([[0.4]])},
+        "affect": affect,
+        "emotion": {"emotional_valence": 0.3, "emotional_arousal": 0.4},
+        "metacognition": {"doubt": torch.tensor([[0.2]])},
+    }
+    obj = {
+        "z_obj": torch.randn(1, focus_dim),
+        "active_slot_index": torch.tensor([[0]]),
+        "slot_token": "OBJ_000",
+        "confidence": torch.tensor([[0.9]]),
+        "event_delta_norm": torch.tensor([[0.6]]),
+        "touch_strength": torch.tensor([[0.4]]),
+        "vision_strength": torch.tensor([[0.7]]),
+    }
+    out["inner_object"] = obj
+
+    event_memory = SimpleNamespace(
+        events=deque([{
+            "slot": 0,
+            "confidence": 0.9,
+            "delta_norm": 0.6,
+            "action_norm": 0.3,
+            "contact_norm": 0.4,
+            "vision_strength": 0.7,
+            "touch_strength": 0.4,
+            "dream_mode": False,
+            "event_code": torch.tensor([[1.0, 0.9, 0.6, 0.3, 0.4, 0.7, 0.4, 0.0]]),
+            "semantic_sentence": "SENT SUBJ=OBJ_000 VERB=move_changes",
+            "kind": "self_motion_transition",
+            "slot_token": "OBJ_000",
+        }], maxlen=8),
+        last_event=None,
+        sentence_memory=SimpleNamespace(latest_episode_summary=lambda: "episode with dynamic object"),
+    )
+    passport_manager = DynamicObjectPassportManager(
+        DynamicObjectPassportConfig(latent_dim=focus_dim, min_dynamic_score=0.0, min_confidence_to_create=0.0)
+    )
+
+    m4 = LongDynamicMemory(LongDynamicMemoryConfig(context_dim=focus_dim))
+    out["long_dynamic_memory"] = m4.compute(
+        out=out,
+        obj=obj,
+        passport_manager=passport_manager,
+        event_memory=event_memory,
+        dream_mode=False,
+        global_step=1,
+    )
+    out["focus_context"] = out["focus_context"] + 0.1 * out["long_dynamic_memory"]["dynamic_identity_context"]
+
+    memory = AutobiographicalMemory(AutobiographicalMemoryConfig(memory_dim=focus_dim, max_episodes=8, retrieval_topk=1))
+    memory.write_episode(obs={}, out=out, global_step=2)
+    out["autobiographical_memory"] = memory.retrieve(out)
+    out["focus_context"] = out["focus_context"] + 0.1 * out["autobiographical_memory"]["retrieved_context"]
+
+    replay = EventDreamReplay(EventDreamReplayConfig(replay_context_dim=focus_dim, replay_threshold=0.0))
+    out["event_dream_replay"] = replay.compute(out=out, event_memory=event_memory, dream_mode=False)
+    out["focus_context"] = out["focus_context"] + 0.1 * out["event_dream_replay"]["replay_context"]
+
+    thought = ThoughtChainController(ThoughtChainControllerConfig(
+        self_bound_context_dim=20,
+        subjective_affect_dim=5,
+        focus_context_dim=focus_dim,
+        affect_latent_dim=6,
+        hidden_dim=32,
+        thought_dim=10,
+        plan_context_dim=12,
+        chain_len=3,
+    ))
+    out["thought_chain"] = thought(
+        focus_context=out["focus_context"],
+        affect_latents=out["affect"]["affect_latents"],
+    )
+
+    assert out["long_dynamic_memory"]["dynamic_identity_context"].shape == (1, focus_dim)
+    assert out["autobiographical_memory"]["retrieved_context"].shape == (1, focus_dim)
+    assert out["event_dream_replay"]["replay_context"].shape == (1, focus_dim)
+    assert out["thought_chain"]["enhanced_focus_context"].shape == (1, focus_dim)
 
 
 def test_m7_verbalizes_self_bound_thought_inputs() -> None:

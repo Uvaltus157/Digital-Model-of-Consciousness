@@ -1,0 +1,21 @@
+emotional_drive:
+  enabled: true
+  reward_weight: 1.0
+  inject_into_env_reward: true
+  log_every_steps: 25
+  ema_decay: 0.985
+  reward_scale: 0.15
+  w_gap_fill: 1.25
+  w_coherence_gain: 0.75
+  w_object_conf_gain: 0.75
+  w_multimodal_alignment: 0.55
+  w_contact_pleasure: 0.35
+  w_curiosity: 0.25
+  w_inner_speech_conf: 0.35
+  w_instability: 0.40
+  w_uncertainty_increase: 1.10
+  w_coherence_loss: 0.85
+  w_object_conf_loss: 0.75
+  w_speech_conf_loss: 0.55
+  w_alignment_loss: 0.70
+  w_chaotic_touch: 0.45

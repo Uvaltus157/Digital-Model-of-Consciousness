@@ -63,6 +63,7 @@ class LifeRuntimeMixin(
 
         prev_action = int(self.state["prev_action_ids"].item())
 
+        self.world.manual_control_active = bool(getattr(self, "_ipc_manual_actions_enabled", False))
         dyn0 = self.apply_dynamic_agent_rig_control(self.prev_embodied_action[0].detach().cpu().numpy())
         mocap_safe_emb0 = np.zeros_like(self.prev_embodied_action[0].detach().cpu().numpy()) if dyn0 is not None else self.prev_embodied_action[0].detach().cpu().numpy()
         obs0 = self.world.observe(
@@ -96,6 +97,7 @@ class LifeRuntimeMixin(
 
         dyn1 = self.apply_dynamic_agent_rig_control(out0["embodied_targets"][0].detach().cpu().numpy())
         mocap_safe_emb1 = np.zeros_like(out0["embodied_targets"][0].detach().cpu().numpy()) if dyn1 is not None else out0["embodied_targets"][0].detach().cpu().numpy()
+        self.world.manual_control_active = bool(getattr(self, "_ipc_manual_actions_enabled", False))
         obs = self.world.observe(
             action_id=int(out0["action_ids"].item()),
             embodied_targets=mocap_safe_emb1,
@@ -198,7 +200,10 @@ class LifeRuntimeMixin(
         )
 
         self.global_step += 1
-        time.sleep(max(0.0, float(self.cfg.life.sleep_sec)))
+        sleep_sec = getattr(self.cfg.life, "sleep_sec", None)
+        if sleep_sec is None:
+            sleep_sec = 1.0 / max(float(getattr(self.cfg.life, "fps", 15.0)), 1e-6)
+        time.sleep(max(0.0, float(sleep_sec)))
 
 
 __all__ = ["LifeRuntimeMixin"]

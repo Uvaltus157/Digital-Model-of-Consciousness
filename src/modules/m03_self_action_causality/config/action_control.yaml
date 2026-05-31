@@ -1,0 +1,37 @@
+ipc_control:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8765
+  poll_every_steps: 1
+
+external_control:
+  enabled: true
+  state_file: "/tmp/conscious_viewer_control.json"
+  poll_every_steps: 1
+
+exploration:
+  enabled: true
+  warmup_steps: 1500
+  min_embodied_norm: 0.03
+  min_hand_norm: 0.03
+  base_amp: 0.65
+  hand_amp: 0.18
+  cycle_action_when_stuck: true
+  action_cycle_period: 45
+  low_novelty_threshold: 0.015
+  stuck_boost: 1.75
+
+manual_action_override:
+  enabled: true
+  window_name: "manual body action override"
+  max_linear: 2.0
+  max_angular: 1.5
+  width: 760
+  height: 480
+  show_every_steps: 1
+
+action_trace:
+  enabled: false
+  print_every_steps: 15
+  force_when_manual: false
+  force_gain: 1.0

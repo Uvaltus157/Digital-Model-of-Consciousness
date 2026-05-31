@@ -59,7 +59,7 @@ class InnerSpeechRuntimeMixin:
         Runtime report bridge used by LifeRuntimeMixin.life_step().
 
         Because InnerSpeechRuntimeMixin appears before LifeRuntimeMixin in the
-        UnifiedSystemV510 MRO, this method overrides the legacy helper. Prefer
+        UnifiedSystem MRO, this method overrides the legacy helper. Prefer
         self-bound M7 outputs and keep symbolic_report only as a final fallback.
         """
         del obs

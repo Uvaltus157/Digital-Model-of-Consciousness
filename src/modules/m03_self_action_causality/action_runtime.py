@@ -8,6 +8,16 @@ from src.modules.m15_counterfactual_imagination_planning.adaptive_scenario_contr
 
 
 class ActionRuntimeMixin:
+    def _sanitize_manual_vector(self, value, size: int, fill: float = 0.0, lo: float | None = None, hi: float | None = None) -> np.ndarray:
+        arr = np.asarray(value, dtype=np.float32).reshape(-1)
+        out = np.full(int(size), float(fill), dtype=np.float32)
+        n = min(int(size), int(arr.size))
+        if n > 0:
+            out[:n] = arr[:n]
+        out = np.nan_to_num(out, nan=float(fill), posinf=float(fill), neginf=float(fill)).astype(np.float32)
+        if lo is not None or hi is not None:
+            out = np.clip(out, -np.inf if lo is None else float(lo), np.inf if hi is None else float(hi)).astype(np.float32)
+        return out
 
     def _close_inner_world_gui_windows(self) -> None:
         try:
@@ -114,26 +124,26 @@ class ActionRuntimeMixin:
 
         if "manual_body_action" in state:
             try:
-                self._ipc_manual_body_action = np.asarray(state["manual_body_action"], dtype=np.float32)
+                self._ipc_manual_body_action = self._sanitize_manual_vector(state["manual_body_action"], 9, fill=0.0)
                 self._last_manual_body_action = self._ipc_manual_body_action
             except Exception as e:
                 print(f"[ipc] bad manual_body_action: {e}")
 
         if "manual_arm_action" in state:
             try:
-                self._ipc_manual_arm_action = np.asarray(state["manual_arm_action"], dtype=np.float32)
+                self._ipc_manual_arm_action = self._sanitize_manual_vector(state["manual_arm_action"], 6, fill=0.0, lo=-1.0, hi=1.0)
             except Exception as e:
                 print(f"[ipc] bad manual_arm_action: {e}")
 
         if "manual_hand_action" in state:
             try:
-                self._ipc_manual_hand_action = np.asarray(state["manual_hand_action"], dtype=np.float32)
+                self._ipc_manual_hand_action = self._sanitize_manual_vector(state["manual_hand_action"], 44, fill=0.5, lo=0.0, hi=1.0)
             except Exception as e:
                 print(f"[ipc] bad manual_hand_action: {e}")
 
         if "manual_leg_action" in state:
             try:
-                self._ipc_manual_leg_action = np.asarray(state["manual_leg_action"], dtype=np.float32)
+                self._ipc_manual_leg_action = self._sanitize_manual_vector(state["manual_leg_action"], 18, fill=0.0, lo=-1.0, hi=1.0)
             except Exception as e:
                 print(f"[ipc] bad manual_leg_action: {e}")
         if "object_image" in state:
@@ -411,13 +421,33 @@ class ActionRuntimeMixin:
         if self.global_step % max(1, self.cfg.ipc_control.poll_every_steps) != 0:
             return
 
+        high_level_action_seen = False
+        manual_state_keys = {
+            "manual_actions",
+            "manual_actions_enabled",
+            "manual_body_action",
+            "manual_arm_action",
+            "manual_hand_action",
+            "manual_leg_action",
+        }
         for msg in self.ipc_server.drain():
             msg_type = msg.get("type")
             if msg_type == "set_state":
-                self.apply_ipc_set_state(msg.get("state", {}))
+                state = msg.get("state", {})
+                if (
+                    high_level_action_seen
+                    and isinstance(state, dict)
+                    and any(k in state for k in manual_state_keys)
+                ):
+                    print("[ipc] skipped stale manual set_state after high-level action")
+                    continue
+                self.apply_ipc_set_state(state)
             elif msg_type == "action":
                 payload = msg.get("payload", {})
-                self.apply_ipc_action(str(msg.get("action", "")), payload if isinstance(payload, dict) else {})
+                action = str(msg.get("action", ""))
+                self.apply_ipc_action(action, payload if isinstance(payload, dict) else {})
+                if action.startswith("gesture_") or action.startswith("fly_to_") or action.startswith("stop_fly_to_"):
+                    high_level_action_seen = True
             elif msg_type == "toggle":
                 key = str(msg.get("key", ""))
                 if key == "inner_world":
@@ -635,6 +665,8 @@ class ActionRuntimeMixin:
                 # Keep current x/y but put z in safe hover range when available.
                 if hasattr(self.world, "cam_pos"):
                     try:
+                        if not np.all(np.isfinite(np.asarray(self.world.cam_pos, dtype=np.float64))):
+                            self.world.cam_pos[:] = np.asarray(getattr(self.world.cfg, "start_pos", [-3.0, -3.0, 2.2]), dtype=np.float64)
                         z = float(getattr(self.cfg.dynamic_agent_rig, "hover_height", self.world.cam_pos[2]))
                         min_z = float(getattr(self.cfg.mocap_flight_bounds, "min_z", 0.05)) if hasattr(self.cfg, "mocap_flight_bounds") else 0.05
                         max_z = float(getattr(self.cfg.mocap_flight_bounds, "max_z", 10.0)) if hasattr(self.cfg, "mocap_flight_bounds") else 10.0
@@ -942,7 +974,7 @@ class ActionRuntimeMixin:
         # Arms are NOT part of hand_ctrl. They live in embodied_targets[5:11].
         # Layout: L shoulder yaw/pitch/elbow, R shoulder yaw/pitch/elbow.
         if getattr(self, "_ipc_manual_actions_enabled", False) and self._ipc_manual_arm_action is not None and emb.shape[-1] >= 11:
-            arm_vec = np.asarray(self._ipc_manual_arm_action, dtype=np.float32).reshape(-1)
+            arm_vec = self._sanitize_manual_vector(self._ipc_manual_arm_action, 6, fill=0.0, lo=-1.0, hi=1.0)
             n_arm = min(6, arm_vec.shape[0])
             emb[0, 5:5 + n_arm] = torch.tensor(arm_vec[:n_arm], device=emb.device, dtype=emb.dtype)
             out["manual_arm_action"] = arm_vec.astype(np.float32)
@@ -956,7 +988,7 @@ class ActionRuntimeMixin:
         #   PyQt hand sliders are already direct 0..1 hand_ctrl values.
         #   RealisticHandBridge expects hand_ctrl in 0..1.
         if getattr(self, "_ipc_manual_actions_enabled", False) and self._ipc_manual_hand_action is not None and "hand_ctrl" in out:
-            hand_vec = np.clip(np.asarray(self._ipc_manual_hand_action, dtype=np.float32).reshape(-1), 0.0, 1.0)
+            hand_vec = self._sanitize_manual_vector(self._ipc_manual_hand_action, 44, fill=0.5, lo=0.0, hi=1.0)
             hand = out["hand_ctrl"].clone()
             n = min(hand.shape[-1], hand_vec.shape[0])
             hand[0, :n] = torch.tensor(hand_vec[:n], device=hand.device, dtype=hand.dtype)

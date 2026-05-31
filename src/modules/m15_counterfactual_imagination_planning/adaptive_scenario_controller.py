@@ -217,12 +217,19 @@ class FlyToCubePalpateScenario(BaseScenario):
                 qw, qx, qy, qz = np.asarray(qpos[3:7], dtype=np.float64)
                 siny_cosp = 2.0 * (qw * qz + qx * qy)
                 cosy_cosp = 1.0 - 2.0 * (qy * qy + qz * qz)
-                return xyz, float(np.arctan2(siny_cosp, cosy_cosp))
+                yaw = float(np.arctan2(siny_cosp, cosy_cosp))
+                if np.isfinite(xyz).all() and np.isfinite(yaw):
+                    return xyz, yaw
             except Exception:
                 pass
 
         xyz = np.asarray(getattr(owner.world, "cam_pos", np.zeros(3)), dtype=np.float64).copy()
-        return xyz, float(np.deg2rad(float(getattr(owner.world, "yaw_deg", 0.0))))
+        if not np.isfinite(xyz).all():
+            xyz = np.asarray(getattr(owner.world.cfg, "start_pos", [-3.0, -3.0, 2.2]), dtype=np.float64)
+        yaw_deg = float(getattr(owner.world, "yaw_deg", 0.0))
+        if not np.isfinite(yaw_deg):
+            yaw_deg = float(getattr(owner.world.cfg, "start_yaw_deg", 0.0))
+        return xyz, float(np.deg2rad(yaw_deg))
 
     def _cube_xyz(self) -> np.ndarray:
         owner = self.owner
@@ -1715,7 +1722,8 @@ class FlyToSmallCubeGraspRotateScenario(FlyToCubePalpateScenario):
                 roll = float(np.arctan2(sinr_cosp, cosr_cosp))
                 sinp = 2.0 * (qw * qy - qz * qx)
                 pitch = float(np.arcsin(np.clip(sinp, -1.0, 1.0)))
-                return roll, pitch
+                if np.isfinite(roll) and np.isfinite(pitch):
+                    return roll, pitch
             except Exception:
                 pass
         return 0.0, 0.0
@@ -2866,11 +2874,18 @@ class FlyToTetrahedronInspectScenario(BaseScenario):
                 qpos = owner.world.data.qpos[ctrl.qpos_adr:ctrl.qpos_adr + 7]
                 xyz = np.asarray(qpos[:3], dtype=np.float64).copy()
                 qw, qx, qy, qz = np.asarray(qpos[3:7], dtype=np.float64)
-                return xyz, float(np.arctan2(2.0 * (qw * qz + qx * qy), 1.0 - 2.0 * (qy * qy + qz * qz)))
+                yaw = float(np.arctan2(2.0 * (qw * qz + qx * qy), 1.0 - 2.0 * (qy * qy + qz * qz)))
+                if np.isfinite(xyz).all() and np.isfinite(yaw):
+                    return xyz, yaw
             except Exception:
                 pass
         xyz = np.asarray(getattr(owner.world, "cam_pos", np.zeros(3)), dtype=np.float64).copy()
-        return xyz, float(np.deg2rad(float(getattr(owner.world, "yaw_deg", 0.0))))
+        if not np.isfinite(xyz).all():
+            xyz = np.asarray(getattr(owner.world.cfg, "start_pos", [-3.0, -3.0, 2.2]), dtype=np.float64)
+        yaw_deg = float(getattr(owner.world, "yaw_deg", 0.0))
+        if not np.isfinite(yaw_deg):
+            yaw_deg = float(getattr(owner.world.cfg, "start_yaw_deg", 0.0))
+        return xyz, float(np.deg2rad(yaw_deg))
 
     def _eye_xyz(self, fallback: np.ndarray) -> np.ndarray:
         world = getattr(self.owner, "world", None)
@@ -3328,10 +3343,17 @@ class AdaptiveScenarioController:
             return
 
         self.owner._ipc_manual_actions_enabled = True
-        self.owner._ipc_manual_body_action = cmd.body.astype(np.float32)
-        self.owner._ipc_manual_arm_action = cmd.arm.astype(np.float32)
-        self.owner._ipc_manual_hand_action = cmd.hand.astype(np.float32)
-        self.owner._ipc_manual_leg_action = cmd.leg.astype(np.float32)
+        sanitize = getattr(self.owner, "_sanitize_manual_vector", None)
+        if callable(sanitize):
+            self.owner._ipc_manual_body_action = sanitize(cmd.body, 9, fill=0.0)
+            self.owner._ipc_manual_arm_action = sanitize(cmd.arm, 6, fill=0.0, lo=-1.0, hi=1.0)
+            self.owner._ipc_manual_hand_action = sanitize(cmd.hand, 44, fill=0.5, lo=0.0, hi=1.0)
+            self.owner._ipc_manual_leg_action = sanitize(cmd.leg, 18, fill=0.0, lo=-1.0, hi=1.0)
+        else:
+            self.owner._ipc_manual_body_action = np.nan_to_num(cmd.body.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+            self.owner._ipc_manual_arm_action = np.nan_to_num(cmd.arm.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+            self.owner._ipc_manual_hand_action = np.nan_to_num(cmd.hand.astype(np.float32), nan=0.5, posinf=0.5, neginf=0.5)
+            self.owner._ipc_manual_leg_action = np.nan_to_num(cmd.leg.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
 
         self.owner._fly_to_cube_palpate_active = bool(cmd.status.get("active", True))
         self.owner._fly_to_cube_palpate_status = dict(cmd.status)

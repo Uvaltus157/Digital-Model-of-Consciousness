@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Life-loop helper for the V5.10 unified system.
 
-This module extracts the `UnifiedSystemV510.run()` loop from the heavy runner
+This module extracts the `UnifiedSystem.run()` loop from the runner
 without importing MuJoCo/OpenCV at module import time. The slim entrypoint
 patches the heavy runtime class to use this function.
 """
@@ -16,7 +16,7 @@ def run_unified_life_loop(system: Any) -> None:
     """Run the V5.10 life loop for an already constructed system.
 
     This is a behavior-preserving extraction of the previous
-    `UnifiedSystemV510.run()` implementation. Heavy viewer imports are kept
+    `UnifiedSystem.run()` implementation. Heavy viewer imports are kept
     inside the function so smoke tests can import this module without a display
     or MuJoCo runtime.
     """

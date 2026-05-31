@@ -3,7 +3,7 @@ from __future__ import annotations
 """Module training flag resolution for the V5.10 runner.
 
 This is part of the gradual runner unload. The logic was originally embedded
-inside `UnifiedSystemV510.resolve_module_training_flags_from_config()`.
+inside `UnifiedSystem.resolve_module_training_flags_from_config()`.
 """
 
 from typing import Any, Dict
@@ -82,5 +82,5 @@ def resolve_module_training_flags_from_config_object(cfg: Any) -> Dict[str, bool
 
 
 def resolve_module_training_flags_for_system(system: Any) -> Dict[str, bool]:
-    """Method-compatible wrapper for `UnifiedSystemV510` instances."""
+    """Method-compatible wrapper for `UnifiedSystem` instances."""
     return resolve_module_training_flags_from_config_object(system.cfg)

@@ -5,6 +5,69 @@ import torch.optim as optim
 
 
 class ModuleStatusRuntimeMixin:
+    def _module_debug_body_xpos(self, body_name: str):
+        world = getattr(self, "world", None)
+        if world is None or not hasattr(world, "model") or not hasattr(world, "data"):
+            return []
+        try:
+            import mujoco
+
+            bid = mujoco.mj_name2id(world.model, mujoco.mjtObj.mjOBJ_BODY, str(body_name))
+            if bid >= 0:
+                return world.data.xpos[bid].tolist()
+        except Exception:
+            pass
+        return []
+
+    def _module_debug_body_mocap_pos(self, body_name: str):
+        world = getattr(self, "world", None)
+        if world is None or not hasattr(world, "data"):
+            return []
+        try:
+            mid = world._mocap_id_for_body(str(body_name), fallback=-1)
+            if int(mid) >= 0:
+                return world.data.mocap_pos[int(mid)].tolist()
+        except Exception:
+            pass
+        return []
+
+    def _module_debug_actuator_ctrls(self, names):
+        world = getattr(self, "world", None)
+        if world is None or not hasattr(world, "model") or not hasattr(world, "data"):
+            return {}
+        try:
+            import mujoco
+
+            out = {}
+            for name in names:
+                aid = mujoco.mj_name2id(world.model, mujoco.mjtObj.mjOBJ_ACTUATOR, str(name))
+                if aid >= 0:
+                    out[str(name)] = float(world.data.ctrl[aid])
+                else:
+                    out[str(name)] = None
+            return out
+        except Exception:
+            return {}
+
+    def _module_debug_joint_qpos(self, names):
+        world = getattr(self, "world", None)
+        if world is None or not hasattr(world, "model") or not hasattr(world, "data"):
+            return {}
+        try:
+            import mujoco
+
+            out = {}
+            for name in names:
+                jid = mujoco.mj_name2id(world.model, mujoco.mjtObj.mjOBJ_JOINT, str(name))
+                if jid >= 0:
+                    adr = int(world.model.jnt_qposadr[jid])
+                    out[str(name)] = float(world.data.qpos[adr])
+                else:
+                    out[str(name)] = None
+            return out
+        except Exception:
+            return {}
+
     def rebuild_optimizer_from_trainable_modules(self):
         params = [p for _name, p in self.module_training_gate.trainable_named_parameters()]
         if not params:
@@ -96,6 +159,66 @@ class ModuleStatusRuntimeMixin:
                 "manual_arm_len": int(len(self._ipc_manual_arm_action)) if getattr(self, "_ipc_manual_arm_action", None) is not None else 0,
                 "manual_hand_len": int(len(self._ipc_manual_hand_action)) if getattr(self, "_ipc_manual_hand_action", None) is not None else 0,
                 "manual_leg_len": int(len(self._ipc_manual_leg_action)) if getattr(self, "_ipc_manual_leg_action", None) is not None else 0,
+                "world_cam_pos": getattr(getattr(self, "world", None), "cam_pos", []).tolist() if hasattr(getattr(self, "world", None), "cam_pos") else [],
+                "world_yaw_deg": float(getattr(getattr(self, "world", None), "yaw_deg", 0.0) or 0.0),
+                "world_pitch_deg": float(getattr(getattr(self, "world", None), "pitch_deg", 0.0) or 0.0),
+                "world_roll_deg": float(getattr(getattr(self, "world", None), "roll_deg", 0.0) or 0.0),
+                "agent_rig_xpos": self._module_debug_body_xpos("agent_rig"),
+                "agent_rig_mocap_pos": self._module_debug_body_mocap_pos("agent_rig"),
+                "arm_actuator_ctrl": self._module_debug_actuator_ctrls([
+                    "act_left_shoulder_yaw",
+                    "act_left_shoulder_pitch",
+                    "act_left_elbow",
+                    "act_right_shoulder_yaw",
+                    "act_right_shoulder_pitch",
+                    "act_right_elbow",
+                ]),
+                "arm_joint_qpos": self._module_debug_joint_qpos([
+                    "left_shoulder_yaw",
+                    "left_shoulder_pitch",
+                    "left_elbow_hinge",
+                    "right_shoulder_yaw",
+                    "right_shoulder_pitch",
+                    "right_elbow_hinge",
+                ]),
+                "hand_actuator_ctrl_sample": self._module_debug_actuator_ctrls([
+                    "act_left_palm_roll",
+                    "act_left_palm_pitch",
+                    "act_left_index_mcp",
+                    "act_left_index_pip",
+                    "act_right_palm_roll",
+                    "act_right_palm_pitch",
+                    "act_right_index_mcp",
+                    "act_right_index_pip",
+                ]),
+                "hand_joint_qpos_sample": self._module_debug_joint_qpos([
+                    "left_palm_roll",
+                    "left_palm_pitch",
+                    "left_index_mcp",
+                    "left_index_pip",
+                    "right_palm_roll",
+                    "right_palm_pitch",
+                    "right_index_mcp",
+                    "right_index_pip",
+                ]),
+                "leg_actuator_ctrl_sample": self._module_debug_actuator_ctrls([
+                    "act_left_hip_yaw",
+                    "act_left_hip_pitch",
+                    "act_left_knee",
+                    "act_right_hip_yaw",
+                    "act_right_hip_pitch",
+                    "act_right_knee",
+                ]),
+                "leg_joint_qpos_sample": self._module_debug_joint_qpos([
+                    "left_hip_yaw",
+                    "left_hip_pitch",
+                    "left_knee",
+                    "right_hip_yaw",
+                    "right_hip_pitch",
+                    "right_knee",
+                ]),
+                "latest_embodied": getattr(getattr(self, "world", None), "latest_embodied", []).tolist() if hasattr(getattr(self, "world", None), "latest_embodied") else [],
+                "latest_hand_ctrl": getattr(getattr(self, "world", None), "latest_hand_ctrl", []).tolist() if hasattr(getattr(self, "world", None), "latest_hand_ctrl") else [],
 
                 # Action preset/scenario status for PyQt Agent Actions.
                 "adaptive_gesture_status": dict(getattr(self, "_adaptive_gesture_status", {}) or {}),

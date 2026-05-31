@@ -1,0 +1,10 @@
+autobiographical_memory:
+  enabled: true
+  memory_dim: 256
+  max_episodes: 512
+  retrieval_topk: 3
+  write_every_steps: 1
+  blend_retrieved_into_focus: true
+  focus_blend: 0.20
+  min_relevance_for_blend: 0.05
+  print_every_steps: 30

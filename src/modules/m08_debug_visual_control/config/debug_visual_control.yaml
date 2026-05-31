@@ -1,0 +1,22 @@
+camera_preview:
+  enabled: true
+  window_name: "input sensors visualizer"
+  scale: 1.25
+  show_depth: true
+  show_actions_window: false
+  show_every_steps: 1
+  delay_ms: 1
+
+action_outputs:
+  enabled: true
+  window_name: "action outputs visualizer"
+  width: 1780
+  height: 820
+  show_every_steps: 2
+  delay_ms: 1
+  scale: 1.0
+
+module_status_ipc:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8766

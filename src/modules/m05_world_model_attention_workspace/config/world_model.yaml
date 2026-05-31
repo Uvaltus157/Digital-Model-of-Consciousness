@@ -1,0 +1,9 @@
+# M5 ConsciousDreamer world-model dimensions.
+
+inner_speech_loss_weight: 0.25
+
+action_dim: 24
+embodied_dim: 15
+hand_motor_dim: 44
+tactile_dim: 42
+body_state_dim: 83

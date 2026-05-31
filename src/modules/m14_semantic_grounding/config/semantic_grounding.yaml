@@ -1,0 +1,25 @@
+latent_semantic_map:
+  enabled: true
+  window_name: "latent semantic map"
+  width: 1780
+  height: 980
+  max_history: 320
+  show_every_steps: 1
+  delay_ms: 1
+  thumbnail_size: 82
+  max_thumbnails: 6
+  point_radius: 4
+  draw_grid: true
+  follow_inner_world_toggle: false
+
+semantic_action:
+  enabled: true
+  hold_threshold: 0.70
+  verify_threshold: 0.55
+  high_doubt_threshold: 0.50
+  min_action_scale: 0.05
+  soft_hold_scale: 0.25
+  explore_threshold: 0.35
+  positive_delta_threshold: 0.10
+  emergency_threshold: 0.50
+  print_every_steps: 30

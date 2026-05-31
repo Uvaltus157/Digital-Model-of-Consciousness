@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-"""Extracted initializer for `UnifiedSystemV510`.
+"""Extracted initializer for `UnifiedSystem`.
 
 This is the first direct replacement of heavy runner construction logic. The
 class itself still lives in `src/apps/runner.py`, but the slim launch path
-patches `UnifiedSystemV510.__init__` to this function so construction starts
+patches `UnifiedSystem.__init__` to this function so construction starts
 using the extracted factories.
 """
 

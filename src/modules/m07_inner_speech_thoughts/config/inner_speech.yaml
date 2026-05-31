@@ -1,0 +1,12 @@
+inner_speech:
+  enabled: true
+  hidden_dim: 256
+  report_latent_dim: 128
+  vocab_size: 2048
+  max_tokens: 24
+  print_every_steps: 30
+
+train:
+  inner_speech_teacher_file: "english_inner_speech_teacher.py"
+  english_inner_speech_teacher_enabled: true
+  russian_inner_speech_teacher_enabled: false

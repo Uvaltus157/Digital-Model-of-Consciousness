@@ -68,6 +68,18 @@ event_code_visualizer:
   max_slots: 10
   max_events: 14
 
+event_dream_replay:
+  enabled: true
+  replay_context_dim: 256
+  event_code_dim: 8
+  replay_threshold: 0.35
+  focus_blend: 0.15
+  blend_replay_into_focus: true
+  use_m13_context: true
+  use_event_memory: true
+  max_recent_events_scan: 16
+  print_every_steps: 30
+
 inner_action_decoder:
   enabled: true
   hidden_dim: 256

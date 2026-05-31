@@ -53,8 +53,9 @@ def create_conscious_dreamer_config(cfg: Any, speech_vocab_size: int | None = No
     from src.shared.conscious_dreamer_config import make_conscious_dreamer_config_from_unified
 
     model_cfg = make_conscious_dreamer_config_from_unified(cfg)
-    if speech_vocab_size is not None:
-        model_cfg.symbolic_report.text_vocab_size = int(speech_vocab_size)
+    symbolic_report_cfg = getattr(model_cfg, "symbolic_report", None)
+    if speech_vocab_size is not None and symbolic_report_cfg is not None:
+        symbolic_report_cfg.text_vocab_size = int(speech_vocab_size)
     return model_cfg
 
 

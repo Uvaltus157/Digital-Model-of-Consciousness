@@ -1,0 +1,23 @@
+sleep_sensors:
+  enabled: true
+  startup_state: sleep
+  video_sensor_enabled: true
+  contact_sensor_enabled: true
+  imu_sensor_enabled: true
+
+module_debug:
+  enabled: true
+  window_name: "module debug"
+  width: 1560
+  height: 980
+  show_every_steps: 2
+
+  module_modes:
+    world_model: train
+    object_imagery: train
+    core_model: passive
+    action_heads: passive
+    leg_control: passive
+    self_core: passive
+    inner_speech: passive
+    long_dynamic_memory: train
