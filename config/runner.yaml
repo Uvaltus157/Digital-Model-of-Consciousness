@@ -54,6 +54,19 @@ runtime:
   out_dir: /home/user/_project/temp/logs
 
 # ------------------------------------------------------------
+# Runner thread CPU affinity
+# ------------------------------------------------------------
+thread_affinity:
+  enabled: true
+  strict: false
+  cpus:
+    train: 1
+    mujoco_viewer: 2
+    ipc_control: 3
+    module_status: 4
+    slot_4d_jsonrpc: 5
+
+# ------------------------------------------------------------
 # MuJoCo world / cameras / body control
 # ------------------------------------------------------------
 mujoco_world:
@@ -122,7 +135,7 @@ train:
   train_sleep_sec: 0.01
 
   # If your TrainLoopConfig has these fields, they will be used.
-  # If not, the v5_8 config filter will ignore unsupported fields.
+  # If not, the runner config filter will ignore unsupported fields.
   stop_train_quality: 0.03
   stabilization_patience: 200
 

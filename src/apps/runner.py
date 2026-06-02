@@ -21,8 +21,7 @@ Those responsibilities now live in small app-level modules:
 - `runner_runtime_state.py`     — mutable runtime bookkeeping
 - `runner_startup_state.py`     — startup/window/sensor flags
 
-The primary public runtime class is now `UnifiedSystem`. The legacy name
-`UnifiedSystemV510` is kept as an alias so older imports do not break.
+The primary public runtime class is `UnifiedSystem`.
 """
 
 import os
@@ -40,7 +39,7 @@ from src.apps.runner_loop import run_unified_life_loop
 from src.apps.runner_optimizer import rebuild_optimizer_from_trainable_modules_for_system
 from src.apps.runner_teachers import load_inner_speech_teacher_from_config
 from src.apps.runner_training_flags import resolve_module_training_flags_for_system
-from src.apps.runner_unified_init import initialize_unified_system_v510
+from src.apps.runner_unified_init import initialize_unified_system
 from src.apps.unified_runtime_base import UnifiedRuntimeBase
 from src.modules.m01_object_imagery.inner_visual_runtime import InnerVisualRuntimeMixin
 from src.modules.m01_object_imagery.runtime import ObjectImageryRuntimeMixin
@@ -65,7 +64,7 @@ from src.platform.ipc.ipc_runtime import IPCRuntimeMixin
 from src.platform.mujoco_world.camera_preview_window import CameraPreviewMixin
 from src.platform.mujoco_world.leg_bird_runtime import LegBirdRuntimeMixin
 from src.shared.checkpointing import CheckpointingMixin
-from src.shared.config import UnifiedV510Config
+from src.shared.config import UnifiedConfig
 from src.apps.life_runtime import LifeRuntimeMixin
 
 
@@ -98,15 +97,11 @@ class UnifiedSystem(
 ):
     """Unified DMoC runtime assembled from mixins and extracted app helpers."""
 
-    __init__ = initialize_unified_system_v510
+    __init__ = initialize_unified_system
     run = run_unified_life_loop
     resolve_module_training_flags_from_config = resolve_module_training_flags_for_system
     _force_hover_flight_runtime_config = force_hover_flight_runtime_config_for_system
     rebuild_optimizer_from_trainable_modules = rebuild_optimizer_from_trainable_modules_for_system
-
-
-# Legacy alias for old imports. New code should import UnifiedSystem.
-UnifiedSystemV510 = UnifiedSystem
 
 
 os.environ.setdefault("PROJECT_ROOT", str(Path(__file__).resolve().parents[2]))
@@ -121,8 +116,7 @@ def main() -> None:
 
 __all__ = [
     "UnifiedSystem",
-    "UnifiedSystemV510",
-    "UnifiedV510Config",
+    "UnifiedConfig",
     "load_inner_speech_teacher_from_config",
     "main",
 ]

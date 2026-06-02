@@ -13,7 +13,7 @@ from src.shared.model_dimensions import validate_runner_model_dimensions
 
 
 def make_conscious_dreamer_config_from_unified(cfg: Any) -> ConsciousDreamerConfig:
-    """Build the canonical M5 config from `UnifiedV510Config`.
+    """Build the canonical M5 config from `UnifiedConfig`.
 
     The runner config remains the single source of truth for model dimensions.
     """

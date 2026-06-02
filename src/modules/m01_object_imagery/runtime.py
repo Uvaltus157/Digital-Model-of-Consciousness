@@ -1730,6 +1730,17 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
         self._slot_4d_jsonrpc_latest_metrics = {}
         self._slot_4d_jsonrpc_success_logged = False
         if started:
+            try:
+                from src.apps.runner_thread_affinity import apply_thread_affinity
+
+                apply_thread_affinity(
+                    self.cfg,
+                    "slot_4d_jsonrpc",
+                    getattr(self.slot_4d_jsonrpc_streamer, "thread", None),
+                    label="Slot4D JSON-RPC",
+                )
+            except Exception as e:
+                print(f"[slot_4d] JSON-RPC affinity skipped: {e}")
             print(f"[slot_4d] JSON-RPC stream started at {self.slot_4d_jsonrpc_streamer.host}:{self.slot_4d_jsonrpc_streamer.port}")
 
     def start_slot_4d_jsonrpc_streamer_if_enabled(self) -> None:

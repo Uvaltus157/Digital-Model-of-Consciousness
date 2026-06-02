@@ -477,7 +477,7 @@ def make_memory_thought_config_from_world(image_height=128, image_width=192, bod
     if missing:
         raise ValueError(
             "make_memory_thought_config_from_world() does not own model dimensions. "
-            "Read them from runner.yaml / UnifiedV510Config and pass them explicitly. "
+            "Read them from runner.yaml / UnifiedConfig and pass them explicitly. "
             f"Missing: {missing}"
         )
     cfg.data.image_height = image_height

@@ -18,6 +18,8 @@ or `None`, then re-applies lightweight metadata/flag initialization hooks.
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
+from src.apps.runner_thread_affinity import apply_thread_affinity
+
 
 @dataclass(frozen=True)
 class RunnerServiceSnapshot:
@@ -74,6 +76,7 @@ def ensure_module_status_server(
     server = server_factory(str(ipc_cfg.host), int(ipc_cfg.port))
     server.start()
     system.module_status_server = server
+    apply_thread_affinity(cfg, "module_status", getattr(server, "thread", None), label="module status IPC")
     return True
 
 
@@ -99,6 +102,7 @@ def ensure_ipc_control_server(
     server = server_factory(str(ipc_cfg.host), int(ipc_cfg.port))
     server.start()
     system.ipc_server = server
+    apply_thread_affinity(cfg, "ipc_control", getattr(server, "thread", None), label="IPC control")
     return True
 
 

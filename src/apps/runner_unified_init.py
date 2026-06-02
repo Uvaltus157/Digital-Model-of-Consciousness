@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Any
 
 
-def initialize_unified_system_v510(self: Any, cfg: Any) -> None:
-    """Initialize a V5.10 system instance using extracted app-level factories."""
+def initialize_unified_system(self: Any, cfg: Any) -> None:
+    """Initialize a UnifiedSystem instance using extracted app-level factories."""
     import torch
 
     from src.apps.runner_components import (
@@ -36,6 +36,7 @@ def initialize_unified_system_v510(self: Any, cfg: Any) -> None:
     from src.apps.runner_services import ensure_runner_services
     from src.apps.runner_startup_state import startup_flag
     from src.apps.runner_teachers import load_inner_speech_teacher_from_config
+    from src.apps.runner_thread_affinity import apply_thread_affinity
     from src.apps.runner_visualizer_factory import create_inner_world_visualizer
     from src.apps.runner_world_factories import create_simulation_world
     from src.modules.m06_learning_sleep_consolidation.module_training_gate import ModuleTrainingGate
@@ -158,6 +159,12 @@ def initialize_unified_system_v510(self: Any, cfg: Any) -> None:
     if cfg.module_status_ipc.enabled:
         self.module_status_server = ModuleDebugStatusServer(cfg.module_status_ipc.host, cfg.module_status_ipc.port)
         self.module_status_server.start()
+        apply_thread_affinity(
+            cfg,
+            "module_status",
+            getattr(self.module_status_server, "thread", None),
+            label="module status IPC",
+        )
     self.rebuild_optimizer_from_trainable_modules()
     self.write_module_debug_status()
 
@@ -182,6 +189,12 @@ def initialize_unified_system_v510(self: Any, cfg: Any) -> None:
     self.show_event_code_visualizer_window = startup_flag(startup, "event_code_visualizer", False)
     self.show_inner_object_open3d_window = startup_flag(startup, "object_image_open3d", False)
     self.start_slot_4d_jsonrpc_streamer_if_enabled()
+    apply_thread_affinity(
+        cfg,
+        "slot_4d_jsonrpc",
+        getattr(getattr(self, "slot_4d_jsonrpc_streamer", None), "thread", None),
+        label="Slot4D JSON-RPC",
+    )
 
     self.camera_preview_armed = bool(self.show_camera_preview_window)
     self.ipc_server = None
@@ -189,6 +202,7 @@ def initialize_unified_system_v510(self: Any, cfg: Any) -> None:
     if cfg.ipc_control.enabled:
         self.ipc_server = IPCControlServer(cfg.ipc_control.host, cfg.ipc_control.port)
         self.ipc_server.start()
+        apply_thread_affinity(cfg, "ipc_control", getattr(self.ipc_server, "thread", None), label="IPC control")
 
     self.show_static_dynamic_code_window = startup_flag(startup, "static_dynamic_code", False)
     self.external_control_last_mtime = 0.0

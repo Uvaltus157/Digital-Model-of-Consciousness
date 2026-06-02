@@ -11,6 +11,8 @@ import time
 from threading import Thread
 from typing import Any
 
+from src.apps.runner_thread_affinity import apply_thread_affinity
+
 
 def run_unified_life_loop(system: Any) -> None:
     """Run the V5.10 life loop for an already constructed system.
@@ -26,8 +28,9 @@ def run_unified_life_loop(system: Any) -> None:
     system.world.reset()
     system.log_tetra_runner_started()
 
-    train_thread = Thread(target=system.train_loop, daemon=True)
+    train_thread = Thread(target=system.train_loop, name="RunnerTrainLoop", daemon=True)
     train_thread.start()
+    apply_thread_affinity(system.cfg, "train", train_thread, label="train loop")
 
     period = 1.0 / max(system.cfg.life.fps, 1e-6)
 
@@ -42,6 +45,12 @@ def run_unified_life_loop(system: Any) -> None:
             show_right_ui=False,
         )
         threaded_viewer.start()
+        apply_thread_affinity(
+            system.cfg,
+            "mujoco_viewer",
+            getattr(threaded_viewer, "_thread", None),
+            label="MuJoCo viewer",
+        )
 
     try:
         while not system.shutdown and system.global_step < system.cfg.life.max_steps:

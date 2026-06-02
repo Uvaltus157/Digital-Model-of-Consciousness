@@ -24,7 +24,7 @@ from src.apps.unified_conscious_viewer import (
 
 
 @dataclass
-class TrainLoopV510Config(TrainLoopConfig):
+class RunnerTrainConfig(TrainLoopConfig):
     inner_speech_teacher_file: str = "english_inner_speech_teacher.py"
     english_inner_speech_teacher_enabled: bool = True
     russian_inner_speech_teacher_enabled: bool = False
@@ -511,7 +511,14 @@ class AgentHeadConfig:
 
 
 @dataclass
-class UnifiedV510Config(RuntimeConfig):
+class ThreadAffinityConfig:
+    enabled: bool = False
+    strict: bool = False
+    cpus: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class UnifiedConfig(RuntimeConfig):
     mode: str = "train"
     inner_speech_loss_weight: float = 0.25
 
@@ -525,7 +532,7 @@ class UnifiedV510Config(RuntimeConfig):
     mujoco_world: MujocoWorldConfig = field(default_factory=MujocoWorldConfig)
     viewer: ViewerConfig = field(default_factory=ViewerConfig)
     life: LifeConfig = field(default_factory=LifeConfig)
-    train: TrainLoopV510Config = field(default_factory=TrainLoopV510Config)
+    train: RunnerTrainConfig = field(default_factory=RunnerTrainConfig)
     replay: ReplayConfig = field(default_factory=ReplayConfig)
     novelty: NoveltyConfig = field(default_factory=NoveltyConfig)
     inner_world: InnerWorldWindowConfig = field(default_factory=InnerWorldWindowConfig)
@@ -564,6 +571,7 @@ class UnifiedV510Config(RuntimeConfig):
     manual_action_override: ManualActionOverrideRuntimeConfig = field(default_factory=ManualActionOverrideRuntimeConfig)
     latent_semantic_map: LatentSemanticMapConfig = field(default_factory=LatentSemanticMapConfig)
     agent_head: AgentHeadConfig = field(default_factory=AgentHeadConfig)
+    thread_affinity: ThreadAffinityConfig = field(default_factory=ThreadAffinityConfig)
 
 
 __all__ = [
@@ -571,8 +579,8 @@ __all__ = [
     "_cfg_get",
     "model_dimensions_from_runner_cfg",
     "validate_runner_model_dimensions",
-    "UnifiedV510Config",
-    "TrainLoopV510Config",
+    "UnifiedConfig",
+    "RunnerTrainConfig",
     "IPCControlConfig",
     "ExternalControlConfig",
     "ActionOutputsWindowConfig",
@@ -607,4 +615,5 @@ __all__ = [
     "LegControlConfig",
     "MocapContactConfig",
     "AgentHeadConfig",
+    "ThreadAffinityConfig",
 ]

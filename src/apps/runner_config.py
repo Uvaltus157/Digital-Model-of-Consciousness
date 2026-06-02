@@ -51,9 +51,10 @@ from src.shared.config import (
     SelfCoreRuntimeConfig,
     SleepSensorGateRuntimeConfig,
     TetraDynamicSlotDiagnosticConfig,
+    ThreadAffinityConfig,
     ThoughtChainRuntimeConfig,
-    TrainLoopV510Config,
-    UnifiedV510Config,
+    RunnerTrainConfig,
+    UnifiedConfig,
     VestibularRuntimeConfig,
 )
 
@@ -105,6 +106,7 @@ ALLOWED_TOP_KEYS: Set[str] = {
     "action_trace",
     "adaptive_scenario_controller",
     "tetra_dynamic_slot_diagnostic",
+    "thread_affinity",
     "inner_speech_loss_weight",
 }
 
@@ -129,12 +131,13 @@ def allowed_nested_keys() -> Dict[str, Set[str]]:
         "novelty": _keys_of(NoveltyConfig),
         "replay": _keys_of(ReplayConfig),
         "life": _keys_of(LifeConfig),
-        "train": _keys_of(TrainLoopV510Config),
+        "train": _keys_of(RunnerTrainConfig),
         "mujoco_world": _keys_of(MujocoWorldConfig),
         "viewer": _keys_of(ViewerConfig),
         "runtime": _keys_of(RuntimeConfig),
         "checkpoint_load": _keys_of(CheckpointLoadConfig),
         "tetra_dynamic_slot_diagnostic": _keys_of(TetraDynamicSlotDiagnosticConfig),
+        "thread_affinity": _keys_of(ThreadAffinityConfig),
         "emotional_drive": _keys_of(EmotionalDriveConfig),
         "exploration": _keys_of(ExplorationMotorConfig),
         "dynamic_agent_rig": _keys_of(DynamicAgentRigRuntimeConfig),
@@ -206,9 +209,9 @@ def apply_required_runner_defaults(clean_dict: Dict[str, Any]) -> Dict[str, Any]
     return clean
 
 
-def build_runner_config(cfg_raw: DictConfig | Mapping[str, Any]) -> UnifiedV510Config:
-    """Build the typed V5.10 runner config from a Hydra raw config."""
-    base = OmegaConf.structured(UnifiedV510Config())
+def build_runner_config(cfg_raw: DictConfig | Mapping[str, Any]) -> UnifiedConfig:
+    """Build the typed unified runner config from a Hydra raw config."""
+    base = OmegaConf.structured(UnifiedConfig())
     clean = OmegaConf.create(apply_required_runner_defaults(filter_runner_config_dict(cfg_raw)))
     merged = OmegaConf.merge(base, clean)
     return OmegaConf.to_object(merged)
@@ -216,7 +219,7 @@ def build_runner_config(cfg_raw: DictConfig | Mapping[str, Any]) -> UnifiedV510C
 
 def render_resolved_runner_config(cfg_raw: DictConfig | Mapping[str, Any]) -> str:
     """Return the resolved YAML used for startup diagnostics."""
-    base = OmegaConf.structured(UnifiedV510Config())
+    base = OmegaConf.structured(UnifiedConfig())
     clean = OmegaConf.create(apply_required_runner_defaults(filter_runner_config_dict(cfg_raw)))
     merged = OmegaConf.merge(base, clean)
     return OmegaConf.to_yaml(merged, resolve=True)

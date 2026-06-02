@@ -57,20 +57,7 @@ def test_unified_system_is_primary_runtime_class_source_contract() -> None:
 
     class_names = {node.name for node in tree.body if isinstance(node, ast.ClassDef)}
     assert "UnifiedSystem" in class_names
-
-    alias_found = False
-    for node in tree.body:
-        if not isinstance(node, ast.Assign):
-            continue
-        for target in node.targets:
-            if (
-                isinstance(target, ast.Name)
-                and target.id == "UnifiedSystemV510"
-                and isinstance(node.value, ast.Name)
-                and node.value.id == "UnifiedSystem"
-            ):
-                alias_found = True
-    assert alias_found
+    assert "UnifiedSystem" + "V510" not in source
 
     unified = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "UnifiedSystem")
     base_names = [base.id for base in unified.bases if isinstance(base, ast.Name)]
@@ -95,6 +82,36 @@ def test_unified_system_has_current_runtime_methods_source_contract() -> None:
         "SemanticActionRuntimeMixin",
     }
     assert required_mixins.issubset(set(base_names))
+
+
+def test_conscious_system_uses_versionless_primary_class_source_contract() -> None:
+    source = Path("src/modules/m05_world_model_attention_workspace/legacy/conscious_system.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+
+    class_names = {node.name for node in tree.body if isinstance(node, ast.ClassDef)}
+    assert "ConsciousSystem" in class_names
+    assert "ConsciousSystemV5" not in class_names
+
+    alias_found = False
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        for target in node.targets:
+            if (
+                isinstance(target, ast.Name)
+                and target.id == "ConsciousSystemV5"
+                and isinstance(node.value, ast.Name)
+                and node.value.id == "ConsciousSystem"
+            ):
+                alias_found = True
+    assert alias_found
+
+    wrapper_source = Path("src/modules/m05_world_model_attention_workspace/models/conscious_system.py").read_text(
+        encoding="utf-8"
+    )
+    wrapper_tree = ast.parse(wrapper_source)
+    assert not any(isinstance(node, ast.ClassDef) for node in wrapper_tree.body)
+    assert "legacy.conscious_system" in wrapper_source
 
 
 def _small_m5_config() -> ConsciousDreamerMemoryThoughtConfig:

@@ -16,7 +16,7 @@ from src.apps.runner_loop import run_unified_life_loop
 from src.apps.runner_optimizer import rebuild_optimizer_from_trainable_modules_for_system
 from src.apps.runner_teachers import load_inner_speech_teacher_from_config
 from src.apps.runner_training_flags import resolve_module_training_flags_for_system
-from src.apps.runner_unified_init import initialize_unified_system_v510
+from src.apps.runner_unified_init import initialize_unified_system
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,7 @@ RUNNER_PATCHES: List[RunnerPatchRecord] = [
     ),
     RunnerPatchRecord(
         target="UnifiedSystem.__init__",
-        replacement="src.apps.runner_unified_init.initialize_unified_system_v510",
+        replacement="src.apps.runner_unified_init.initialize_unified_system",
         reason="system construction extracted from heavy runner",
     ),
     RunnerPatchRecord(
@@ -63,7 +63,7 @@ RUNNER_PATCHES: List[RunnerPatchRecord] = [
 def apply_runner_patches(runner_runtime: Any, unified_system_cls: type) -> None:
     """Idempotently ensure runner module/class uses extracted helpers."""
     runner_runtime.load_inner_speech_teacher_from_config = load_inner_speech_teacher_from_config
-    unified_system_cls.__init__ = initialize_unified_system_v510
+    unified_system_cls.__init__ = initialize_unified_system
     unified_system_cls.run = run_unified_life_loop
     unified_system_cls.resolve_module_training_flags_from_config = resolve_module_training_flags_for_system
     unified_system_cls._force_hover_flight_runtime_config = force_hover_flight_runtime_config_for_system

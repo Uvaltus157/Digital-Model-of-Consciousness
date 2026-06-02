@@ -140,7 +140,7 @@ def make_inner_speech_config_from_world(
     if missing:
         raise ValueError(
             "make_inner_speech_config_from_world() does not own model dimensions. "
-            "Read them from runner.yaml / UnifiedV510Config and pass them explicitly. "
+            "Read them from runner.yaml / UnifiedConfig and pass them explicitly. "
             f"Missing: {missing}"
         )
 

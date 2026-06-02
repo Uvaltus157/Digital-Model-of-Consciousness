@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Tuple
 
 import cv2
 import hydra
@@ -10,8 +10,11 @@ import numpy as np
 import torch
 from omegaconf import OmegaConf
 
-from conscious_system import ConsciousSystemConfig, ConsciousSystemV5
 from dynamic_self_world_dataset_v2 import DynamicSelfWorldDataset, DynamicSelfWorldDatasetConfig
+from src.modules.m05_world_model_attention_workspace.legacy.conscious_system import (
+    ConsciousSystem,
+    ConsciousSystemConfig,
+)
 
 
 action_names = {i: f"action_{i}" for i in range(24)}
@@ -221,7 +224,7 @@ def render_frame(
     return canvas
 
 
-@hydra.main(version_base=None, config_path="../../config", config_name="conscious_system_tools_v5")
+@hydra.main(version_base=None, config_path="../../config", config_name="conscious_system_tools")
 def main(cfg_raw) -> None:
     base = OmegaConf.structured(ToolConfig())
     cfg = OmegaConf.merge(base, cfg_raw)
@@ -241,7 +244,7 @@ def main(cfg_raw) -> None:
     sample = ds[cfg_obj.viewer.index]
     batch = {k: (v.unsqueeze(0).to(cfg_obj.viewer.device) if isinstance(v, torch.Tensor) and v.ndim > 0 else v) for k, v in sample.items()}
 
-    model = ConsciousSystemV5(cfg_obj.system).to(cfg_obj.viewer.device)
+    model = ConsciousSystem(cfg_obj.system).to(cfg_obj.viewer.device)
     ckpt = torch.load(Path(cfg_obj.viewer.ckpt), map_location=cfg_obj.viewer.device)
     model.load_state_dict(ckpt["model"])
     model.eval()
@@ -273,7 +276,7 @@ def main(cfg_raw) -> None:
     trails = {"workspace": [], "memory": [], "report": []}
     paused = False
     t = 0
-    cv2.namedWindow("subjective stream viewer v5", cv2.WINDOW_NORMAL)
+    cv2.namedWindow("subjective stream viewer", cv2.WINDOW_NORMAL)
 
     while True:
         panel = render_frame(
@@ -294,7 +297,7 @@ def main(cfg_raw) -> None:
             t,
             trails,
         )
-        cv2.imshow("subjective stream viewer v5", panel)
+        cv2.imshow("subjective stream viewer", panel)
         key = cv2.waitKey(0 if paused else cfg_obj.viewer.delay_ms) & 0xFF
         if key in (27, ord('q')):
             break
@@ -314,7 +317,7 @@ def main(cfg_raw) -> None:
                     break
 
     try:
-        cv2.destroyWindow("subjective stream viewer v5")
+        cv2.destroyWindow("subjective stream viewer")
     except Exception:
         pass
 
