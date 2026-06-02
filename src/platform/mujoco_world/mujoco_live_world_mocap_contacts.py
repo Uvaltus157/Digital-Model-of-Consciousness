@@ -14,10 +14,10 @@ This is for stable object exploration without the freejoint body spinning.
 import numpy as np
 import torch
 
-from src.apps.unified_conscious_viewer import MujocoLiveWorldV57
+from src.apps.unified_conscious_viewer import MujocoLiveWorld
 
 
-class MujocoLiveWorldMocapContacts(MujocoLiveWorldV57):
+class MujocoLiveWorldMocapContacts(MujocoLiveWorld):
     def __init__(
         self,
         *args,

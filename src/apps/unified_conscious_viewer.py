@@ -75,7 +75,7 @@ class InnerWorldWindowConfig:
 
 
 @dataclass
-class UnifiedV57Config:
+class UnifiedBaseConfig:
     mode: str = "run"
     novelty: NoveltyConfig = field(default_factory=NoveltyConfig)
     replay: ReplayConfig = field(default_factory=ReplayConfig)
@@ -93,7 +93,7 @@ class UnifiedV57Config:
     body_state_dim: int = 49
 
 
-class MujocoLiveWorldV57:
+class MujocoLiveWorld:
     def __init__(self, device: str, cfg: MujocoWorldConfig, embodied_dim: int = 11, hand_motor_dim: int = 34) -> None:
         self.device = device
         self.cfg = cfg
@@ -327,8 +327,8 @@ class MujocoLiveWorldV57:
         }
 
 
-class UnifiedSystemV57:
-    def __init__(self, cfg: UnifiedV57Config) -> None:
+class UnifiedRuntimeBase:
+    def __init__(self, cfg: UnifiedBaseConfig) -> None:
         self.cfg = cfg
         self.device = torch.device(cfg.runtime.device)
         random.seed(cfg.runtime.seed)
@@ -355,7 +355,7 @@ class UnifiedSystemV57:
         self.quality = QualityMeter(ema_decay=0.98)
         self.novelty = NoveltyDetector(cfg.novelty)
 
-        self.world = MujocoLiveWorldV57(
+        self.world = MujocoLiveWorld(
             self.device,
             cfg.mujoco_world,
             embodied_dim=cfg.embodied_dim,
@@ -484,7 +484,7 @@ class UnifiedSystemV57:
 @hydra.main(version_base=None, config_path="../../config", config_name="runner")
 def main(cfg_raw) -> None:
     raw = OmegaConf.create(OmegaConf.to_container(cfg_raw, resolve=False))
-    base = OmegaConf.structured(UnifiedV57Config())
+    base = OmegaConf.structured(UnifiedBaseConfig())
 
     allowed_top_keys = {
         "mode",
@@ -532,13 +532,13 @@ def main(cfg_raw) -> None:
     cfg = OmegaConf.merge(base, clean)
 
     print("Resolved config:\n" + OmegaConf.to_yaml(cfg, resolve=True))
-    cfg_obj: UnifiedV57Config = OmegaConf.to_object(cfg)
+    cfg_obj: UnifiedBaseConfig = OmegaConf.to_object(cfg)
 
-    system = UnifiedSystemV57(cfg_obj)
+    system = UnifiedRuntimeBase(cfg_obj)
     if hasattr(system, "run"):
         system.run()
     else:
-        raise RuntimeError("UnifiedSystemV57 has no run() method. Use src.apps.runner for the V5.10 runtime.")
+        raise RuntimeError("UnifiedRuntimeBase has no run() method. Use src.apps.runner for the V5.10 runtime.")
 
 
 if __name__ == "__main__":

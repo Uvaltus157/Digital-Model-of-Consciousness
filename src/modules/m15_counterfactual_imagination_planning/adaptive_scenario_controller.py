@@ -959,7 +959,7 @@ class FlyToCubePalpateScenario(BaseScenario):
     def _arm_raw_from_ik(self, target_world: np.ndarray, yaw: float) -> Optional[np.ndarray]:
         """
         Convert a world-space reach target into the normalized arm vector expected
-        by MujocoLiveWorldV57: L yaw/pitch/elbow + R yaw/pitch/elbow in [-1, 1].
+        by MujocoLiveWorld: L yaw/pitch/elbow + R yaw/pitch/elbow in [-1, 1].
         """
         if simple_arm_ik_local is None or ArmActuatorConfig is None:
             return None

@@ -62,7 +62,7 @@ def test_unified_system_is_primary_runtime_class_source_contract() -> None:
     unified = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "UnifiedSystem")
     base_names = [base.id for base in unified.bases if isinstance(base, ast.Name)]
     assert "UnifiedRuntimeBase" in base_names
-    assert "UnifiedSystemV57" not in base_names
+    assert "UnifiedSystem" + "V57" not in source
 
 
 def test_unified_system_has_current_runtime_methods_source_contract() -> None:

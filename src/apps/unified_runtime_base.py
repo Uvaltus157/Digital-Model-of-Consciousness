@@ -7,11 +7,7 @@ compatibility, but new runtime assembly should import the versionless names from
 this module.
 """
 
-from src.apps.unified_conscious_viewer import (
-    MujocoLiveWorldV57 as MujocoLiveWorld,
-    UnifiedSystemV57 as UnifiedRuntimeBase,
-    UnifiedV57Config as UnifiedBaseConfig,
-)
+from src.apps.unified_conscious_viewer import MujocoLiveWorld, UnifiedBaseConfig, UnifiedRuntimeBase
 
 __all__ = [
     "MujocoLiveWorld",
