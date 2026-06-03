@@ -383,6 +383,7 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
             ("Touch object pose", "gesture_touch_object_pose", self.gesture_touch_object_pose),
         ]
         scenarios = [
+            ("Имит action", "imit_action", self.gesture_imit_action),
             ("Fly to cube + palpate", "fly_to_cube_palpate", self.gesture_fly_to_cube_and_palpate),
             ("Grab small cube + rotate", "fly_to_small_cube_grasp_rotate", self.gesture_fly_to_small_cube_grasp_rotate),
         ]
@@ -739,6 +740,16 @@ class AgentActionsWindow(QtWidgets.QMainWindow):
 
     def gesture_touch_object_pose(self):
         self.send_action_command("gesture_touch_object_pose")
+
+    def gesture_imit_action(self):
+        self.send_action_command(
+            "imit_action",
+            active_key="imit_action",
+            mode="conscious",
+            steps=1,
+            blend_into_focus_context=True,
+            focus_blend_weight=0.015,
+        )
 
     def gesture_fly_to_cube_and_palpate(self):
         self.send_action_command("fly_to_cube_palpate")

@@ -55,6 +55,7 @@ from src.modules.m07_inner_speech_thoughts.inner_speech_runtime import InnerSpee
 from src.modules.m08_debug_visual_control.module_status_runtime import ModuleStatusRuntimeMixin
 from src.modules.m09_self_core.self_core_runtime import SelfCoreRuntimeMixin
 from src.modules.m10_global_conscious_broadcast.broadcast_runtime import GlobalBroadcastRuntimeMixin
+from src.modules.m11_motivational_homeostasis.energy_resonator_runtime import EnergyResonatorRuntimeMixin
 from src.modules.m12_metacognition_monitor.metacognition_runtime import MetacognitionRuntimeMixin
 from src.modules.m13_autobiographical_memory.autobiographical_memory_runtime import AutobiographicalMemoryRuntimeMixin
 from src.modules.m14_semantic_grounding.semantic_action_runtime import SemanticActionRuntimeMixin
@@ -85,6 +86,7 @@ class UnifiedSystem(
     EventDreamReplayRuntimeMixin,
     ThoughtChainRuntimeMixin,
     GlobalBroadcastRuntimeMixin,
+    EnergyResonatorRuntimeMixin,
     InnerSpeechRuntimeMixin,
     MetacognitionRuntimeMixin,
     AutobiographicalMemoryRuntimeMixin,

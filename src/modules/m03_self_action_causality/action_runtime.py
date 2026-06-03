@@ -245,6 +245,11 @@ class ActionRuntimeMixin:
             self.shutdown = True
         elif action == "ping":
             print("[ipc] ping received")
+        elif action in ("imit_action", "simulate_energy_resonator_action", "energy_resonator_imit_action"):
+            if hasattr(self, "request_energy_resonator_imitation"):
+                self.request_energy_resonator_imitation(payload)
+            else:
+                print("[ipc] imit_action ignored: EnergyResonatorRuntimeMixin is not installed")
         elif is_adaptive_gesture_command(action):
             self.start_adaptive_gesture_command(action)
         elif action == "fly_to_cube_palpate":

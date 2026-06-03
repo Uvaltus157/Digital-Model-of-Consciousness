@@ -131,7 +131,16 @@ class LifeRuntimeMixin(
         out = self.apply_manual_leg_action_override(out)
         out["inner_object"] = self.compute_inner_object_image(obs, out)
         self._compute_long_dynamic_memory(obs, out)
+        if hasattr(self, "compute_energy_resonator"):
+            try:
+                self.compute_energy_resonator(obs, out)
+            except Exception as e:
+                if not hasattr(self, "_energy_resonator_warned"):
+                    print(f"[energy_resonator] compute skipped: {e}")
+                    self._energy_resonator_warned = True
         out["self_core"] = self.compute_self_core(obs, out)
+        if hasattr(self, "maybe_print_energy_resonator_trace"):
+            self.maybe_print_energy_resonator_trace(out)
         self._apply_conscious_action_guard(obs, out)
         self.maybe_print_self_core_trace(out)
 
