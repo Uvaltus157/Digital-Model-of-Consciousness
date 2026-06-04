@@ -3362,7 +3362,7 @@ class AdaptiveScenarioController:
 # Small cube adaptive palm/cube servo V5.
 # ---------------------------------------------------------------------------
 try:
-    from src.modules.m15_counterfactual_imagination_planning.small_cube_grasp_rotate_finger_gait import install_small_cube_grasp_rotate_gait
+    from src.modules.m15_counterfactual_imagination_planning.imit.small_cube_grasp_rotate_finger_gait import install_small_cube_grasp_rotate_gait
     install_small_cube_grasp_rotate_gait(FlyToSmallCubeGraspRotateScenario)
 except NameError:
     pass
@@ -3374,7 +3374,7 @@ except Exception as e:
 # Keeps chasing after palm touch until real stable grasp.
 # ---------------------------------------------------------------------------
 try:
-    from src.modules.m15_counterfactual_imagination_planning.small_cube_adaptive_chase import install_small_cube_chase_until_grasp
+    from src.modules.m15_counterfactual_imagination_planning.imit.small_cube_adaptive_chase import install_small_cube_chase_until_grasp
 
     install_small_cube_chase_until_grasp(FlyToSmallCubeGraspRotateScenario)
 except NameError:
@@ -3387,7 +3387,7 @@ except Exception as e:
 # Explicit adaptive arm extension: hand reaches, not only body circles.
 # ---------------------------------------------------------------------------
 try:
-    from src.modules.m15_counterfactual_imagination_planning.small_cube_arm_reach_servo import install_small_cube_arm_reach_servo
+    from src.modules.m15_counterfactual_imagination_planning.imit.small_cube_arm_reach_servo import install_small_cube_arm_reach_servo
 
     install_small_cube_arm_reach_servo(FlyToSmallCubeGraspRotateScenario)
 except NameError:

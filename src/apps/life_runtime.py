@@ -75,7 +75,7 @@ class LifeRuntimeMixin(
         obs0 = self.apply_focused_depth_observation(obs0)
 
         with torch.no_grad():
-            out0 = self.model_step(obs0, self.state)
+            out0 = self.model_step(obs0, self.state, model_stage="pre_observe")
 
         # Imitate neural output at the exact model output boundary.
         # This is where PyQt sliders replace real neural outputs.
@@ -110,7 +110,7 @@ class LifeRuntimeMixin(
         self.maybe_print_vestibular_trace(obs)
 
         with torch.no_grad():
-            out = self.model_step(obs, self.state)
+            out = self.model_step(obs, self.state, model_stage="main")
 
         # Imitate neural output at the exact model output boundary.
         # This is where PyQt sliders replace real neural outputs.
@@ -181,6 +181,24 @@ class LifeRuntimeMixin(
         out["emotion"] = emotion
         if isinstance(emotion.get("affect"), dict):
             out["affect"] = emotion["affect"]
+        if hasattr(self, "compute_metacognition"):
+            try:
+                self.compute_metacognition(obs, out)
+            except Exception as e:
+                if not hasattr(self, "_metacognition_runtime_warned"):
+                    print(f"[metacognition] compute skipped: {e}")
+                    self._metacognition_runtime_warned = True
+        if hasattr(self, "compute_conscious_loop_feedback"):
+            try:
+                self.compute_conscious_loop_feedback(obs, out)
+            except Exception as e:
+                if not hasattr(self, "_conscious_loop_warned"):
+                    print(f"[conscious_loop] feedback skipped: {e}")
+                    self._conscious_loop_warned = True
+        if hasattr(self, "maybe_print_conscious_loop_trace"):
+            self.maybe_print_conscious_loop_trace(out)
+        if hasattr(self, "maybe_print_metacognition_trace"):
+            self.maybe_print_metacognition_trace(out)
         if self.cfg.emotional_drive.inject_into_env_reward:
             obs["reward"] = obs["reward"] + emotion["intrinsic_reward"].detach() * float(self.cfg.emotional_drive.reward_weight)
 

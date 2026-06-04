@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-src/modules/m15_counterfactual_imagination_planning/small_cube_arm_reach_servo.py
+src/modules/m15_counterfactual_imagination_planning/imit/small_cube_arm_reach_servo.py
 
 V7 over V5/V6:
     Fixes "кружит вокруг кубика, рука не тянется".
@@ -22,7 +22,7 @@ V7 adds an explicit adaptive reach controller:
 
 import numpy as np
 
-from src.modules.m15_counterfactual_imagination_planning.small_cube_grasp_rotate_finger_gait import (
+from src.modules.m15_counterfactual_imagination_planning.imit.small_cube_grasp_rotate_finger_gait import (
     ARM_DIM,
     BODY_DIM,
     HAND_DIM,

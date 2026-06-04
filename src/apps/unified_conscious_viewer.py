@@ -433,7 +433,9 @@ class UnifiedRuntimeBase:
             + 0.001 * report_reg
         )
 
-    def model_step(self, obs: Dict[str, torch.Tensor], state: Dict[str, torch.Tensor], action_override=None, write_memory: bool = True) -> Dict:
+    def model_step(self, obs: Dict[str, torch.Tensor], state: Dict[str, torch.Tensor], action_override=None, write_memory: bool = True, model_stage: str = "main", focus_context_seed=None, focus_context_seed_gate=None) -> Dict:
+        if focus_context_seed is None and hasattr(self, "get_conscious_loop_focus_seed"):
+            focus_context_seed, focus_context_seed_gate = self.get_conscious_loop_focus_seed(stage=model_stage)
         return self.model.step(
             left=obs["left"],
             right=obs["right"],
@@ -447,6 +449,8 @@ class UnifiedRuntimeBase:
             object_state=obs["object_state"],
             action_override=action_override,
             write_memory=write_memory,
+            focus_context_seed=focus_context_seed,
+            focus_context_seed_gate=focus_context_seed_gate,
         )
 
     def update_inner_world_window(self, out: Dict) -> None:

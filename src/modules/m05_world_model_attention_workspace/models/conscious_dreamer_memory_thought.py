@@ -38,6 +38,7 @@ from src.modules.m05_world_model_attention_workspace.models.conscious_dreamer_co
     VisionEncoder,
     MLPEncoder,
 )
+from src.modules.m05_world_model_attention_workspace.models.focus_feedback_boundary import FocusFeedbackBoundary
 
 
 @dataclass
@@ -231,6 +232,12 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
         self.imagination = ImaginationCore(l.rssm_dim, c.workspace_dim, c.thought_dim, c.object_repr_dim, l.tactile_dim, d.action_dim, c.imagination_horizon)
         self.planner = ConsciousPlanner(c.workspace_dim, c.thought_dim, c.model_reflection_dim, c.object_repr_dim, tm.memory_dim, c.value_dim, d.action_dim, d.embodied_dim, d.hand_motor_dim)
         self.decoder = DecoderHeads(l.rssm_dim, d.image_channels, d.image_height, d.image_width)
+        self.focus_feedback_boundary = FocusFeedbackBoundary(
+            focus_context_dim=c.workspace_dim,
+            workspace_seed_dim=c.workspace_dim,
+            thought_dim=c.thought_dim,
+            hidden_dim=max(c.workspace_dim, c.thought_dim),
+        )
 
     def initial_state(self, batch_size: int, device: torch.device | str) -> Dict[str, torch.Tensor]:
         device = torch.device(device)
@@ -308,7 +315,7 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
             return torch.zeros(workspace.shape[0], self.cfg.conscious.workspace_dim, device=workspace.device, dtype=workspace.dtype)
         return torch.cat(flat_parts, dim=-1)
 
-    def step(self, left, right, pose, body_state, state, tactile=None, hand_motor=None, embodied_action=None, depth=None, object_state=None, action_override=None, write_memory: bool = True) -> Dict:
+    def step(self, left, right, pose, body_state, state, tactile=None, hand_motor=None, embodied_action=None, depth=None, object_state=None, action_override=None, write_memory: bool = True, focus_context_seed=None, focus_context_seed_gate=None) -> Dict:
         b = left.shape[0]
         d = self.cfg.data
 
@@ -330,6 +337,15 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
         action_latent = self.action_embed(action_ids_in)
 
         attn = self.attention([vision, pose_latent, body_latent, tactile_latent, motor_latent, object_state_latent, action_latent])
+        focus_feedback = self.focus_feedback_boundary(
+            workspace_seed=attn["workspace_seed"],
+            focus_context_seed=focus_context_seed,
+            focus_context_seed_gate=focus_context_seed_gate,
+        )
+        attn = dict(attn)
+        attn["raw_workspace_seed"] = attn["workspace_seed"]
+        attn["workspace_seed"] = focus_feedback["workspace_seed"]
+        attn["focus_feedback"] = focus_feedback
         fused = self.fusion(torch.cat([attn["workspace_seed"], attn["context"]], dim=-1))
 
         prev_rssm = state.get("rssm", self._zeros(left, b, self.cfg.latent.rssm_dim))
@@ -341,6 +357,13 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
         body_context = body_ctx["body_context"]
         model_reflection_context = body_ctx["model_reflection_context"]
         preconscious_seed = ws["preconscious_seed"]
+        if isinstance(focus_feedback, dict):
+            adjusted_preconscious_seed = self.focus_feedback_boundary.apply_preconscious_seed(preconscious_seed, focus_feedback)
+            if torch.is_tensor(adjusted_preconscious_seed):
+                preconscious_seed = adjusted_preconscious_seed
+                ws = dict(ws)
+                ws["preconscious_seed"] = preconscious_seed
+                ws["report"] = self.workspace.report(torch.cat([ws["workspace"], preconscious_seed], dim=-1))
         obj = self.object_repr(ws["workspace"], body_context, tactile_latent, vision, object_state_latent)
 
         refl0 = self.preconscious_reflection_loop(ws["workspace"], preconscious_seed, body_context, obj, model_reflection_context)
@@ -410,6 +433,8 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
                 "tokens": attn["tokens"],
                 "modality_weights": attn["modality_weights"],
                 "attn_matrix": attn["attn_matrix"],
+                "focus_feedback_gate": attn.get("focus_feedback", {}).get("total_gate") if isinstance(attn.get("focus_feedback"), dict) else None,
+                "focus_feedback_learned_gate": attn.get("focus_feedback", {}).get("learned_gate") if isinstance(attn.get("focus_feedback"), dict) else None,
             },
             "preconscious_memory": {
                 "memory_context": memory_context,
@@ -423,6 +448,13 @@ class ConsciousDreamerMemoryThought(ConsciousDreamerCore):
             },
             "workspace_out": ws["workspace"],
             "focus_context": focus_context,
+            "focus_feedback": {
+                "active": focus_feedback.get("active") if isinstance(focus_feedback, dict) else None,
+                "external_gate": focus_feedback.get("external_gate") if isinstance(focus_feedback, dict) else None,
+                "learned_gate": focus_feedback.get("learned_gate") if isinstance(focus_feedback, dict) else None,
+                "total_gate": focus_feedback.get("total_gate") if isinstance(focus_feedback, dict) else None,
+                "seed_norm": focus_feedback.get("seed_norm") if isinstance(focus_feedback, dict) else None,
+            },
             "preconscious_thoughts": {
                 "thought_candidate": preconscious_candidate,
                 "workspace_seed": preconscious_seed,

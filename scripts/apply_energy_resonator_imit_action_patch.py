@@ -65,7 +65,7 @@ def main() -> int:
         ),
         new=(
             "from src.modules.m10_global_conscious_broadcast.broadcast_runtime import GlobalBroadcastRuntimeMixin\n"
-            "from src.modules.m11_motivational_homeostasis.energy_resonator_runtime import EnergyResonatorRuntimeMixin\n"
+            "from src.modules.m11_motivational_homeostasis.imit.energy_resonator_runtime import EnergyResonatorRuntimeMixin\n"
             "from src.modules.m12_metacognition_monitor.metacognition_runtime import MetacognitionRuntimeMixin\n"
         ),
         marker="EnergyResonatorRuntimeMixin",
@@ -199,8 +199,8 @@ def main() -> int:
     )
 
     print("\nDone. Now run:")
-    print("  python -m py_compile src/modules/m11_motivational_homeostasis/energy_resonator.py")
-    print("  python -m py_compile src/modules/m11_motivational_homeostasis/energy_resonator_runtime.py")
+    print("  python -m py_compile src/modules/m11_motivational_homeostasis/imit/energy_resonator.py")
+    print("  python -m py_compile src/modules/m11_motivational_homeostasis/imit/energy_resonator_runtime.py")
     print("  python -m py_compile scripts/run_energy_resonator_demo.py")
     return 0
 

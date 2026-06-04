@@ -9,7 +9,7 @@ Run from repository root:
     python scripts/run_energy_resonator_demo.py
 """
 
-from src.modules.m11_motivational_homeostasis.energy_resonator import run_headless_demo
+from src.modules.m11_motivational_homeostasis.imit.energy_resonator import run_headless_demo
 
 
 if __name__ == "__main__":

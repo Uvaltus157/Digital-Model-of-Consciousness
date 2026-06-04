@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-src/modules/m15_counterfactual_imagination_planning/small_cube_adaptive_chase.py
+src/modules/m15_counterfactual_imagination_planning/imit/small_cube_adaptive_chase.py
 
 V6 add-on over V5:
     chase the small cube until it is really grasped.
@@ -24,7 +24,7 @@ It still uses the V5 helper functions:
 
 import numpy as np
 
-from src.modules.m15_counterfactual_imagination_planning.small_cube_grasp_rotate_finger_gait import (
+from src.modules.m15_counterfactual_imagination_planning.imit.small_cube_grasp_rotate_finger_gait import (
     ARM_DIM,
     BODY_DIM,
     HAND_DIM,

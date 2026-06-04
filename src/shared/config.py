@@ -234,6 +234,18 @@ class ThoughtChainRuntimeConfig:
 
 
 @dataclass
+class ConsciousLoopRuntimeConfig:
+    enabled: bool = True
+    feedback_gain: float = 0.22
+    min_gate: float = 0.00
+    max_gate: float = 0.22
+    require_self_binding: bool = True
+    use_metacognition_gate: bool = True
+    apply_stage: str = "both"  # both | pre_observe | main
+    print_every_steps: int = 30
+
+
+@dataclass
 class EventDreamReplayRuntimeConfig:
     enabled: bool = True
     replay_context_dim: int = 256
@@ -551,6 +563,7 @@ class UnifiedConfig(RuntimeConfig):
     adaptive_scenario_controller: Dict[str, Any] = field(default_factory=dict)
     self_core: SelfCoreRuntimeConfig = field(default_factory=SelfCoreRuntimeConfig)
     thought_chain: ThoughtChainRuntimeConfig = field(default_factory=ThoughtChainRuntimeConfig)
+    conscious_loop: ConsciousLoopRuntimeConfig = field(default_factory=ConsciousLoopRuntimeConfig)
     event_dream_replay: EventDreamReplayRuntimeConfig = field(default_factory=EventDreamReplayRuntimeConfig)
     event_code_visualizer: EventCodeVisualizerRuntimeConfig = field(default_factory=EventCodeVisualizerRuntimeConfig)
     long_dynamic_memory: LongDynamicMemoryRuntimeConfig = field(default_factory=LongDynamicMemoryRuntimeConfig)

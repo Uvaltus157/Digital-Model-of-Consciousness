@@ -20,7 +20,7 @@ try:
 except Exception:  # pragma: no cover
     torch = None  # type: ignore
 
-from src.modules.m11_motivational_homeostasis.energy_resonator import (
+from src.modules.m11_motivational_homeostasis.imit.energy_resonator import (
     EnergyResonator,
     EnergyResonatorConfig,
 )
