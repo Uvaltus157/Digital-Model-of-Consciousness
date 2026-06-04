@@ -86,10 +86,18 @@ class EventDreamReplayConfig:
     event_code_dim: int = 8
     replay_threshold: float = 0.35
     focus_blend: float = 0.15
-    blend_replay_into_focus: bool = True
+    # Legacy path. Keep available, but default runtime should use the
+    # M5 FocusFeedbackBoundary seed input instead of direct focus mutation.
+    blend_replay_into_focus: bool = False
     use_m13_context: bool = True
+    use_m4_context: bool = True
+    m4_context_weight: float = 0.20
     use_event_memory: bool = True
     max_recent_events_scan: int = 16
+    seed_to_m5_boundary: bool = True
+    seed_gate_gain: float = 1.0
+    apply_stage: str = "pre_observe"  # both | pre_observe | main
+    seed_only_in_sleep: bool = True
 
 
 class EventDreamReplay:
@@ -164,10 +172,12 @@ class EventDreamReplay:
         meta = out.get("metacognition", {}) if isinstance(out.get("metacognition"), dict) else {}
         tc = out.get("thought_chain", {}) if isinstance(out.get("thought_chain"), dict) else {}
         memory13 = out.get("autobiographical_memory", {}) if isinstance(out.get("autobiographical_memory"), dict) else {}
+        memory4 = out.get("long_dynamic_memory", {}) if isinstance(out.get("long_dynamic_memory"), dict) else {}
 
         event, event_idx = self._select_replay_event(event_memory) if bool(c.use_event_memory) else ({}, -1)
         event_vec = self._event_vector(event, device)
         m13_context = pad_or_trim_replay(memory13.get("retrieved_context"), int(c.replay_context_dim), device=device)
+        m4_context = pad_or_trim_replay(memory4.get("dynamic_identity_context"), int(c.replay_context_dim), device=device)
         focus_context = pad_or_trim_replay(out.get("focus_context"), int(c.replay_context_dim), device=device)
 
         panic = _scalar(affect.get("panic_latent"), 0.0)
@@ -177,6 +187,9 @@ class EventDreamReplay:
         no_viable = _scalar(tc.get("no_viable_chain"), 0.0)
         predicted_delta = _scalar(tc.get("predicted_affect_delta"), 0.0)
         memory_relevance = _scalar(memory13.get("retrieval_relevance"), 0.0)
+        identity_stability = _scalar(memory4.get("identity_stability"), 0.0)
+        identity_novelty = _scalar(memory4.get("identity_novelty"), 0.0)
+        dynamic_memory_gate = _scalar(memory4.get("dynamic_memory_gate"), 0.0)
         event_delta = _scalar(event.get("delta_norm"), 0.0)
         event_contact = _scalar(event.get("contact_norm"), 0.0)
         event_action = _scalar(event.get("action_norm"), 0.0)
@@ -192,6 +205,9 @@ class EventDreamReplay:
                 + 0.20 * no_viable
                 + 0.18 * max(0.0, -predicted_delta)
                 + 0.22 * memory_relevance
+                + 0.12 * identity_stability
+                + 0.10 * identity_novelty
+                + 0.10 * dynamic_memory_gate
                 + 0.30 * event_delta
                 + 0.30 * event_contact
                 + 0.15 * event_action,
@@ -202,8 +218,14 @@ class EventDreamReplay:
 
         m13_weight = 0.35 if bool(c.use_m13_context) else 0.0
         event_weight = 0.45 if event else 0.0
-        focus_weight = max(0.0, 1.0 - m13_weight - event_weight)
-        replay_context = focus_weight * focus_context + event_weight * event_vec + m13_weight * m13_context
+        m4_weight = float(c.m4_context_weight) if bool(getattr(c, "use_m4_context", True)) and dynamic_memory_gate > 0.0 else 0.0
+        focus_weight = max(0.0, 1.0 - m13_weight - event_weight - m4_weight)
+        replay_context = (
+            focus_weight * focus_context
+            + event_weight * event_vec
+            + m13_weight * m13_context
+            + m4_weight * m4_context
+        )
 
         replay_gate = torch.tensor([[replay_gate_value]], dtype=torch.float32, device=device)
         event_salience = torch.tensor([[event_salience_value]], dtype=torch.float32, device=device)
@@ -230,6 +252,11 @@ class EventDreamReplay:
             "selected_event_kind": str(event.get("kind", "")) if event else "",
             "selected_event_slot_token": str(event.get("slot_token", "")) if event else "",
             "selected_episode_summary": str(memory13.get("summary", memory13.get("last_summary", ""))),
+            "selected_identity_token": str(memory4.get("identity_token", "")),
+            "selected_identity_sentence": str(memory4.get("selected_sentence", "")),
+            "identity_stability": torch.tensor([[identity_stability]], dtype=torch.float32, device=device),
+            "identity_novelty": torch.tensor([[identity_novelty]], dtype=torch.float32, device=device),
+            "dynamic_memory_gate": torch.tensor([[dynamic_memory_gate]], dtype=torch.float32, device=device),
             "replay_source": source,
         }
         self.last_packet = packet

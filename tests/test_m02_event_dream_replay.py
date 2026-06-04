@@ -9,6 +9,7 @@ from src.modules.m02_event_dream_replay.event_dream_replay import (
     EventDreamReplay,
     EventDreamReplayConfig,
 )
+from src.modules.m02_event_dream_replay.event_dream_runtime import EventDreamReplayRuntimeMixin
 
 
 def test_m2_event_dream_replay_builds_replay_packet_from_event_and_m13() -> None:
@@ -64,3 +65,51 @@ def test_m2_event_dream_replay_builds_replay_packet_from_event_and_m13() -> None
     assert packet["selected_event_slot_token"] == "OBJ_001"
     assert packet["selected_episode_summary"] == "step=7 source=m15_focus"
     assert packet["replay_source"] == "m02_event_memory"
+
+
+def test_m2_event_dream_replay_blends_m4_identity_context() -> None:
+    replay = EventDreamReplay(EventDreamReplayConfig(
+        replay_context_dim=4,
+        replay_threshold=0.0,
+        use_m13_context=False,
+        use_m4_context=True,
+        m4_context_weight=0.20,
+        use_event_memory=False,
+    ))
+    out = {
+        "focus_context": torch.zeros(1, 4),
+        "affect": {"curiosity_latent": torch.tensor([[0.1]])},
+        "long_dynamic_memory": {
+            "dynamic_identity_context": torch.ones(1, 4),
+            "identity_stability": torch.tensor([[0.7]]),
+            "identity_novelty": torch.tensor([[0.3]]),
+            "dynamic_memory_gate": torch.tensor([[1.0]]),
+            "identity_token": "OBJ_009",
+            "selected_sentence": "SENT SUBJ=OBJ_009 VERB=changed",
+        },
+    }
+
+    packet = replay.compute(out=out, event_memory=None, dream_mode=False)
+
+    assert torch.allclose(packet["replay_context"], torch.full((1, 4), 0.20))
+    assert packet["selected_identity_token"] == "OBJ_009"
+    assert packet["selected_identity_sentence"] == "SENT SUBJ=OBJ_009 VERB=changed"
+    assert abs(float(packet["identity_stability"].item()) - 0.7) < 1e-6
+    assert abs(float(packet["identity_novelty"].item()) - 0.3) < 1e-6
+    assert float(packet["dynamic_memory_gate"].item()) == 1.0
+
+
+def test_event_dream_runtime_default_uses_m5_seed_boundary_not_focus_blend() -> None:
+    class Dummy(EventDreamReplayRuntimeMixin):
+        def __init__(self) -> None:
+            self.cfg = SimpleNamespace(
+                self_core=SimpleNamespace(focus_context_dim=4),
+                event_dream_replay=SimpleNamespace(),
+            )
+
+    dummy = Dummy()
+
+    dummy.ensure_event_dream_replay_ready()
+
+    assert dummy.event_dream_replay.cfg.seed_to_m5_boundary is True
+    assert dummy.event_dream_replay.cfg.blend_replay_into_focus is False

@@ -181,6 +181,29 @@ class LifeRuntimeMixin(
         out["emotion"] = emotion
         if isinstance(emotion.get("affect"), dict):
             out["affect"] = emotion["affect"]
+
+        # Strict unconscious sleep/replay loop:
+        #   M11 affect -> M13 retrieval + M4 identity -> M2 replay selector
+        #   -> next M5 FocusFeedbackBoundary seed.
+        if hasattr(self, "compute_autobiographical_retrieval"):
+            try:
+                self.compute_autobiographical_retrieval(obs, out)
+            except Exception as e:
+                if not hasattr(self, "_autobiographical_retrieval_warned"):
+                    print(f"[autobiographical_memory] retrieval skipped: {e}")
+                    self._autobiographical_retrieval_warned = True
+        if hasattr(self, "compute_event_dream_replay"):
+            try:
+                self.compute_event_dream_replay(obs, out)
+            except Exception as e:
+                if not hasattr(self, "_event_dream_replay_warned"):
+                    print(f"[event_dream_replay] compute skipped: {e}")
+                    self._event_dream_replay_warned = True
+        if hasattr(self, "maybe_print_event_dream_replay_trace"):
+            self.maybe_print_event_dream_replay_trace(out)
+        if hasattr(self, "maybe_print_autobiographical_memory_trace"):
+            self.maybe_print_autobiographical_memory_trace(out)
+
         if hasattr(self, "compute_metacognition"):
             try:
                 self.compute_metacognition(obs, out)

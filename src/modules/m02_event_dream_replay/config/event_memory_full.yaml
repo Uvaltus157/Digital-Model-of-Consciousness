@@ -74,7 +74,7 @@ event_dream_replay:
   event_code_dim: 8
   replay_threshold: 0.35
   focus_blend: 0.15
-  blend_replay_into_focus: true
+  blend_replay_into_focus: false
   use_m13_context: true
   use_event_memory: true
   max_recent_events_scan: 16

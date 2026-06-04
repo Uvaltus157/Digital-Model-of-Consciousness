@@ -252,10 +252,16 @@ class EventDreamReplayRuntimeConfig:
     event_code_dim: int = 8
     replay_threshold: float = 0.35
     focus_blend: float = 0.15
-    blend_replay_into_focus: bool = True
+    blend_replay_into_focus: bool = False
     use_m13_context: bool = True
+    use_m4_context: bool = True
+    m4_context_weight: float = 0.20
     use_event_memory: bool = True
     max_recent_events_scan: int = 16
+    seed_to_m5_boundary: bool = True
+    seed_gate_gain: float = 1.0
+    apply_stage: str = "pre_observe"  # both | pre_observe | main
+    seed_only_in_sleep: bool = True
     print_every_steps: int = 30
 
 

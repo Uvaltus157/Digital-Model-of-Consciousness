@@ -434,8 +434,11 @@ class UnifiedRuntimeBase:
         )
 
     def model_step(self, obs: Dict[str, torch.Tensor], state: Dict[str, torch.Tensor], action_override=None, write_memory: bool = True, model_stage: str = "main", focus_context_seed=None, focus_context_seed_gate=None) -> Dict:
-        if focus_context_seed is None and hasattr(self, "get_conscious_loop_focus_seed"):
-            focus_context_seed, focus_context_seed_gate = self.get_conscious_loop_focus_seed(stage=model_stage)
+        if focus_context_seed is None:
+            if hasattr(self, "get_m5_focus_seed"):
+                focus_context_seed, focus_context_seed_gate = self.get_m5_focus_seed(stage=model_stage)
+            elif hasattr(self, "get_conscious_loop_focus_seed"):
+                focus_context_seed, focus_context_seed_gate = self.get_conscious_loop_focus_seed(stage=model_stage)
         return self.model.step(
             left=obs["left"],
             right=obs["right"],
