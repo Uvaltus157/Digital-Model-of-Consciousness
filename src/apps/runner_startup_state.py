@@ -45,19 +45,38 @@ def startup_flag(startup: Any, name: str, default: bool = False) -> bool:
     return bool(getattr(startup, name, default))
 
 
+def startup_sensor_flags(sleep_sensors: Any) -> tuple[bool, bool, bool]:
+    """Resolve semantic sleep startup modes before applying the final snapshot."""
+    state = str(getattr(sleep_sensors, "startup_state", "config")).lower().strip()
+    if state in ("active", "awake", "run", "life"):
+        return True, True, True
+    if state in ("sleep", "dream", "dreaming", "full_sleep"):
+        return False, False, False
+    if state in ("blind", "eyes_closed"):
+        return False, True, True
+    if state in ("body_only", "imu_only"):
+        return False, False, True
+    return (
+        bool(getattr(sleep_sensors, "video_sensor_enabled", True)),
+        bool(getattr(sleep_sensors, "contact_sensor_enabled", True)),
+        bool(getattr(sleep_sensors, "imu_sensor_enabled", True)),
+    )
+
+
 def build_startup_state_snapshot(cfg: Any) -> StartupStateSnapshot:
     """Build the startup state snapshot from a config object."""
     startup = getattr(cfg, "control_startup", None)
     sleep_sensors = getattr(cfg, "sleep_sensors", None)
+    video_sensor_enabled, contact_sensor_enabled, imu_sensor_enabled = startup_sensor_flags(sleep_sensors)
 
     show_camera_preview_window = startup_flag(startup, "cameras", False)
 
     return StartupStateSnapshot(
         training_enabled=startup_flag(startup, "training", False),
         mujoco_next_run=startup_flag(startup, "mujoco_next_run", False),
-        video_sensor_enabled=bool(getattr(sleep_sensors, "video_sensor_enabled", True)),
-        contact_sensor_enabled=bool(getattr(sleep_sensors, "contact_sensor_enabled", True)),
-        imu_sensor_enabled=bool(getattr(sleep_sensors, "imu_sensor_enabled", True)),
+        video_sensor_enabled=video_sensor_enabled,
+        contact_sensor_enabled=contact_sensor_enabled,
+        imu_sensor_enabled=imu_sensor_enabled,
         show_inner_world_window=startup_flag(startup, "inner_world", False),
         show_camera_preview_window=show_camera_preview_window,
         show_latent_semantic_window=startup_flag(startup, "latent_semantic", False),

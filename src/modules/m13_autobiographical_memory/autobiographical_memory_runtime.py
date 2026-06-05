@@ -19,7 +19,7 @@ class AutobiographicalMemoryRuntimeMixin:
             max_episodes=int(getattr(cfg_obj, "max_episodes", 512)),
             retrieval_topk=int(getattr(cfg_obj, "retrieval_topk", 3)),
             write_every_steps=int(getattr(cfg_obj, "write_every_steps", 1)),
-            blend_retrieved_into_focus=bool(getattr(cfg_obj, "blend_retrieved_into_focus", True)),
+            blend_retrieved_into_focus=bool(getattr(cfg_obj, "blend_retrieved_into_focus", False)),
             focus_blend=float(getattr(cfg_obj, "focus_blend", 0.20)),
             min_relevance_for_blend=float(getattr(cfg_obj, "min_relevance_for_blend", 0.05)),
         )

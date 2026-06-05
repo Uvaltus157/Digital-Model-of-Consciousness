@@ -17,7 +17,7 @@ class LongDynamicMemoryRuntimeMixin:
             enabled=bool(getattr(cfg_obj, "enabled", True)),
             context_dim=int(getattr(cfg_obj, "context_dim", getattr(self.cfg.self_core, "focus_context_dim", 256))),
             focus_blend=float(getattr(cfg_obj, "focus_blend", 0.18)),
-            blend_into_focus=bool(getattr(cfg_obj, "blend_into_focus", True)),
+            blend_into_focus=bool(getattr(cfg_obj, "blend_into_focus", False)),
             stability_threshold=float(getattr(cfg_obj, "stability_threshold", 0.12)),
             novelty_threshold=float(getattr(cfg_obj, "novelty_threshold", 0.35)),
             use_passport_manager=bool(getattr(cfg_obj, "use_passport_manager", True)),
@@ -76,7 +76,7 @@ class LongDynamicMemoryRuntimeMixin:
         context = packet.get("dynamic_identity_context")
         gate = packet.get("dynamic_memory_gate")
         cfg = self.long_dynamic_memory_controller.cfg if hasattr(self, "long_dynamic_memory_controller") else None
-        if cfg is None or not bool(getattr(cfg, "blend_into_focus", True)):
+        if cfg is None or not bool(getattr(cfg, "blend_into_focus", False)):
             return None
         if not (torch.is_tensor(focus) and torch.is_tensor(context) and torch.is_tensor(gate)):
             return None

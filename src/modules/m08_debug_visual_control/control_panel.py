@@ -204,6 +204,7 @@ def main() -> None:
             self.chk_sensor_video = QtWidgets.QCheckBox("Video")
             self.chk_sensor_contact = QtWidgets.QCheckBox("Tactile")
             self.chk_sensor_imu = QtWidgets.QCheckBox("IMU")
+            self.btn_sleep_replay = QtWidgets.QPushButton("Сон / replay mode")
 
             for b in [self.btn_mujoco, self.btn_inner, self.btn_cameras, self.btn_actions, self.btn_object_image, self.btn_event_code, self.btn_static_dynamic, self.btn_object_open3d, self.btn_train, self.btn_module_debug, self.btn_latent]:
                 b.setCheckable(True)
@@ -263,6 +264,7 @@ def main() -> None:
             self.btn_module_debug_pyqt.setMinimumHeight(42)
             self.btn_module_lab.setMinimumHeight(42)
             self.btn_agent_actions_pyqt.setMinimumHeight(42)
+            self.btn_sleep_replay.setMinimumHeight(42)
             self.btn_object_open3d_step4.setMinimumHeight(42)
             self.btn_object_open3d_rpc.setMinimumHeight(42)
             self.btn_object_open3d_file.setMinimumHeight(42)
@@ -271,6 +273,7 @@ def main() -> None:
             self.chk_sensor_video.setToolTip("Enable or disable video / eyes input")
             self.chk_sensor_contact.setToolTip("Enable or disable tactile / contact input")
             self.chk_sensor_imu.setToolTip("Enable or disable IMU / vestibular body input")
+            self.btn_sleep_replay.setToolTip("Toggle full sleep/replay mode by cutting or enabling all external sensors")
             self.btn_actions.setToolTip("Show or hide the action outputs window")
             self.btn_agent_actions_pyqt.setToolTip("Open or close the PyQt agent action imitation window")
             self.btn_object_image.setToolTip("Show or hide the inner object visualizer window")
@@ -344,6 +347,7 @@ def main() -> None:
             sensor_row.addWidget(self.chk_sensor_video, 0)
             sensor_row.addWidget(self.chk_sensor_contact, 0)
             sensor_row.addWidget(self.chk_sensor_imu, 0)
+            sensor_row.addWidget(self.btn_sleep_replay, 2)
             sensor_row.addWidget(self.btn_train, 2)
             viewers_lay.addLayout(sensor_row)
 
@@ -434,6 +438,7 @@ def main() -> None:
             self.chk_sensor_video.toggled.connect(lambda checked: self.set_sensor_gate("video", checked))
             self.chk_sensor_contact.toggled.connect(lambda checked: self.set_sensor_gate("contact", checked))
             self.chk_sensor_imu.toggled.connect(lambda checked: self.set_sensor_gate("imu", checked))
+            self.btn_sleep_replay.clicked.connect(self.toggle_sleep_replay_mode)
             self.btn_module_debug.clicked.connect(lambda: self.toggle("module_debug"))
             self.btn_module_lab.clicked.connect(self.open_m8_module_lab_window)
             self.btn_module_debug_pyqt.clicked.connect(self.open_pyqt_module_debug)
@@ -558,6 +563,7 @@ def main() -> None:
                 self.chk_sensor_video,
                 self.chk_sensor_contact,
                 self.chk_sensor_imu,
+                self.btn_sleep_replay,
                 self.btn_actions,
                 self.btn_object_image,
                 self.btn_event_code,
@@ -824,6 +830,7 @@ def main() -> None:
                 blocker = QtCore.QSignalBlocker(cb)
                 cb.setChecked(bool(checked))
                 del blocker
+            self._style_plain_status_button(self.btn_sleep_replay, self._sleep_mode_active(), "Сон / replay mode")
             self._style_button(self.btn_actions, s.actions, "Action outputs")
             
             self._style_button(self.btn_object_image, s.object_image, "Inner Object Visualizer")
@@ -901,6 +908,38 @@ def main() -> None:
                 sleep_contact_cut=mask["contact"],
                 sleep_imu_cut=mask["imu"],
             ))
+
+        def toggle_sleep_replay_mode(self):
+            if not self.state.connected:
+                self.status.setText("STATUS IPC: no signal")
+                self.refresh_ui()
+                return
+            enable_sleep = not self._sleep_mode_active()
+            sensors_enabled = not enable_sleep
+            self.state.video_sensor_enabled = sensors_enabled
+            self.state.contact_sensor_enabled = sensors_enabled
+            self.state.imu_sensor_enabled = sensors_enabled
+            sensors = {
+                "video": sensors_enabled,
+                "contact": sensors_enabled,
+                "imu": sensors_enabled,
+            }
+            mask = {k: not v for k, v in sensors.items()}
+            ok = self.send(make_set_state_message(
+                input_sensors_enabled=sensors,
+                sleep_sensor_mask=mask,
+                video_sensor_enabled=sensors_enabled,
+                contact_sensor_enabled=sensors_enabled,
+                imu_sensor_enabled=sensors_enabled,
+                sleep_video_cut=enable_sleep,
+                sleep_contact_cut=enable_sleep,
+                sleep_imu_cut=enable_sleep,
+            ))
+            self.status.setText(
+                f"Sleep / replay mode {'ON' if enable_sleep else 'OFF'}"
+                if ok else "Sleep / replay mode request failed"
+            )
+            self.refresh_ui()
 
         def open_pyqt_module_debug(self):
             self._refresh_pyqt_process_status(force=True)

@@ -32,3 +32,4 @@ def test_m04_long_dynamic_memory_contract():
     assert_tensor("dynamic_identity_context", packet["dynamic_identity_context"], (1, 256))
     assert_gate("dynamic_memory_gate", packet["dynamic_memory_gate"], 0.0, 1.0)
     assert packet["identity_token"] == "obj:test"
+    assert m4.cfg.blend_into_focus is False

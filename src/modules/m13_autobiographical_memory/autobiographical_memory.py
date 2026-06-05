@@ -73,7 +73,7 @@ class AutobiographicalMemoryConfig:
     max_episodes: int = 512
     retrieval_topk: int = 3
     write_every_steps: int = 1
-    blend_retrieved_into_focus: bool = True
+    blend_retrieved_into_focus: bool = False
     focus_blend: float = 0.20
     min_relevance_for_blend: float = 0.05
 

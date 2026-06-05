@@ -28,6 +28,7 @@ class SleepSensorsMixin:
         cfg_sleep = getattr(self.cfg, "sleep_sensors", None)
         state = str(getattr(cfg_sleep, "startup_state", "config")).lower().strip()
         old = self.input_sensors_enabled_dict_no_startup_apply()
+        old_sleep = (not old.get("video", True) and not old.get("contact", True) and not old.get("imu", True))
 
         print("SleepSensorsMixin: ------------------------> ", state)
 
@@ -56,7 +57,10 @@ class SleepSensorsMixin:
 
         self._startup_state_applied = True
         new = self.input_sensors_enabled_dict_no_startup_apply()
+        new_sleep = (not new.get("video", True) and not new.get("contact", True) and not new.get("imu", True))
         changed = old != new
+        if changed and (not old_sleep) and new_sleep:
+            self._zero_prev_motor_state_on_sleep_entry()
 
         print(
             "[startup_state] "
@@ -118,6 +122,39 @@ class SleepSensorsMixin:
         return {k: not bool(v) for k, v in enabled.items()}
 
 
+    def _zero_prev_motor_state_on_sleep_entry(self) -> None:
+        """
+        Clear one-step awake motor tail when entering full sleep/replay mode.
+
+        life_runtime reads prev_embodied_action / prev_hand_motor at the very
+        beginning of the next step. Without this reset, the first sleep frame
+        can still execute the last awake command before sleep_motor_guard runs.
+        """
+        zeroed = []
+        norms = {}
+        for attr in ("prev_embodied_action", "prev_hand_motor"):
+            value = getattr(self, attr, None)
+            if not torch.is_tensor(value):
+                continue
+            try:
+                norms[attr] = float(value.detach().float().norm().cpu().item())
+            except Exception:
+                norms[attr] = 0.0
+            setattr(self, attr, torch.zeros_like(value))
+            zeroed.append(attr)
+
+        self._sleep_replay_prev_motor_reset = {
+            "reason": "entered_full_sleep",
+            "zeroed": list(zeroed),
+            "norms": dict(norms),
+        }
+        if zeroed:
+            print(
+                "[sleep_replay] zeroed previous motor tail on sleep entry: "
+                + ", ".join(f"{k}={norms.get(k, 0.0):.4f}" for k in zeroed)
+            )
+
+
     def apply_sleep_sensor_state(self, state: dict) -> bool:
         """
         Accepts sensor-gate IPC from pyqt_module_debug_ipc_status.py.
@@ -140,6 +177,11 @@ class SleepSensorsMixin:
         self.apply_startup_state()
 
         old = self.input_sensors_enabled_dict_no_startup_apply()
+        old_sleep = (
+            not old.get("video", True)
+            and not old.get("contact", True)
+            and not old.get("imu", True)
+        )
 
         enabled = state.get("input_sensors_enabled")
         if isinstance(enabled, dict):
@@ -174,7 +216,14 @@ class SleepSensorsMixin:
             self.imu_sensor_enabled = not bool(state["sleep_imu_cut"])
 
         new = self.input_sensors_enabled_dict_no_startup_apply()
+        new_sleep = (
+            not new.get("video", True)
+            and not new.get("contact", True)
+            and not new.get("imu", True)
+        )
         changed = old != new
+        if changed and (not old_sleep) and new_sleep:
+            self._zero_prev_motor_state_on_sleep_entry()
         if changed:
             print(
                 "[ipc][sleep_sensors] "

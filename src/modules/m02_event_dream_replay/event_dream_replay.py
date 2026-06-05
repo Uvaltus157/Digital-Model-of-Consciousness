@@ -46,7 +46,10 @@ def pad_or_trim_replay(x: Optional[torch.Tensor], dim: int, *, device=None, dtyp
         x = x.unsqueeze(0)
     elif x.ndim > 2:
         x = x.reshape(x.shape[0], -1)
-    x = x.float()
+    x = x.to(
+        device=device if device is not None else x.device,
+        dtype=dtype or torch.float32,
+    )
     if x.shape[-1] == dim:
         return x
     if x.shape[-1] > dim:

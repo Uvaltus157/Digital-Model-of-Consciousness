@@ -21,3 +21,4 @@ def test_m13_autobiographical_memory_empty_and_retrieval_contract():
     assert_gate("retrieval_relevance", got["retrieval_relevance"], -1.0, 1.0)
     assert "summary" in got
     assert_tensor("retrieved_episode_count", got["retrieved_episode_count"])
+    assert m13.cfg.blend_retrieved_into_focus is False

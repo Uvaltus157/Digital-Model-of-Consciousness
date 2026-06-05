@@ -9,9 +9,15 @@ Run:
 
 import argparse
 import json
+import sys
+from pathlib import Path
 from typing import Any, Dict
 
 import torch
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.module_lab.module_fixture_factory import (
     FakePassportManager,
@@ -33,7 +39,16 @@ def f(x: Any) -> float:
         return 0.0
 
 
-def compute_m2_packet(*, panic: float, stress: float, curiosity: float, m13_relevance: float, m4_gate: float, dream_mode: bool = True) -> Dict[str, Any]:
+def compute_m2_packet(
+    *,
+    panic: float,
+    stress: float,
+    curiosity: float,
+    m13_relevance: float,
+    m4_gate: float,
+    dream_mode: bool = True,
+    include_event_memory: bool = True,
+) -> Dict[str, Any]:
     from src.modules.m02_event_dream_replay.event_dream_replay import EventDreamReplay, EventDreamReplayConfig
 
     out = make_fake_m5_out(curiosity=curiosity)
@@ -54,7 +69,8 @@ def compute_m2_packet(*, panic: float, stress: float, curiosity: float, m13_rele
         use_m4_context=True,
         seed_to_m5_boundary=True,
     ))
-    return m2.compute(out=out, event_memory=make_fake_event_memory(), dream_mode=dream_mode)
+    event_memory = make_fake_event_memory() if include_event_memory else None
+    return m2.compute(out=out, event_memory=event_memory, dream_mode=dream_mode)
 
 
 def scenario_calm_no_replay() -> Dict[str, Any]:
@@ -65,6 +81,7 @@ def scenario_calm_no_replay() -> Dict[str, Any]:
         m13_relevance=0.0,
         m4_gate=0.0,
         dream_mode=False,
+        include_event_memory=False,
     )
     return {
         "name": "calm_no_replay",

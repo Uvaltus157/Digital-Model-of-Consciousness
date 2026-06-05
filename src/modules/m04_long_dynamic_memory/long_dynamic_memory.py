@@ -52,7 +52,10 @@ def pad_or_trim_dynamic(x: Optional[torch.Tensor], dim: int, *, device=None, dty
         x = x.unsqueeze(0)
     elif x.ndim > 2:
         x = x.reshape(x.shape[0], -1)
-    x = x.float()
+    x = x.to(
+        device=device if device is not None else x.device,
+        dtype=dtype or torch.float32,
+    )
     if x.shape[-1] == dim:
         return x
     if x.shape[-1] > dim:
@@ -92,7 +95,7 @@ class LongDynamicMemoryConfig:
     enabled: bool = True
     context_dim: int = 256
     focus_blend: float = 0.18
-    blend_into_focus: bool = True
+    blend_into_focus: bool = False
     stability_threshold: float = 0.12
     novelty_threshold: float = 0.35
     use_passport_manager: bool = True

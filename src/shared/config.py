@@ -282,7 +282,7 @@ class LongDynamicMemoryRuntimeConfig:
     enabled: bool = True
     context_dim: int = 256
     focus_blend: float = 0.18
-    blend_into_focus: bool = True
+    blend_into_focus: bool = False
     stability_threshold: float = 0.12
     novelty_threshold: float = 0.35
     use_passport_manager: bool = True
@@ -315,7 +315,7 @@ class AutobiographicalMemoryRuntimeConfig:
     max_episodes: int = 512
     retrieval_topk: int = 3
     write_every_steps: int = 1
-    blend_retrieved_into_focus: bool = True
+    blend_retrieved_into_focus: bool = False
     focus_blend: float = 0.20
     min_relevance_for_blend: float = 0.05
     print_every_steps: int = 30
