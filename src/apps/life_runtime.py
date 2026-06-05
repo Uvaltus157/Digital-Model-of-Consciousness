@@ -87,6 +87,8 @@ class LifeRuntimeMixin(
         out0 = self.apply_manual_hand_action_dimension_override(out0)
         out0["leg_ctrl"] = self.compute_leg_control(out0)
         out0 = self.apply_manual_leg_action_override(out0)
+        if hasattr(self, "apply_sleep_motor_guard"):
+            out0 = self.apply_sleep_motor_guard(out0, stage="pre_observe")
         self.apply_bird_leg_controls(out0["leg_ctrl"])
 
         self.world.set_attention_drive(
@@ -139,6 +141,8 @@ class LifeRuntimeMixin(
                     print(f"[energy_resonator] compute skipped: {e}")
                     self._energy_resonator_warned = True
         out["self_core"] = self.compute_self_core(obs, out)
+        if hasattr(self, "apply_sleep_motor_guard"):
+            out = self.apply_sleep_motor_guard(out, stage="main")
         if hasattr(self, "maybe_print_energy_resonator_trace"):
             self.maybe_print_energy_resonator_trace(out)
         self._apply_conscious_action_guard(obs, out)
@@ -203,6 +207,8 @@ class LifeRuntimeMixin(
             self.maybe_print_event_dream_replay_trace(out)
         if hasattr(self, "maybe_print_autobiographical_memory_trace"):
             self.maybe_print_autobiographical_memory_trace(out)
+        if hasattr(self, "maybe_print_unconscious_loop_trace"):
+            self.maybe_print_unconscious_loop_trace(out, obs)
 
         if hasattr(self, "compute_metacognition"):
             try:

@@ -13,9 +13,11 @@ class EventDreamReplayRuntimeMixin:
         if hasattr(self, "event_dream_replay") and self.event_dream_replay is not None:
             return
         cfg_obj = getattr(self.cfg, "event_dream_replay", None)
+        self_core_cfg = getattr(self.cfg, "self_core", None)
+        default_context_dim = getattr(self_core_cfg, "focus_context_dim", 256)
         self.event_dream_replay = EventDreamReplay(EventDreamReplayConfig(
             enabled=bool(getattr(cfg_obj, "enabled", True)),
-            replay_context_dim=int(getattr(cfg_obj, "replay_context_dim", getattr(self.cfg.self_core, "focus_context_dim", 256))),
+            replay_context_dim=int(getattr(cfg_obj, "replay_context_dim", default_context_dim)),
             event_code_dim=int(getattr(cfg_obj, "event_code_dim", 8)),
             replay_threshold=float(getattr(cfg_obj, "replay_threshold", 0.35)),
             focus_blend=float(getattr(cfg_obj, "focus_blend", 0.15)),

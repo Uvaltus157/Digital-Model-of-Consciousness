@@ -33,6 +33,7 @@ Start order:
 """
 
 import argparse
+import json
 import os
 import time
 import subprocess
@@ -68,7 +69,7 @@ MODULE_TAB_BUTTONS = {
     "m3": [],
     "m6": [],
     "m7": ["btn_inner"],
-    "m8": ["btn_module_debug"],
+    "m8": ["btn_module_debug", "btn_module_lab"],
     "m14": ["btn_latent"],
 }
 
@@ -127,6 +128,8 @@ def main() -> None:
             self.open3d_slot_viewer_step4_proc = None
             self.open3d_slot_viewer_rpc_proc = None
             self.open3d_slot_viewer_proc = None
+            self.module_lab_window = None
+            self.module_lab_text = None
             self.module_debug_external_alive = False
             self.agent_actions_external_alive = False
             self._last_process_scan = 0.0
@@ -192,6 +195,7 @@ def main() -> None:
             self.btn_object_open3d_file = QtWidgets.QPushButton("Open3D file")
             self.btn_train = QtWidgets.QPushButton()
             self.btn_module_debug = QtWidgets.QPushButton()
+            self.btn_module_lab = QtWidgets.QPushButton("Run Module Lab")
             self.btn_module_debug_pyqt = QtWidgets.QPushButton("PyQt Module Debug")
             self.btn_agent_actions_pyqt = QtWidgets.QPushButton("PyQt Agent Actions Imit")
             self.btn_module_debug_pyqt.setObjectName("pyqtWindowButton")
@@ -257,6 +261,7 @@ def main() -> None:
             self.btn_stop.setMinimumHeight(42)
             self.btn_start_viewer.setMinimumHeight(42)
             self.btn_module_debug_pyqt.setMinimumHeight(42)
+            self.btn_module_lab.setMinimumHeight(42)
             self.btn_agent_actions_pyqt.setMinimumHeight(42)
             self.btn_object_open3d_step4.setMinimumHeight(42)
             self.btn_object_open3d_rpc.setMinimumHeight(42)
@@ -280,6 +285,8 @@ def main() -> None:
             self.btn_mujoco.setToolTip("Enable or disable the MuJoCo viewer on the next runner launch")
             self.btn_train.setToolTip("Enable or disable online training in the runner")
             self.btn_module_debug.setToolTip("Show or hide the runner-owned module debug visualizer")
+            self.btn_module_lab.setToolTip("Run module lab contracts/scenarios and show latest result")
+            self.btn_module_lab.setToolTip("Run M8 module lab contracts/scenarios inside the runner via IPC")
             self.btn_module_debug_pyqt.setToolTip("Open or close the registry-backed PyQt module debug window")
             self.btn_save_ply.setToolTip("Export the current internal 3D object model as a PLY file")
             self.btn_save_pcd.setToolTip("Export the current internal 3D object model as a PCD file")
@@ -428,6 +435,7 @@ def main() -> None:
             self.chk_sensor_contact.toggled.connect(lambda checked: self.set_sensor_gate("contact", checked))
             self.chk_sensor_imu.toggled.connect(lambda checked: self.set_sensor_gate("imu", checked))
             self.btn_module_debug.clicked.connect(lambda: self.toggle("module_debug"))
+            self.btn_module_lab.clicked.connect(self.open_m8_module_lab_window)
             self.btn_module_debug_pyqt.clicked.connect(self.open_pyqt_module_debug)
             self.btn_agent_actions_pyqt.clicked.connect(self.open_pyqt_agent_actions)
             self.btn_latent.clicked.connect(lambda: self.toggle("latent_semantic"))
@@ -557,6 +565,7 @@ def main() -> None:
                 self.btn_object_open3d,
                 self.btn_train,
                 self.btn_module_debug,
+                self.btn_module_lab,
                 self.btn_latent,
                 self.btn_save_ply,
                 self.btn_save_pcd,
@@ -838,6 +847,7 @@ def main() -> None:
             )
             self._style_train_button(self.btn_train, s.training)
             self._style_button(self.btn_module_debug, s.module_debug, "Module debug")
+            self._style_plain_status_button(self.btn_module_lab, False, "Module Lab")
             self._style_plain_status_button(
                 self.btn_module_debug_pyqt,
                 self._pyqt_window_alive(self.module_debug_proc, self.module_debug_external_alive),
@@ -852,6 +862,7 @@ def main() -> None:
             if not s.connected:
                 self.status.setText("STATUS IPC: no signal")
             self._set_runner_controls_enabled(s.connected)
+            self.refresh_module_lab_window()
 
         def toggle(self, field: str):
             if not self.state.connected:
@@ -1212,6 +1223,150 @@ def main() -> None:
                     self._reset_to_default()
                     self.status.setText(f"viewer start failed: {e2}")
                     print(f"[control] viewer start failed: {e2}")
+
+        def run_m8_module_lab(self):
+            if not self.state.connected:
+                self.status.setText("STATUS IPC: no signal")
+                self.refresh_ui()
+                return
+            ok = self.send(make_action_message(
+                "module_lab_run",
+                module="all",
+                source="m8_control_panel",
+            ))
+            if ok:
+                self.status.setText("M8 Module Lab requested")
+            else:
+                self.status.setText("M8 Module Lab request failed")
+            self.refresh_ui()
+
+        def _format_module_lab_result(self, result: dict) -> str:
+            if not isinstance(result, dict) or not result:
+                return (
+                    "Нет результата. Нажми одну из кнопок Run M*.\n\n"
+                    "Окно показывает last_module_lab_result из status IPC."
+                )
+            try:
+                return json.dumps(result, ensure_ascii=False, indent=2)
+            except Exception:
+                return str(result)
+
+        def refresh_module_lab_window(self):
+            text_widget = getattr(self, "module_lab_text", None)
+            if text_widget is None:
+                return
+            try:
+                if not self.module_lab_window or not self.module_lab_window.isVisible():
+                    return
+            except Exception:
+                return
+            result = {}
+            if isinstance(getattr(self, "last_status", None), dict):
+                result = self.last_status.get("last_module_lab_result", {}) or {}
+            text_widget.setPlainText(self._format_module_lab_result(result))
+
+        def request_m8_module_lab(self, module: str = "all"):
+            if not self.state.connected:
+                self.status.setText("STATUS IPC: no signal")
+                self.refresh_ui()
+                return
+            label = str(module)
+            if getattr(self, "module_lab_text", None) is not None:
+                self.module_lab_text.setPlainText(f"Запрос Module Lab: {label}\nЖду status IPC...")
+            ok = self.send(make_action_message(
+                "module_lab_run",
+                module=label,
+                source="m8_control_panel",
+            ))
+            if ok:
+                self.status.setText(f"M8 Module Lab requested: {label}")
+            else:
+                self.status.setText("M8 Module Lab request failed")
+            self.refresh_ui()
+
+        def open_m8_module_lab_window(self):
+            try:
+                if self.module_lab_window is not None and self.module_lab_window.isVisible():
+                    self.module_lab_window.raise_()
+                    self.module_lab_window.activateWindow()
+                    return
+            except Exception:
+                pass
+
+            dialog = QtWidgets.QDialog(self)
+            dialog.setWindowTitle("M8 Module Lab")
+            dialog.resize(820, 620)
+            dialog.setStyleSheet(
+                "QDialog { background: #0C121B; color: #DCE8F8; }"
+                "QLabel { color: #B7C5DA; background: transparent; font-weight: 700; }"
+                "QPlainTextEdit { background: #07101A; color: #DCE8F8; border: 1px solid #2B3A50; "
+                "border-radius: 10px; padding: 10px; font-family: Consolas, monospace; font-size: 11px; }"
+                "QPushButton { background: #1D2A3B; color: white; border: 1px solid #37507A; "
+                "border-radius: 10px; padding: 8px 12px; font-weight: 800; }"
+                "QPushButton:hover { background: #263B55; }"
+            )
+
+            lay = QtWidgets.QVBoxLayout(dialog)
+            lay.setContentsMargins(14, 14, 14, 14)
+            lay.setSpacing(10)
+
+            title = QtWidgets.QLabel(
+                "M8 Module Lab: отдельная проверка модулей и всего бессознательного контура"
+            )
+            title.setWordWrap(True)
+            lay.addWidget(title)
+
+            row1 = QtWidgets.QHBoxLayout()
+            row1.setSpacing(10)
+            btn_m2 = QtWidgets.QPushButton("Run M2 test")
+            btn_m4 = QtWidgets.QPushButton("Run M4 test")
+            btn_m11 = QtWidgets.QPushButton("Run M11 test")
+            btn_m13 = QtWidgets.QPushButton("Run M13 test")
+            for b in [btn_m2, btn_m4, btn_m11, btn_m13]:
+                b.setMinimumHeight(38)
+                row1.addWidget(b)
+            lay.addLayout(row1)
+
+            row2 = QtWidgets.QHBoxLayout()
+            row2.setSpacing(10)
+            btn_m5 = QtWidgets.QPushButton("Run M5Boundary test")
+            btn_loop = QtWidgets.QPushButton("Run unconscious loop test")
+            btn_scenarios = QtWidgets.QPushButton("Run behavioral scenarios")
+            btn_all = QtWidgets.QPushButton("Run all")
+            for b in [btn_m5, btn_loop, btn_scenarios, btn_all]:
+                b.setMinimumHeight(38)
+                row2.addWidget(b)
+            lay.addLayout(row2)
+
+            text = QtWidgets.QPlainTextEdit()
+            text.setReadOnly(True)
+            text.setMinimumHeight(410)
+            lay.addWidget(text)
+
+            close_row = QtWidgets.QHBoxLayout()
+            close_row.addStretch(1)
+            btn_close = QtWidgets.QPushButton("Close")
+            btn_close.setMinimumHeight(36)
+            close_row.addWidget(btn_close)
+            lay.addLayout(close_row)
+
+            self.module_lab_window = dialog
+            self.module_lab_text = text
+
+            btn_m2.clicked.connect(lambda: self.request_m8_module_lab("m02"))
+            btn_m4.clicked.connect(lambda: self.request_m8_module_lab("m4"))
+            btn_m11.clicked.connect(lambda: self.request_m8_module_lab("m11"))
+            btn_m13.clicked.connect(lambda: self.request_m8_module_lab("m13"))
+            btn_m5.clicked.connect(lambda: self.request_m8_module_lab("m05"))
+            btn_loop.clicked.connect(lambda: self.request_m8_module_lab("loop"))
+            btn_scenarios.clicked.connect(lambda: self.request_m8_module_lab("scenarios"))
+            btn_all.clicked.connect(lambda: self.request_m8_module_lab("all"))
+            btn_close.clicked.connect(dialog.close)
+
+            dialog.finished.connect(lambda _code: setattr(self, "module_lab_text", None))
+
+            self.refresh_module_lab_window()
+            dialog.show()
 
         def action(self, action: str):
             if not self.state.connected:

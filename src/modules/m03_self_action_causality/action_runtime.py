@@ -250,6 +250,32 @@ class ActionRuntimeMixin:
                 self.request_energy_resonator_imitation(payload)
             else:
                 print("[ipc] imit_action ignored: EnergyResonatorRuntimeMixin is not installed")
+        elif action == "module_lab_run":
+            try:
+                from src.modules.m08_debug_visual_control.module_lab_runtime import run_module_lab_from_payload
+
+                result = run_module_lab_from_payload(payload)
+                self.last_module_lab_result = result
+                status = "ok" if bool(result.get("ok", False)) else "fail"
+                print(
+                    "[module_lab] "
+                    f"status={status} module={result.get('module')} "
+                    f"kind={result.get('kind')} duration={result.get('duration_sec')}s"
+                )
+                if not bool(result.get("ok", False)):
+                    print(f"[module_lab] error={result.get('error', '')}")
+                if hasattr(self, "write_module_debug_status"):
+                    self.write_module_debug_status()
+            except Exception as e:
+                self.last_module_lab_result = {
+                    "ok": False,
+                    "module": str(payload.get("module", "all")) if isinstance(payload, dict) else "all",
+                    "kind": "module_lab",
+                    "error": str(e),
+                }
+                print(f"[module_lab] failed: {e}")
+                if hasattr(self, "write_module_debug_status"):
+                    self.write_module_debug_status()
         elif is_adaptive_gesture_command(action):
             self.start_adaptive_gesture_command(action)
         elif action == "fly_to_cube_palpate":

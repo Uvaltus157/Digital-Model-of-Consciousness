@@ -128,6 +128,7 @@ class ModuleStatusRuntimeMixin:
                 "last_train_reason": str(getattr(self, "last_train_reason", "")),
                 "last_train_loss": float(getattr(self, "last_train_loss", 0.0) or 0.0),
                 "last_train_error": str(getattr(self, "last_train_error", "")),
+                "last_module_lab_result": dict(getattr(self, "last_module_lab_result", {}) or {}),
                 "object_decoder_stats": dict(getattr(self, "latest_object_decoder_stats", {})),
                 "long_dynamic_memory_learning": dict(getattr(self, "latest_long_dynamic_memory_stats", {})),
                 "long_dynamic_memory_status": {

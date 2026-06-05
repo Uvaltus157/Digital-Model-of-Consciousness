@@ -44,8 +44,10 @@ from src.apps.unified_runtime_base import UnifiedRuntimeBase
 from src.modules.m01_object_imagery.inner_visual_runtime import InnerVisualRuntimeMixin
 from src.modules.m01_object_imagery.runtime import ObjectImageryRuntimeMixin
 from src.modules.m02_event_dream_replay.event_dream_runtime import EventDreamReplayRuntimeMixin
+from src.modules.m02_event_dream_replay.unconscious_loop_trace import UnconsciousLoopTraceRuntimeMixin
 from src.modules.m03_self_action_causality.action_outputs_window import ActionOutputsMixin
 from src.modules.m03_self_action_causality.action_runtime import ActionRuntimeMixin
+from src.modules.m03_self_action_causality.sleep_motor_guard import SleepMotorGuardRuntimeMixin
 from src.modules.m04_long_dynamic_memory.dynamic_object_passport_runtime import DynamicObjectPassportRuntimeMixin
 from src.modules.m04_long_dynamic_memory.long_dynamic_memory_runtime import LongDynamicMemoryRuntimeMixin
 from src.modules.m05_world_model_attention_workspace.tetra_dynamic_slot_diagnostic import TetraDynamicSlotDiagnosticMixin
@@ -80,11 +82,13 @@ class UnifiedSystem(
     CheckpointingMixin,
     ModuleStatusRuntimeMixin,
     ActionRuntimeMixin,
+    SleepMotorGuardRuntimeMixin,
     LegBirdRuntimeMixin,
     SelfCoreRuntimeMixin,
     DynamicObjectPassportRuntimeMixin,
     LongDynamicMemoryRuntimeMixin,
     EventDreamReplayRuntimeMixin,
+    UnconsciousLoopTraceRuntimeMixin,
     ThoughtChainRuntimeMixin,
     ConsciousLoopRuntimeMixin,
     GlobalBroadcastRuntimeMixin,
