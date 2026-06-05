@@ -250,6 +250,14 @@ class ActionRuntimeMixin:
                 self.request_energy_resonator_imitation(payload)
             else:
                 print("[ipc] imit_action ignored: EnergyResonatorRuntimeMixin is not installed")
+        elif action in ("dream_probe_inject", "dream_probe_clear"):
+            print(f"[dream_probe][ipc] action={action} payload={payload}")
+            if hasattr(self, "request_dream_probe"):
+                if action == "dream_probe_clear":
+                    payload = {"kind": "clear", **dict(payload or {})}
+                self.request_dream_probe(payload)
+            else:
+                print("[dream_probe] ignored: DreamProbeRuntimeMixin is not installed")
         elif action == "module_lab_run":
             try:
                 from src.modules.m08_debug_visual_control.module_lab_runtime import run_module_lab_from_payload

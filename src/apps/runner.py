@@ -44,6 +44,7 @@ from src.apps.unified_runtime_base import UnifiedRuntimeBase
 from src.modules.m01_object_imagery.inner_visual_runtime import InnerVisualRuntimeMixin
 from src.modules.m01_object_imagery.runtime import ObjectImageryRuntimeMixin
 from src.modules.m02_event_dream_replay.event_dream_runtime import EventDreamReplayRuntimeMixin
+from src.modules.m02_event_dream_replay.dream_probe_runtime import DreamProbeRuntimeMixin
 from src.modules.m02_event_dream_replay.unconscious_loop_trace import UnconsciousLoopTraceRuntimeMixin
 from src.modules.m03_self_action_causality.action_outputs_window import ActionOutputsMixin
 from src.modules.m03_self_action_causality.action_runtime import ActionRuntimeMixin
@@ -88,6 +89,7 @@ class UnifiedSystem(
     DynamicObjectPassportRuntimeMixin,
     LongDynamicMemoryRuntimeMixin,
     EventDreamReplayRuntimeMixin,
+    DreamProbeRuntimeMixin,
     UnconsciousLoopTraceRuntimeMixin,
     ThoughtChainRuntimeMixin,
     ConsciousLoopRuntimeMixin,

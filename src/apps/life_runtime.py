@@ -181,6 +181,14 @@ class LifeRuntimeMixin(
         out["decoded_report"] = decoded_report
         out["target_report"] = target_report
 
+        if hasattr(self, "apply_dream_probe_to_out"):
+            try:
+                out = self.apply_dream_probe_to_out(out, obs)
+            except Exception as e:
+                if not hasattr(self, "_dream_probe_warned"):
+                    print(f"[dream_probe] apply skipped: {e}")
+                    self._dream_probe_warned = True
+
         emotion = self.emotional_drive.compute(out, obs)
         out["emotion"] = emotion
         if isinstance(emotion.get("affect"), dict):

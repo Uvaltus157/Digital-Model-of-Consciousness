@@ -69,7 +69,7 @@ MODULE_TAB_BUTTONS = {
     "m3": [],
     "m6": [],
     "m7": ["btn_inner"],
-    "m8": ["btn_module_debug", "btn_module_lab"],
+    "m8": ["btn_module_debug", "btn_module_lab", "btn_sleep_replay_monitor"],
     "m14": ["btn_latent"],
 }
 
@@ -130,6 +130,9 @@ def main() -> None:
             self.open3d_slot_viewer_proc = None
             self.module_lab_window = None
             self.module_lab_text = None
+            self.sleep_replay_monitor_window = None
+            self.sleep_replay_monitor_labels = {}
+            self.sleep_replay_monitor_raw = None
             self.module_debug_external_alive = False
             self.agent_actions_external_alive = False
             self._last_process_scan = 0.0
@@ -196,6 +199,7 @@ def main() -> None:
             self.btn_train = QtWidgets.QPushButton()
             self.btn_module_debug = QtWidgets.QPushButton()
             self.btn_module_lab = QtWidgets.QPushButton("Run Module Lab")
+            self.btn_sleep_replay_monitor = QtWidgets.QPushButton("Sleep Replay Monitor")
             self.btn_module_debug_pyqt = QtWidgets.QPushButton("PyQt Module Debug")
             self.btn_agent_actions_pyqt = QtWidgets.QPushButton("PyQt Agent Actions Imit")
             self.btn_module_debug_pyqt.setObjectName("pyqtWindowButton")
@@ -263,6 +267,7 @@ def main() -> None:
             self.btn_start_viewer.setMinimumHeight(42)
             self.btn_module_debug_pyqt.setMinimumHeight(42)
             self.btn_module_lab.setMinimumHeight(42)
+            self.btn_sleep_replay_monitor.setMinimumHeight(42)
             self.btn_agent_actions_pyqt.setMinimumHeight(42)
             self.btn_sleep_replay.setMinimumHeight(42)
             self.btn_object_open3d_step4.setMinimumHeight(42)
@@ -289,6 +294,7 @@ def main() -> None:
             self.btn_train.setToolTip("Enable or disable online training in the runner")
             self.btn_module_debug.setToolTip("Show or hide the runner-owned module debug visualizer")
             self.btn_module_lab.setToolTip("Run module lab contracts/scenarios and show latest result")
+            self.btn_sleep_replay_monitor.setToolTip("Open live sleep/replay monitor for M1/M11/M13/M4/M2/M5/M3")
             self.btn_module_lab.setToolTip("Run M8 module lab contracts/scenarios inside the runner via IPC")
             self.btn_module_debug_pyqt.setToolTip("Open or close the registry-backed PyQt module debug window")
             self.btn_save_ply.setToolTip("Export the current internal 3D object model as a PLY file")
@@ -441,6 +447,7 @@ def main() -> None:
             self.btn_sleep_replay.clicked.connect(self.toggle_sleep_replay_mode)
             self.btn_module_debug.clicked.connect(lambda: self.toggle("module_debug"))
             self.btn_module_lab.clicked.connect(self.open_m8_module_lab_window)
+            self.btn_sleep_replay_monitor.clicked.connect(self.open_sleep_replay_monitor_window)
             self.btn_module_debug_pyqt.clicked.connect(self.open_pyqt_module_debug)
             self.btn_agent_actions_pyqt.clicked.connect(self.open_pyqt_agent_actions)
             self.btn_latent.clicked.connect(lambda: self.toggle("latent_semantic"))
@@ -572,6 +579,7 @@ def main() -> None:
                 self.btn_train,
                 self.btn_module_debug,
                 self.btn_module_lab,
+                self.btn_sleep_replay_monitor,
                 self.btn_latent,
                 self.btn_save_ply,
                 self.btn_save_pcd,
@@ -855,6 +863,7 @@ def main() -> None:
             self._style_train_button(self.btn_train, s.training)
             self._style_button(self.btn_module_debug, s.module_debug, "Module debug")
             self._style_plain_status_button(self.btn_module_lab, False, "Module Lab")
+            self._style_plain_status_button(self.btn_sleep_replay_monitor, self._sleep_mode_active(), "Sleep Replay Monitor")
             self._style_plain_status_button(
                 self.btn_module_debug_pyqt,
                 self._pyqt_window_alive(self.module_debug_proc, self.module_debug_external_alive),
@@ -870,6 +879,243 @@ def main() -> None:
                 self.status.setText("STATUS IPC: no signal")
             self._set_runner_controls_enabled(s.connected)
             self.refresh_module_lab_window()
+            self.refresh_sleep_replay_monitor_window()
+
+        def _sleep_replay_monitor_value(self, section: str, key: str, default=""):
+            monitor = {}
+            if isinstance(getattr(self, "last_status", None), dict):
+                monitor = self.last_status.get("sleep_replay_monitor", {}) or {}
+            if not isinstance(monitor, dict):
+                return default
+            sec = monitor.get(section, {})
+            if isinstance(sec, dict):
+                return sec.get(key, default)
+            return default
+
+        def _fmt_monitor_value(self, value):
+            if isinstance(value, float):
+                return f"{value:.3f}"
+            if isinstance(value, bool):
+                return "ON" if value else "OFF"
+            if value is None:
+                return ""
+            if isinstance(value, (list, tuple)):
+                return ", ".join(str(x) for x in value)
+            return str(value)
+
+        def refresh_sleep_replay_monitor_window(self):
+            labels = getattr(self, "sleep_replay_monitor_labels", {}) or {}
+            if not labels:
+                return
+            try:
+                if not self.sleep_replay_monitor_window or not self.sleep_replay_monitor_window.isVisible():
+                    return
+            except Exception:
+                return
+
+            monitor = {}
+            if isinstance(getattr(self, "last_status", None), dict):
+                monitor = self.last_status.get("sleep_replay_monitor", {}) or {}
+            if not isinstance(monitor, dict):
+                monitor = {}
+
+            header = labels.get("__header__")
+            if header is not None:
+                step = monitor.get("global_step", self.last_status.get("global_step", 0) if isinstance(self.last_status, dict) else 0)
+                state = monitor.get("sensor_state", self.last_status.get("sensor_state", "") if isinstance(self.last_status, dict) else "")
+                sleep = monitor.get("full_sleep", self.last_status.get("full_sleep", False) if isinstance(self.last_status, dict) else False)
+                header.setText(f"step={step} | state={state} | full_sleep={int(bool(sleep))}")
+
+            for name, label in labels.items():
+                if name.startswith("__"):
+                    continue
+                section, key = name.split(".", 1)
+                value = self._sleep_replay_monitor_value(section, key, "")
+                label.setText(self._fmt_monitor_value(value))
+
+            raw = getattr(self, "sleep_replay_monitor_raw", None)
+            if raw is not None:
+                try:
+                    raw.setPlainText(json.dumps(monitor, ensure_ascii=False, indent=2))
+                except Exception:
+                    raw.setPlainText(str(monitor))
+
+        def request_sleep_replay_probe(self, kind: str, intensity: float = 0.8, duration: int = 80):
+            if not self.state.connected:
+                self.status.setText("STATUS IPC: no signal")
+                self.refresh_ui()
+                return
+            payload_kind = str(kind)
+            ok = self.send(make_action_message(
+                "dream_probe_inject",
+                kind=payload_kind,
+                intensity=float(intensity),
+                duration=int(duration),
+                source="m8_sleep_replay_monitor",
+            ))
+            self.status.setText(
+                f"Dream probe requested: {payload_kind}" if ok else "Dream probe request failed"
+            )
+            self.refresh_ui()
+
+        def open_sleep_replay_monitor_window(self):
+            try:
+                if self.sleep_replay_monitor_window is not None and self.sleep_replay_monitor_window.isVisible():
+                    self.sleep_replay_monitor_window.raise_()
+                    self.sleep_replay_monitor_window.activateWindow()
+                    return
+            except Exception:
+                pass
+
+            dialog = QtWidgets.QDialog(self)
+            dialog.setWindowTitle("M8 Sleep Replay Monitor")
+            dialog.resize(880, 720)
+            dialog.setStyleSheet(
+                "QDialog { background:#0C121B; color:#DCE8F8; }"
+                "QLabel { color:#DCE8F8; background:transparent; }"
+                "QGroupBox { background:#101722; border:1px solid #243145; border-radius:12px; "
+                "margin-top:12px; padding:10px; color:#B7C5DA; font-weight:800; }"
+                "QGroupBox::title { subcontrol-origin: margin; left:10px; padding:0 6px; }"
+                "QPlainTextEdit { background:#07101A; color:#DCE8F8; border:1px solid #2B3A50; "
+                "border-radius:10px; padding:8px; font-family:Consolas, monospace; font-size:11px; }"
+                "QPushButton { background:#1D2A3B; color:white; border:1px solid #37507A; "
+                "border-radius:10px; padding:8px 12px; font-weight:800; }"
+            )
+
+            main = QtWidgets.QVBoxLayout(dialog)
+            main.setContentsMargins(14, 14, 14, 14)
+            main.setSpacing(10)
+
+            title = QtWidgets.QLabel("Sleep Replay Monitor: M1 → M5 → M11 → M2 → M5, M4/M13 → M2, M3 blocked")
+            title.setWordWrap(True)
+            title.setStyleSheet("font-weight:900; color:#D2A8FF;")
+            main.addWidget(title)
+
+            header = QtWidgets.QLabel("")
+            header.setStyleSheet("font-weight:900; color:#FFD36D;")
+            main.addWidget(header)
+
+            probe_row = QtWidgets.QHBoxLayout()
+            probe_row.setSpacing(8)
+            btn_probe_curiosity = QtWidgets.QPushButton("Probe curiosity")
+            btn_probe_stress = QtWidgets.QPushButton("Probe stress")
+            btn_probe_replay = QtWidgets.QPushButton("Probe replay seed")
+            btn_probe_mixed = QtWidgets.QPushButton("Probe mixed")
+            btn_probe_clear = QtWidgets.QPushButton("Clear probe")
+            for b in [btn_probe_curiosity, btn_probe_stress, btn_probe_replay, btn_probe_mixed, btn_probe_clear]:
+                b.setMinimumHeight(34)
+                probe_row.addWidget(b)
+            main.addLayout(probe_row)
+
+
+            labels = {"__header__": header}
+
+            def add_box(title_text, rows):
+                box = QtWidgets.QGroupBox(title_text)
+                grid = QtWidgets.QGridLayout(box)
+                grid.setHorizontalSpacing(12)
+                grid.setVerticalSpacing(6)
+                for r, (label_text, name) in enumerate(rows):
+                    k = QtWidgets.QLabel(label_text)
+                    k.setStyleSheet("color:#8FA4BF; font-weight:800;")
+                    v = QtWidgets.QLabel("")
+                    v.setStyleSheet("color:#FFFFFF; font-weight:900;")
+                    v.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+                    grid.addWidget(k, r, 0)
+                    grid.addWidget(v, r, 1)
+                    labels[name] = v
+                return box
+
+            row1 = QtWidgets.QHBoxLayout()
+            row1.setSpacing(10)
+            row1.addWidget(add_box("M1 sensors", [
+                ("state", "m1.state"),
+                ("video_on", "m1.video_on"),
+                ("contact_on", "m1.contact_on"),
+                ("imu_on", "m1.imu_on"),
+            ]))
+            row1.addWidget(add_box("M11 affect + Δ / trend", [
+                ("valence", "m11.valence"),
+                ("arousal", "m11.arousal"),
+                ("stress", "m11.stress"),
+                ("panic", "m11.panic"),
+                ("curiosity", "m11.curiosity"),
+                ("Δ stress", "m11_delta.stress"),
+                ("Δ panic", "m11_delta.panic"),
+                ("Δ curiosity", "m11_delta.curiosity"),
+                ("trend", "m11_activity.trend"),
+                ("change_score", "m11_activity.change_score"),
+            ]))
+            main.addLayout(row1)
+
+            row2 = QtWidgets.QHBoxLayout()
+            row2.setSpacing(10)
+            row2.addWidget(add_box("M13 autobiographical retrieval", [
+                ("relevance", "m13.relevance"),
+                ("episodes", "m13.episodes"),
+                ("summary", "m13.summary"),
+            ]))
+            row2.addWidget(add_box("M4 dynamic identity", [
+                ("token", "m4.token"),
+                ("gate", "m4.gate"),
+                ("stability", "m4.stability"),
+                ("novelty", "m4.novelty"),
+                ("sentence", "m4.sentence"),
+            ]))
+            main.addLayout(row2)
+
+            row3 = QtWidgets.QHBoxLayout()
+            row3.setSpacing(10)
+            row3.addWidget(add_box("M2 event/dream replay", [
+                ("replay_gate", "m2.replay_gate"),
+                ("should_replay", "m2.should_replay"),
+                ("dream_pressure", "m2.dream_pressure"),
+                ("event_salience", "m2.event_salience"),
+                ("source", "m2.source"),
+                ("identity", "m2.identity"),
+            ]))
+            row3.addWidget(add_box("Dream probe", [
+                ("active", "dream_probe.active"),
+                ("kind", "dream_probe.kind"),
+                ("remaining", "dream_probe.remaining"),
+                ("pulse", "dream_probe.pulse"),
+                ("intensity", "dream_probe.intensity"),
+            ]))
+            row3.addWidget(add_box("M5 seed + M3 guard", [
+                ("seed_gate", "m5.seed_gate"),
+                ("seed_norm", "m5.seed_norm"),
+                ("feedback_gate", "m5.feedback_gate"),
+                ("m3 sleep_blocked", "m3.sleep_blocked"),
+                ("blocked_norm", "m3.blocked_norm"),
+                ("blocked_keys", "m3.blocked_keys"),
+            ]))
+            main.addLayout(row3)
+
+            raw = QtWidgets.QPlainTextEdit()
+            raw.setReadOnly(True)
+            raw.setMinimumHeight(160)
+            main.addWidget(raw)
+
+            close_row = QtWidgets.QHBoxLayout()
+            close_row.addStretch(1)
+            btn_close = QtWidgets.QPushButton("Close")
+            close_row.addWidget(btn_close)
+            main.addLayout(close_row)
+
+            self.sleep_replay_monitor_window = dialog
+            self.sleep_replay_monitor_labels = labels
+            self.sleep_replay_monitor_raw = raw
+            btn_probe_curiosity.clicked.connect(lambda: self.request_sleep_replay_probe("curiosity", 0.85, 80))
+            btn_probe_stress.clicked.connect(lambda: self.request_sleep_replay_probe("stress", 0.85, 80))
+            btn_probe_replay.clicked.connect(lambda: self.request_sleep_replay_probe("replay_seed", 0.75, 60))
+            btn_probe_mixed.clicked.connect(lambda: self.request_sleep_replay_probe("mixed", 0.75, 80))
+            btn_probe_clear.clicked.connect(lambda: self.request_sleep_replay_probe("clear", 0.0, 1))
+            btn_close.clicked.connect(dialog.close)
+            dialog.finished.connect(lambda _code: setattr(self, "sleep_replay_monitor_labels", {}))
+            dialog.finished.connect(lambda _code: setattr(self, "sleep_replay_monitor_raw", None))
+
+            self.refresh_sleep_replay_monitor_window()
+            dialog.show()
 
         def toggle(self, field: str):
             if not self.state.connected:
