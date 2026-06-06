@@ -45,6 +45,7 @@ Output:
 
 Rule:
     imit z_obj latents must not be forced through raw sensory fusion.
+    M1 imit z_obj latents must not be forced through raw sensory fusion.
 ```
 
 ### M2 Event Dream Replay
@@ -79,6 +80,7 @@ Output:
 
 Rule:
     in sleep/replay mode outward motor output must remain blocked.
+    M3 blocks outward motor output in sleep/replay.
 ```
 
 ### M5 World Model
@@ -97,6 +99,7 @@ Output:
 
 Rule:
     seeds pass through FocusFeedbackBoundary.
+    M5 seeds pass through FocusFeedbackBoundary.
 ```
 
 ### M7 Inner Speech
@@ -115,6 +118,7 @@ Output:
 
 Rule:
     M7 verbalizes selected content; it does not drive M3 directly.
+    M7 verbalizes, does not drive M3 directly.
 ```
 
 ### M10 Global Conscious Broadcast
@@ -138,6 +142,7 @@ Output:
 
 Rule:
     M10 selects and broadcasts; it does not mutate memory or motor output directly.
+    M10 selects/broadcasts, does not mutate memory/motor directly.
 ```
 
 ### M12 Metacognition
@@ -179,6 +184,24 @@ Output:
 
 Rule:
     M15 uses the common M5 seed bus and FocusFeedbackBoundary.
+    M15 uses common M5 seed bus and does not write focus_context directly.
+```
+
+### M9 Self Core
+
+```text
+Input:
+    M5 focus_context
+    body/self state
+    ownership/agency signals
+
+Output:
+    self_state
+    agency_grounding
+    body_ownership_grounding
+
+Rule:
+    M9 grounds conscious content in I/body/agency.
 ```
 
 ### M8 Debug Visual Control

@@ -109,6 +109,8 @@ def test_m5_latent_prototype_control_panel_contract():
     assert "self.refresh_m5_latent_prototype_window()" in source
     assert "m5_latent_prototype_inject" in source
     assert 'source="m8_m5_latent_prototype_window"' in source
+    assert '"m5": ["btn_m5_learning_quality", "btn_m5_latent_prototype"]' in source
+    assert '"m8": ["btn_module_debug", "btn_module_lab", "btn_sleep_replay_monitor", "btn_replay_quality_monitor"]' in source
     assert "Inject cube latent" in source
     assert "Inject tetrahedron latent" in source
     assert "Inject cube↔tetra morph" in source

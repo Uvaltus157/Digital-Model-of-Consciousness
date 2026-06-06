@@ -28,9 +28,13 @@ M11 probe: stress/relief/curiosity
 M13 imit: selected episode
 M2 imit: replay material
 M10 imit: conscious broadcast packet
+M10 conscious broadcast probe
 M7 imit: inner speech text
+M7 inner speech probe
 M15 imit: imagined rollout/candidate plan
+M15 counterfactual planning probe
 M12 imit: confidence/uncertainty
+M12 confidence/uncertainty probe
 ```
 
 ## Level 3 — downstream behavior as if trained

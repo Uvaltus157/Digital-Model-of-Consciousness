@@ -58,18 +58,23 @@ MODULE_TAB_BUTTONS = {
     "m1": [
         "btn_object_image",
         "btn_object_open3d",
-        "btn_object_open3d_rpc",
-        "btn_object_open3d_step4",
-        "btn_object_open3d_file",
         "btn_save_ply",
         "btn_save_pcd",
         "btn_static_dynamic",
+        "btn_m1_object_slot_imit",
     ],
-    "m2": ["btn_event_code", "btn_m2_scenario_imit"],
+    "m2": [
+        "btn_event_code",
+        "btn_m2_scenario_imit",
+        "btn_object_open3d_rpc",
+        "btn_object_open3d_step4",
+        "btn_object_open3d_file",
+    ],
     "m3": [],
+    "m5": ["btn_m5_learning_quality", "btn_m5_latent_prototype"],
     "m6": [],
     "m7": ["btn_inner"],
-    "m8": ["btn_module_debug", "btn_module_lab", "btn_sleep_replay_monitor", "btn_replay_quality_monitor", "btn_m5_learning_quality", "btn_m5_latent_prototype", "btn_m1_object_slot_imit"],
+    "m8": ["btn_module_debug", "btn_module_lab", "btn_sleep_replay_monitor", "btn_replay_quality_monitor"],
     "m14": ["btn_latent"],
 }
 
@@ -1769,7 +1774,16 @@ def main() -> None:
             dialog.show()
             self.refresh_ui()
 
-        def request_m2_scenario_imit(self, kind: str, *, slot: int | None = None, density: int = 1, alpha: float = 0.5):
+        def request_m2_scenario_imit(
+            self,
+            kind: str,
+            *,
+            slot: int | None = None,
+            density: int = 1,
+            alpha: float = 0.5,
+            frames: int | None = None,
+            amplitude: float | None = None,
+        ):
             if not self.state.connected:
                 self.status.setText("STATUS IPC: no signal")
                 self.refresh_ui()
@@ -1782,6 +1796,10 @@ def main() -> None:
             }
             if slot is not None:
                 payload["slot"] = int(slot)
+            if frames is not None:
+                payload["frames"] = int(frames)
+            if amplitude is not None:
+                payload["amplitude"] = float(amplitude)
             action = "m2_scenario_imit_clear" if str(kind) == "clear" else "m2_scenario_imit_inject"
             ok = self.send(make_action_message(action, **payload))
             self.status.setText(
@@ -1806,6 +1824,11 @@ def main() -> None:
                 data = {}
 
             rpc = data.get("rpc", {}) if isinstance(data.get("rpc", {}), dict) else {}
+            inner_object_slots = data.get("inner_object_slots", {}) if isinstance(data.get("inner_object_slots", {}), dict) else {}
+            timeline = data.get("timeline", {}) if isinstance(data.get("timeline", {}), dict) else {}
+            tmetrics = timeline.get("timeline", {}) if isinstance(timeline.get("timeline", {}), dict) else {}
+            dmetrics = timeline.get("deformation", {}) if isinstance(timeline.get("deformation", {}), dict) else {}
+            pmetrics = timeline.get("playback", {}) if isinstance(timeline.get("playback", {}), dict) else {}
             streamer = data.get("streamer", {}) if isinstance(data.get("streamer", {}), dict) else {}
             slots = streamer.get("slots", {}) if isinstance(streamer.get("slots", {}), dict) else {}
 
@@ -1828,6 +1851,14 @@ def main() -> None:
                 "slot_1_points": rpc.get("slot_1_points", (slots.get("1", {}) or {}).get("raw_points", 0)),
                 "slot_0_name": (slots.get("0", {}) or {}).get("target_name", ""),
                 "slot_1_name": (slots.get("1", {}) or {}).get("target_name", ""),
+                "inner_object_sync": inner_object_slots.get("updated", False),
+                "inner_object_selected_slot": inner_object_slots.get("selected_slot", ""),
+                "timeline_frames": timeline.get("frames", tmetrics.get("frame_count", 0)),
+                "timeline_motion": tmetrics.get("motion_norm", 0.0),
+                "timeline_span": tmetrics.get("temporal_span", 0),
+                "deformation_valid": dmetrics.get("valid", False),
+                "deformation_delta": dmetrics.get("pred_delta_norm", 0.0),
+                "playback_valid": pmetrics.get("valid", pmetrics.get("render_valid", False)),
                 "layout": data.get("layout", ""),
             }
             for key, label in labels.items():
@@ -1887,8 +1918,11 @@ def main() -> None:
             btn_cube = QtWidgets.QPushButton("Cube → RPC slot0")
             btn_tetra = QtWidgets.QPushButton("Tetra → RPC slot1")
             btn_morph = QtWidgets.QPushButton("Morph → RPC slot1")
+            btn_4d_move = QtWidgets.QPushButton("4D Cube Move")
+            btn_4d_morph = QtWidgets.QPushButton("4D Morph")
+            btn_4d_circle = QtWidgets.QPushButton("4D Circle")
             btn_clear = QtWidgets.QPushButton("Clear")
-            for b in [btn_fill, btn_cube, btn_tetra, btn_morph, btn_clear]:
+            for b in [btn_fill, btn_cube, btn_tetra, btn_morph, btn_4d_move, btn_4d_morph, btn_4d_circle, btn_clear]:
                 b.setMinimumHeight(36)
                 row.addWidget(b)
             main.addLayout(row)
@@ -1906,6 +1940,14 @@ def main() -> None:
                 ("slot_0_name", "slot_0_name"),
                 ("slot_1_points", "slot_1_points"),
                 ("slot_1_name", "slot_1_name"),
+                ("inner_object_sync", "inner_object_sync"),
+                ("inner_object_selected_slot", "inner_object_selected_slot"),
+                ("timeline_frames", "timeline_frames"),
+                ("timeline_motion", "timeline_motion"),
+                ("timeline_span", "timeline_span"),
+                ("deformation_valid", "deformation_valid"),
+                ("deformation_delta", "deformation_delta"),
+                ("playback_valid", "playback_valid"),
                 ("layout", "layout"),
                 ("target", "target"),
                 ("source", "source"),
@@ -1941,6 +1983,9 @@ def main() -> None:
             btn_cube.clicked.connect(lambda: self.request_m2_scenario_imit("cube", slot=0, density=1))
             btn_tetra.clicked.connect(lambda: self.request_m2_scenario_imit("tetrahedron", slot=1, density=1))
             btn_morph.clicked.connect(lambda: self.request_m2_scenario_imit("morph", slot=1, density=1, alpha=0.5))
+            btn_4d_move.clicked.connect(lambda: self.request_m2_scenario_imit("4d_cube_move", slot=0, density=1, frames=48, amplitude=0.85))
+            btn_4d_morph.clicked.connect(lambda: self.request_m2_scenario_imit("4d_morph", slot=0, density=1, frames=48, amplitude=0.65, alpha=0.5))
+            btn_4d_circle.clicked.connect(lambda: self.request_m2_scenario_imit("4d_circle", slot=0, density=1, frames=72, amplitude=0.75))
             btn_clear.clicked.connect(lambda: self.request_m2_scenario_imit("clear"))
             btn_close.clicked.connect(dialog.close)
             dialog.finished.connect(lambda _code: self._clear_m2_scenario_imit_window_refs())

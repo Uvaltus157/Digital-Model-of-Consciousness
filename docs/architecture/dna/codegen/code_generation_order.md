@@ -15,7 +15,9 @@ src/platform/
 tests/
 ```
 
-## Phase 1 — shared config and types
+## Phase 1 — shared config/types
+
+Alias: shared config and types.
 
 ```text
 src/shared/config.py
@@ -24,7 +26,9 @@ src/shared/tensor_utils.py
 src/shared/event_bus/
 ```
 
-## Phase 2 — M8 status and IPC first
+## Phase 2 — M8 status/IPC first
+
+Alias: M8 status and IPC first.
 
 Build observability before model intelligence:
 
@@ -43,7 +47,9 @@ TrainGate
 M3 ActionGuard
 ```
 
-## Phase 4 — M1 object slot path
+## Phase 4 — M1 object slots
+
+Alias: M1 object slot path.
 
 ```text
 ObjectSlotMemory

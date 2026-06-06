@@ -18,6 +18,8 @@ latent/content comparison passes
 imit can be disabled
 ```
 
+Required phrase: imit output contract → trained output contract.
+
 ## M1 training target
 
 Goal:
@@ -85,7 +87,9 @@ coherence_delta > 0
 identity_stability_delta > 0
 ```
 
-## Conscious training target
+## M10/M7/M15/M12 conscious training target
+
+Alias: Conscious training target.
 
 ### M10
 
@@ -121,6 +125,8 @@ action outcome prediction
 ```
 
 ## Guard
+
+Required phrase: guards must not be disabled.
 
 Training must never disable:
 

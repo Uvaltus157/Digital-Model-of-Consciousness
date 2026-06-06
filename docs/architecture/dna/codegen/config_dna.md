@@ -21,7 +21,17 @@ training:
   online: false
 ```
 
+Required scalar paths:
+
+```text
+object_image.latent_dim
+object_image.num_slots
+self_core.focus_context_dim
+```
+
 ## Sleep / replay
+
+Required phrase: sleep gates.
 
 ```yaml
 sleep:
@@ -34,7 +44,7 @@ sleep:
   keep_m2_active: true
 ```
 
-## Sensor mask
+## sensor mask
 
 ```yaml
 sleep_sensor_mask:
@@ -43,7 +53,7 @@ sleep_sensor_mask:
   imu: false
 ```
 
-## Imitators
+## imitators
 
 ```yaml
 imitators:
@@ -61,7 +71,7 @@ imitators:
     default_duration: 160
 ```
 
-## Debug UI
+## debug_ui
 
 ```yaml
 debug_ui:

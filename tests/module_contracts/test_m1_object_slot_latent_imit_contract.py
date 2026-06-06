@@ -31,6 +31,15 @@ class DummyProgressiveSystem(DummySystem):
 
     _run_progressive_inner_object_system = ObjectImageryRuntimeMixin._run_progressive_inner_object_system
     _memory_update_forced_slot = ObjectImageryRuntimeMixin._memory_update_forced_slot
+    _attach_slot_4d_playback_tensors = ObjectImageryRuntimeMixin._attach_slot_4d_playback_tensors
+    _inner_object_requested_display_slot = ObjectImageryRuntimeMixin._inner_object_requested_display_slot
+    _sync_inner_object_requested_slot_from_viz = ObjectImageryRuntimeMixin._sync_inner_object_requested_slot_from_viz
+    _m1_imit_shape_kind_for_slot = ObjectImageryRuntimeMixin._m1_imit_shape_kind_for_slot
+    _m1_imit_shape_kind_from_latent = ObjectImageryRuntimeMixin._m1_imit_shape_kind_from_latent
+    _inner_object_open3d_display_obj = ObjectImageryRuntimeMixin._inner_object_open3d_display_obj
+    _inner_object_selected_slot_is_empty = ObjectImageryRuntimeMixin._inner_object_selected_slot_is_empty
+    _empty_inner_object_open3d_display_obj = ObjectImageryRuntimeMixin._empty_inner_object_open3d_display_obj
+    _scalar_debug_slot = ObjectImageryRuntimeMixin._scalar_debug_slot
 
     def __init__(self):
         super().__init__()
@@ -220,6 +229,163 @@ def test_m1_imit_open3d_fallback_generates_visible_primitives():
     assert morph_cols.shape == morph_pts.shape
     assert not np.allclose(cube_pts[: min(len(cube_pts), len(tetra_pts))], tetra_pts[: min(len(cube_pts), len(tetra_pts))])
 
+def test_inner_object_packet_attaches_existing_4d_playback_preview_tensors():
+    system = DummyProgressiveSystem()
+    system._slot_4d_latest_metrics = {"frame_count": 8, "motion_norm": 0.12, "temporal_span": 7, "gaussian_count": 128}
+    system._slot_4d_deformation_latest_metrics = {"updates": 1, "pred_delta_norm": 0.05, "sample_count": 64, "loss": 0.001}
+    system._slot_4d_playback_latest_metrics = {
+        "slot_id": 0,
+        "frame_count": 1,
+        "playback_phase": 0.25,
+        "pred_delta_norm": 0.05,
+        "render_valid": True,
+        "deformation_used": True,
+        "preview_fps": 30.0,
+    }
+    system.slot_4d_playback_renderer = SimpleNamespace(last_preview={
+        0: {
+            "rgb": torch.ones(16, 16, 3),
+            "depth": torch.ones(16, 16, 1) * 0.5,
+            "alpha": torch.ones(16, 16, 1),
+        }
+    })
+
+    obj = system._attach_slot_4d_playback_tensors({
+        "z_obj": torch.zeros(1, 128),
+        "confidence": torch.ones(1, 1),
+    })
+
+    assert float(obj["slot_4d_playback_render_valid"].item()) == 1.0
+    assert float(obj["slot_4d_playback_deformation_used"].item()) == 1.0
+    assert tuple(obj["slot_4d_playback_rgb"].shape) == (1, 3, 16, 16)
+    assert tuple(obj["slot_4d_playback_depth"].shape) == (1, 1, 16, 16)
+    assert tuple(obj["slot_4d_playback_alpha"].shape) == (1, 1, 16, 16)
+
+def test_inner_object_open3d_viewer_is_pure_mirror_without_slot_input_state():
+    source = Path("src/modules/m01_object_imagery/inner_object_open3d_viewer.py").read_text(encoding="utf-8")
+    assert "VisualizerWithKeyCallback" not in source
+    assert "register_key_callback" not in source
+    assert "requested_slot_index" not in source
+    assert "slot_selection_version" not in source
+
+def test_m1_imit_open3d_display_follows_selected_slot():
+    system = DummyProgressiveSystem()
+    system.request_m1_object_slot_latents({"kind":"cube_tetra","duration":5,"cube_slot":1,"tetra_slot":2,"selected_slot":2,"auto_select_slot":True})
+    proposals = system.get_m1_imit_inner_object_proposals(torch.zeros(1, 12))
+    system._inner_object_proposal_target_slots = list(proposals["target_slots"])
+    system._inner_object_proposal_kinds = list(proposals["proposal_kinds"])
+    system._inner_object_proposal_target_names = list(proposals["target_names"])
+
+    decoded = system._run_progressive_inner_object_system(
+        system.inner_object_system.initial_state(batch_size=1, device=system.device),
+        proposals["proposals"],
+        torch.zeros(1, 50),
+        torch.zeros(1, 12),
+        torch.zeros(1, 34),
+        torch.zeros(1, 18),
+        dream_mode=True,
+    )
+
+    system.inner_object_viz.requested_dream_slot_index = 1
+    cube_obj = system._inner_object_open3d_display_obj(decoded)
+    assert int(cube_obj["active_slot_index"].reshape(-1)[0].item()) == 1
+    assert int(cube_obj["open3d_display_slot"].reshape(-1)[0].item()) == 1
+    assert cube_obj["debug_imit_fallback_shape"] is True
+    assert cube_obj["debug_imit_shape_kind"] == "cube"
+
+    system.inner_object_viz.requested_dream_slot_index = 2
+    tetra_obj = system._inner_object_open3d_display_obj(decoded)
+    assert int(tetra_obj["active_slot_index"].reshape(-1)[0].item()) == 2
+    assert int(tetra_obj["open3d_display_slot"].reshape(-1)[0].item()) == 2
+    assert tetra_obj["debug_imit_fallback_shape"] is True
+    assert tetra_obj["debug_imit_shape_kind"] == "tetrahedron"
+
+def test_m1_imit_open3d_display_uses_current_frame_requested_slot_marker():
+    system = DummyProgressiveSystem()
+    system.request_m1_object_slot_latents({"kind":"cube_tetra","duration":5,"cube_slot":1,"tetra_slot":2,"selected_slot":2,"auto_select_slot":True})
+    proposals = system.get_m1_imit_inner_object_proposals(torch.zeros(1, 12))
+    system._inner_object_proposal_target_slots = list(proposals["target_slots"])
+    system._inner_object_proposal_kinds = list(proposals["proposal_kinds"])
+    system._inner_object_proposal_target_names = list(proposals["target_names"])
+
+    decoded = system._run_progressive_inner_object_system(
+        system.inner_object_system.initial_state(batch_size=1, device=system.device),
+        proposals["proposals"],
+        torch.zeros(1, 50),
+        torch.zeros(1, 12),
+        torch.zeros(1, 34),
+        torch.zeros(1, 18),
+        dream_mode=True,
+    )
+
+    system.inner_object_viz.requested_dream_slot_index = None
+    system._ipc_inner_object_dream_slot_index = None
+    decoded["_requested_dream_slot_index"] = 1
+    cube_obj = system._inner_object_open3d_display_obj(decoded)
+    assert int(cube_obj["open3d_display_slot"].reshape(-1)[0].item()) == 1
+    assert cube_obj["debug_imit_shape_kind"] == "cube"
+
+def test_m1_imit_open3d_selected_slot_does_not_inherit_active_tetra_debug_kind():
+    system = DummyProgressiveSystem()
+    cube_z, _ = system.make_m1_object_slot_latent("cube", device=system.device, dim=128)
+    tetra_z, _ = system.make_m1_object_slot_latent("tetrahedron", device=system.device, dim=128)
+    state = system.inner_object_system.initial_state(batch_size=1, device=system.device)
+    state["z_obj_slots"][:, 1, :] = cube_z
+    state["z_obj_slots"][:, 2, :] = tetra_z
+    state["confidence_slots"][:, 1, :] = 1.0
+    state["confidence_slots"][:, 2, :] = 1.0
+    state["active_slot_index"] = torch.tensor([[2]], device=system.device, dtype=torch.long)
+    decoded = system.inner_object_system.decode_z(tetra_z, state)
+    decoded["z_obj_slots"] = state["z_obj_slots"]
+    decoded["confidence_slots"] = state["confidence_slots"]
+    decoded["active_slot_index"] = state["active_slot_index"]
+    decoded["debug_imit_fallback_shape"] = True
+    decoded["debug_imit_source"] = "m1_object_slot_imit"
+    decoded["debug_imit_shape_kind"] = "tetrahedron"
+
+    system.inner_object_viz.requested_dream_slot_index = 1
+    cube_obj = system._inner_object_open3d_display_obj(decoded)
+    assert int(cube_obj["open3d_display_slot"].reshape(-1)[0].item()) == 1
+    assert cube_obj["debug_imit_fallback_shape"] is True
+    assert cube_obj["debug_imit_shape_kind"] == "cube"
+
+def test_m1_imit_open3d_selected_empty_slot_clears_active_tetra_geometry():
+    system = DummyProgressiveSystem()
+    tetra_z, _ = system.make_m1_object_slot_latent("tetrahedron", device=system.device, dim=128)
+    state = system.inner_object_system.initial_state(batch_size=1, device=system.device)
+    state["z_obj_slots"][:, 2, :] = tetra_z
+    state["confidence_slots"][:, 2, :] = 1.0
+    state["active_slot_index"] = torch.tensor([[2]], device=system.device, dtype=torch.long)
+    decoded = system.inner_object_system.decode_z(tetra_z, state)
+    decoded["z_obj_slots"] = state["z_obj_slots"]
+    decoded["confidence_slots"] = state["confidence_slots"]
+    decoded["active_slot_index"] = state["active_slot_index"]
+    decoded["debug_imit_fallback_shape"] = True
+    decoded["debug_imit_source"] = "m1_object_slot_imit"
+    decoded["debug_imit_shape_kind"] = "tetrahedron"
+
+    system.inner_object_viz.requested_dream_slot_index = 5
+    empty_obj = system._inner_object_open3d_display_obj(decoded)
+    assert int(empty_obj["open3d_display_slot"].reshape(-1)[0].item()) == 5
+    assert int(empty_obj["point_cloud"].shape[1]) == 0
+    assert float(empty_obj["confidence"].detach().float().sum().item()) == 0.0
+    assert float(empty_obj["open3d_display_empty_slot"].detach().float().sum().item()) == 1.0
+    assert "debug_imit_shape_kind" not in empty_obj
+
+def test_inner_object_viz_slot_selection_syncs_to_open3d_ipc_slot():
+    system = DummyProgressiveSystem()
+    system.inner_object_viz.requested_dream_slot_index = 12
+    assert system._sync_inner_object_requested_slot_from_viz() == 9
+    assert system._ipc_inner_object_dream_slot_index == 9
+
+    system.inner_object_viz.requested_dream_slot_index = None
+    assert system._sync_inner_object_requested_slot_from_viz() is None
+    assert system._ipc_inner_object_dream_slot_index is None
+
+def test_inner_object_selected_slot_is_not_cleared_outside_dream_mode():
+    runtime_source = Path("src/modules/m01_object_imagery/runtime.py").read_text(encoding="utf-8")
+    assert "Leaving full sleep immediately cancels dream-only UI state" not in runtime_source
+
 def test_m1_single_morph_status_payload():
     system = DummySystem()
     system.request_m1_object_slot_latents({"kind":"morph","slot":3,"alpha":0.5,"duration":3})
@@ -287,6 +453,9 @@ def test_m1_object_slot_imit_control_panel_window_contract():
     assert "Clear" in source
     assert "m1_object_slot_imit_inject" in source
     assert 'source": "m8_m1_object_slot_imit_window"' in source
+    assert '"m1": [' in source
+    assert '"btn_m1_object_slot_imit",' in source
+    assert '"m8": ["btn_module_debug", "btn_module_lab", "btn_sleep_replay_monitor", "btn_replay_quality_monitor"]' in source
     assert "self._style_plain_status_button(\n                self.btn_m1_object_slot_imit," in source
     assert 'self._window_visible(getattr(self, "m1_object_slot_imit_window", None))' in source
     assert "self.btn_module_lab,\n                self.btn_m1_object_slot_imit," not in source

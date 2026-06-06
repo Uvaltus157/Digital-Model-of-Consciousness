@@ -2,7 +2,9 @@
 
 This document defines how code should wire modules together.
 
-## Root launch
+## root launch
+
+Alias: Root launch.
 
 ```text
 runner.py
@@ -45,7 +47,9 @@ class UnifiedSystem(
     ...
 ```
 
-## Awake step order
+## awake step order
+
+Alias: Awake step order.
 
 ```text
 1. read sensors / simulator
@@ -65,7 +69,9 @@ class UnifiedSystem(
 15. M8 status publish
 ```
 
-## Sleep/replay step order
+## sleep/replay step order
+
+Alias: Sleep/replay step order.
 
 ```text
 1. sleep mode ON

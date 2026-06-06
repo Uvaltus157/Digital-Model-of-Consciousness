@@ -2,7 +2,9 @@
 
 This document defines M8 control panel and monitor behavior.
 
-## M8 button registry
+## M8 buttons
+
+Alias: M8 button registry.
 
 Required buttons:
 
@@ -48,7 +50,7 @@ m15_counterfactual_probe_inject
 m12_metacognition_probe_inject
 ```
 
-## Status windows
+## status windows
 
 Each window must have:
 
@@ -61,7 +63,9 @@ button style
 runner-connected enable/disable
 ```
 
-## Inner Object 3D UI
+## Inner Object 3D requirements
+
+Alias: Inner Object 3D UI.
 
 Must show:
 
@@ -80,3 +84,14 @@ debug_imit_fallback_shape = True
 ```
 
 must be visible for fallback cube/tetra/morph.
+
+## conscious monitors
+
+```text
+Conscious Broadcast Monitor
+Self Core Monitor
+Inner Speech Monitor
+Counterfactual Planning Monitor
+Metacognition Monitor
+Semantic Grounding Monitor
+```

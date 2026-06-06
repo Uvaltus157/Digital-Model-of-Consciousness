@@ -123,6 +123,8 @@ def test_m5_learning_quality_control_panel_button_contract():
     assert "def open_m5_learning_quality_window(self):" in source
     assert "def refresh_m5_learning_quality_window(self):" in source
     assert "self.refresh_m5_learning_quality_window()" in source
+    assert '"m5": ["btn_m5_learning_quality", "btn_m5_latent_prototype"]' in source
+    assert '"m8": ["btn_module_debug", "btn_module_lab", "btn_sleep_replay_monitor", "btn_replay_quality_monitor"]' in source
     assert "self._style_plain_status_button(\n                self.btn_m5_learning_quality," in source
     assert 'self._window_visible(getattr(self, "m5_learning_quality_window", None))' in source
     assert "self.btn_replay_quality_monitor,\n                self.btn_m5_learning_quality," not in source

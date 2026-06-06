@@ -2105,6 +2105,72 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
             pass
         return decoded
 
+
+    def _attach_slot_4d_playback_tensors(self, decoded: dict) -> dict:
+        try:
+            ref_tensor = decoded.get("z_obj", decoded.get("confidence"))
+            if not torch.is_tensor(ref_tensor):
+                return decoded
+            dtype = ref_tensor.dtype if ref_tensor.is_floating_point() else torch.float32
+
+            def put(name: str, value, default: float = 0.0):
+                try:
+                    if value is None:
+                        value = default
+                    decoded[name] = torch.tensor([[float(value)]], device=ref_tensor.device, dtype=dtype)
+                except Exception:
+                    pass
+
+            t4d = getattr(self, "_slot_4d_latest_metrics", {}) or {}
+            put("slot_4d_timeline_frames", t4d.get("frame_count", 0.0))
+            put("slot_4d_temporal_span", t4d.get("temporal_span", 0.0))
+            put("slot_4d_motion_norm", t4d.get("motion_norm", 0.0))
+            put("slot_4d_gaussian_count", t4d.get("gaussian_count", 0.0))
+
+            d4d = getattr(self, "_slot_4d_deformation_latest_metrics", {}) or {}
+            put("slot_4d_deformation_updates", d4d.get("updates", 0.0))
+            put("slot_4d_deformation_loss", d4d.get("loss", 0.0))
+            put("slot_4d_deformation_pred_delta_norm", d4d.get("pred_delta_norm", 0.0))
+            put("slot_4d_deformation_sample_count", d4d.get("sample_count", 0.0))
+
+            p4d = getattr(self, "_slot_4d_playback_latest_metrics", {}) or {}
+            put("slot_4d_playback_frames", p4d.get("frame_count", 0.0))
+            put("slot_4d_playback_phase", p4d.get("playback_phase", 0.0))
+            put("slot_4d_playback_pred_delta_norm", p4d.get("pred_delta_norm", 0.0))
+            put("slot_4d_playback_render_valid", 1.0 if bool(p4d.get("render_valid", False)) else 0.0)
+            put("slot_4d_playback_deformation_used", 1.0 if bool(p4d.get("deformation_used", False)) else 0.0)
+            put("slot_4d_playback_preview_fps", p4d.get("preview_fps", 0.0))
+            put("slot_4d_playback_backend_is_cuda", 1.0 if str(p4d.get("backend", "")) == "cuda_3dgs" else 0.0)
+
+            def put_tensor_preview(name: str, value):
+                try:
+                    if value is None or not torch.is_tensor(value):
+                        return False
+                    t = value.detach()
+                    if t.ndim == 2:
+                        t = t.unsqueeze(-1)
+                    if t.ndim == 3 and t.shape[-1] in (1, 3, 4):
+                        t = t.permute(2, 0, 1).unsqueeze(0)
+                    elif t.ndim == 3 and t.shape[0] in (1, 3, 4):
+                        t = t.unsqueeze(0)
+                    elif t.ndim != 4:
+                        return False
+                    decoded[name] = t.to(device=ref_tensor.device, dtype=dtype)
+                    return True
+                except Exception:
+                    return False
+
+            pslot = int(p4d.get("slot_id", -1))
+            pviews = getattr(getattr(self, "slot_4d_playback_renderer", None), "last_preview", {}) or {}
+            pview = pviews.get(pslot) if pslot >= 0 else None
+            if isinstance(pview, dict):
+                put_tensor_preview("slot_4d_playback_rgb", pview.get("rgb"))
+                put_tensor_preview("slot_4d_playback_depth", pview.get("depth"))
+                put_tensor_preview("slot_4d_playback_alpha", pview.get("alpha"))
+        except Exception:
+            pass
+        return decoded
+
     # -------------------------------------------------------------------------
     # Level-5 neural event decoder
     # -------------------------------------------------------------------------
@@ -2317,14 +2383,6 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
                         self.inner_object_state["active_slot_index"] = prev_state["active_slot_index"].detach()
                     except Exception as e:
                         print(f"[inner_object][dream_slot_key] failed: {e}")
-            else:
-                # Leaving full sleep immediately cancels dream-only UI state.
-                try:
-                    if getattr(self, "inner_object_viz", None) is not None:
-                        self.inner_object_viz.requested_dream_slot_index = None
-                except Exception:
-                    pass
-
             obj = self._run_progressive_inner_object_system(
                 prev_state,
                 vision,
@@ -2394,6 +2452,8 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
             # Trace final real-action path after trust-gated blending.
             obj = self.update_inner_real_action_trace(obj, out=out)
 
+            obj = self._attach_slot_4d_playback_tensors(obj)
+
             # Runtime memory should not keep graph history.
             self.inner_object_state = {
                 "z_obj": obj["z_obj"].detach(),
@@ -2450,6 +2510,8 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
             obj = self.compute_inner_object_image(obs, out)
         if obj is None:
             return
+        obj = self._attach_slot_4d_playback_tensors(obj)
+        out["inner_object"] = obj
 
         if object_due:
             tactile_values = []
@@ -2469,6 +2531,7 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
 
             obs_for_viz = self._safe_obs_for_inner_object_viz(obs)
             self.inner_object_viz.draw(obj, obs=obs_for_viz, tactile_values=tactile_values)
+            self._sync_inner_object_requested_slot_from_viz()
             if hasattr(self, "log_tetra_inner_object_window_state"):
                 self.log_tetra_inner_object_window_state(obj, visible=True, reason="object_image_window_drawn")
 
@@ -2513,6 +2576,179 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
                 self._inner_object_snapshot_warned = True
 
 
+    def _inner_object_requested_display_slot(self, obj: dict) -> int | None:
+        requested_slot = None
+        try:
+            if isinstance(obj, dict) and obj.get("_requested_dream_slot_index", None) is not None:
+                requested_slot = obj.get("_requested_dream_slot_index", None)
+        except Exception:
+            requested_slot = None
+        try:
+            if requested_slot is None:
+                requested_slot = getattr(getattr(self, "inner_object_viz", None), "requested_dream_slot_index", None)
+        except Exception:
+            if requested_slot is None:
+                requested_slot = None
+        if requested_slot is None:
+            requested_slot = getattr(self, "_ipc_inner_object_dream_slot_index", None)
+        if requested_slot is None:
+            return None
+        try:
+            z_slots = obj.get("z_obj_slots")
+            if not torch.is_tensor(z_slots) or z_slots.ndim != 3:
+                return None
+            return max(0, min(int(requested_slot), int(z_slots.shape[1]) - 1))
+        except Exception:
+            return None
+
+
+    def _sync_inner_object_requested_slot_from_viz(self) -> int | None:
+        try:
+            requested_slot = getattr(getattr(self, "inner_object_viz", None), "requested_dream_slot_index", None)
+        except Exception:
+            requested_slot = None
+        if requested_slot is None:
+            self._ipc_inner_object_dream_slot_index = None
+            return None
+        try:
+            n_slots = int(getattr(self.cfg.object_image, "num_slots", 10))
+            slot_id = max(0, min(int(requested_slot), n_slots - 1))
+        except Exception:
+            slot_id = int(requested_slot)
+        self._ipc_inner_object_dream_slot_index = slot_id
+        return slot_id
+
+
+    def _m1_imit_shape_kind_for_slot(self, slot_id: int, z_obj: torch.Tensor | None = None) -> str:
+        state = getattr(self, "_m1_object_slot_imit_state", None)
+        if isinstance(state, dict):
+            for item in state.get("items", []) or []:
+                try:
+                    if int(item.get("slot", -1)) == int(slot_id):
+                        return str(item.get("kind", "") or "")
+                except Exception:
+                    pass
+            slots = list(state.get("last_slots", []) or [])
+            names = list(state.get("last_names", []) or [])
+            for slot, name in zip(slots, names):
+                try:
+                    if int(slot) == int(slot_id):
+                        return str(name or "")
+                except Exception:
+                    pass
+        inferred = self._m1_imit_shape_kind_from_latent(z_obj)
+        if inferred:
+            return inferred
+        return ""
+
+
+    def _m1_imit_shape_kind_from_latent(self, z_obj: torch.Tensor | None) -> str:
+        if not torch.is_tensor(z_obj) or not hasattr(self, "make_m1_object_slot_latent"):
+            return ""
+        try:
+            z = z_obj.detach().float()
+            if z.ndim == 1:
+                z = z.reshape(1, -1)
+            elif z.ndim > 2:
+                z = z.reshape(z.shape[0], -1)
+            dim = int(z.shape[-1])
+            device = z.device
+            scores = {}
+            for kind in ("cube", "tetrahedron", "morph"):
+                ref, _desc = self.make_m1_object_slot_latent(kind, device=device, dim=dim)
+                ref = ref.detach().float().reshape(1, -1)
+                scores[kind] = float(torch.nn.functional.cosine_similarity(z[:, :dim], ref[:, :dim], dim=-1).mean().cpu().item())
+            best_kind, best_score = max(scores.items(), key=lambda kv: kv[1])
+            if best_score >= 0.70:
+                return str(best_kind)
+        except Exception:
+            return ""
+        return ""
+
+
+    def _inner_object_open3d_display_obj(self, obj: dict) -> dict:
+        slot_id = self._inner_object_requested_display_slot(obj)
+        if slot_id is None:
+            return obj
+        try:
+            z_slots = obj.get("z_obj_slots")
+            if not torch.is_tensor(z_slots) or z_slots.ndim != 3:
+                return obj
+            z = z_slots[:, int(slot_id), :]
+            if self._inner_object_selected_slot_is_empty(obj, int(slot_id), z):
+                return self._empty_inner_object_open3d_display_obj(obj, int(slot_id), z)
+            extra = {k: v for k, v in obj.items() if k != "z_obj"}
+            decoded = self.inner_object_system.decode_z(z, extra)
+            for key in (
+                "z_obj_slots",
+                "confidence_slots",
+                "memory_stability_slots",
+                "dream_activation_slots",
+                "slot_update_strength",
+                "slot_age",
+            ):
+                if key in obj:
+                    decoded[key] = obj[key]
+            decoded["active_slot_index"] = torch.full((z.shape[0], 1), int(slot_id), device=z.device, dtype=torch.long)
+            decoded["open3d_display_slot"] = torch.full((z.shape[0], 1), int(slot_id), device=z.device, dtype=torch.long)
+
+            shape_kind = self._m1_imit_shape_kind_for_slot(int(slot_id), z)
+            if shape_kind:
+                decoded["debug_imit_fallback_shape"] = True
+                decoded["debug_imit_source"] = "m1_object_slot_imit"
+                decoded["debug_imit_shape_kind"] = shape_kind
+            elif bool(obj.get("debug_imit_fallback_shape", False)) and int(slot_id) == int(self._scalar_debug_slot(obj, "active_slot_index", slot_id)):
+                decoded["debug_imit_fallback_shape"] = obj.get("debug_imit_fallback_shape")
+                decoded["debug_imit_source"] = obj.get("debug_imit_source", "")
+                decoded["debug_imit_shape_kind"] = obj.get("debug_imit_shape_kind", "")
+            return decoded
+        except Exception as e:
+            if not hasattr(self, "_inner_object_open3d_slot_select_warned"):
+                print(f"[inner_object_open3d] slot display decode failed: {e}")
+                self._inner_object_open3d_slot_select_warned = True
+            return obj
+
+
+    def _inner_object_selected_slot_is_empty(self, obj: dict, slot_id: int, z_obj: torch.Tensor) -> bool:
+        try:
+            c_slots = obj.get("confidence_slots")
+            conf_empty = True
+            if torch.is_tensor(c_slots) and c_slots.ndim >= 3 and int(slot_id) < int(c_slots.shape[1]):
+                conf = c_slots[:, int(slot_id), :].detach().float().mean()
+                thr = float(getattr(self.cfg.object_image, "slot_activity_threshold", 0.05))
+                conf_empty = bool(float(conf.cpu().item()) <= thr)
+            z_norm = float(z_obj.detach().float().norm(dim=-1).mean().cpu().item()) if torch.is_tensor(z_obj) else 0.0
+            return bool(conf_empty and z_norm <= 1.0e-5)
+        except Exception:
+            return False
+
+
+    def _empty_inner_object_open3d_display_obj(self, obj: dict, slot_id: int, z_obj: torch.Tensor) -> dict:
+        device = z_obj.device if torch.is_tensor(z_obj) else self.device
+        dtype = z_obj.dtype if torch.is_tensor(z_obj) else torch.float32
+        batch = int(z_obj.shape[0]) if torch.is_tensor(z_obj) and z_obj.ndim >= 2 else 1
+        empty = {k: v for k, v in obj.items() if k not in ("debug_imit_fallback_shape", "debug_imit_source", "debug_imit_shape_kind")}
+        empty["z_obj"] = z_obj
+        empty["point_cloud"] = torch.zeros(batch, 0, 3, device=device, dtype=dtype)
+        empty["point_conf"] = torch.zeros(batch, 0, 1, device=device, dtype=dtype)
+        empty["voxel_occ"] = torch.zeros(batch, 1, 1, 1, 1, device=device, dtype=dtype)
+        empty["confidence"] = torch.zeros(batch, 1, device=device, dtype=dtype)
+        empty["active_slot_index"] = torch.full((batch, 1), int(slot_id), device=device, dtype=torch.long)
+        empty["open3d_display_slot"] = torch.full((batch, 1), int(slot_id), device=device, dtype=torch.long)
+        empty["open3d_display_empty_slot"] = torch.ones(batch, 1, device=device, dtype=dtype)
+        return empty
+
+
+    def _scalar_debug_slot(self, obj: dict, key: str, default: int = 0) -> int:
+        try:
+            value = obj.get(key, default)
+            if torch.is_tensor(value):
+                return int(value.detach().cpu().reshape(-1)[0].item())
+            return int(value)
+        except Exception:
+            return int(default)
+
+
     def export_inner_object_model(self, fmt: str = "ply"):
         try:
             path = self.inner_object_open3d_viz.export_current(fmt)
@@ -2540,6 +2776,7 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
         obj = out.get("inner_object")
         if obj is None:
             return
+        obj = self._inner_object_open3d_display_obj(obj)
 
         self.maybe_capture_inner_object_snapshot(obj)
         try:

@@ -323,6 +323,14 @@ never mutate model state except explicit action messages
 
 # M9 — Self Core
 
+## Required methods
+
+```python
+class SelfCoreRuntimeMixin:
+    def build_self_core_status(self) -> dict:
+        ...
+```
+
 ## Required outputs
 
 ```text
@@ -382,6 +390,14 @@ M10 must not mutate memory or motor output directly.
 
 # M11 — Motivational Homeostasis
 
+## Required methods
+
+```python
+class MotivationalHomeostasisRuntimeMixin:
+    def build_motivational_homeostasis_status(self) -> dict:
+        ...
+```
+
 ## Required outputs
 
 ```text
@@ -407,6 +423,14 @@ M11 influences M2 and M10 through affect/salience.
 
 # M12 — Metacognition
 
+## Required methods
+
+```python
+class MetacognitionRuntimeMixin:
+    def build_metacognition_status(self) -> dict:
+        ...
+```
+
 ## Required outputs
 
 ```text
@@ -426,6 +450,14 @@ M12 checks reliability before deliberate action/planning.
 ---
 
 # M13 — Autobiographical Memory
+
+## Required methods
+
+```python
+class AutobiographicalMemoryRuntimeMixin:
+    def build_autobiographical_memory_status(self) -> dict:
+        ...
+```
 
 ## Required outputs
 
@@ -447,6 +479,14 @@ M13 provides episode material to M2 and context to M10/M15.
 
 # M14 — Semantic Grounding
 
+## Required methods
+
+```python
+class SemanticGroundingRuntimeMixin:
+    def build_semantic_grounding_status(self) -> dict:
+        ...
+```
+
 ## Required outputs
 
 ```text
@@ -465,6 +505,14 @@ M14 grounds words/concepts; it does not select action.
 ---
 
 # M15 — Counterfactual Imagination / Planning
+
+## Required methods
+
+```python
+class CounterfactualPlanningRuntimeMixin:
+    def build_counterfactual_planning_status(self) -> dict:
+        ...
+```
 
 ## Required outputs
 
