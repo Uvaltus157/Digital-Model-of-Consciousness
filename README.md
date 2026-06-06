@@ -36,6 +36,26 @@ M14 Semantic grounding
 M15 Counterfactual imagination / planning
 ```
 
+The architecture is now documented as two connected contours:
+
+```text
+Unconscious contour:
+    M1 → M5 → M11 → M13/M4 → M2 → M5 → M3 guard
+
+Conscious contour:
+    M1/M5 → M10 → M9 → M7 → M15 → M12/M14/M13/M4 → M3 / M5 seed bus
+```
+
+The project uses an imitator-first workflow:
+
+```text
+Level 1: wiring and contracts
+Level 2: simulated learned latents/content
+Level 3: downstream behavior as if trained
+Level 4: replace imitators with real training
+Level 5: compare real latents/content with prototype/imit latents/content
+```
+
 ---
 
 ## Capabilities
@@ -83,6 +103,23 @@ Digital-Model-of-Consciousness/
 │   └── runner.yaml                   # main Hydra config
 ├── docs/
 │   ├── architecture/
+│   │   ├── current_structure.md
+│   │   ├── module_file_map.md
+│   │   ├── module_file_map.json
+│   │   ├── module_migration_plan.md
+│   │   └── dna/                          # architecture/code DNA
+│   │       ├── architecture_genome.md
+│   │       ├── unconscious_loop_dna.md
+│   │       ├── conscious_loop_dna.md
+│   │       ├── validation_levels_1_5_dna.md
+│   │       ├── rebuild_from_dna.md
+│   │       └── codegen/                   # implementation-level DNA
+│   │           ├── module_api_specs.md
+│   │           ├── runtime_wiring_dna.md
+│   │           ├── config_dna.md
+│   │           ├── ui_dna.md
+│   │           ├── training_dna.md
+│   │           └── reference_traces_dna.md
 │   └── images/
 ├── src/
 │   ├── apps/
@@ -216,11 +253,70 @@ open3d_exports/
 
 ## Architecture documentation
 
+The documentation is split into three layers.
+
+### 1. Structure and migration docs
+
+These describe the repository layout and safe refactoring plan:
+
 ```text
 docs/architecture/current_structure.md
 docs/architecture/module_file_map.md
 docs/architecture/module_file_map.json
 docs/architecture/module_migration_plan.md
+```
+
+### 2. Architecture DNA
+
+These describe the organism-level architecture: modules, contours, buses, contracts, monitors, imitators, and validation levels.
+
+```text
+docs/architecture/dna/README.md
+docs/architecture/dna/architecture_genome.md
+docs/architecture/dna/unconscious_loop_dna.md
+docs/architecture/dna/conscious_loop_dna.md
+docs/architecture/dna/module_contracts_dna.md
+docs/architecture/dna/validation_levels_1_5_dna.md
+docs/architecture/dna/imitators_dna.md
+docs/architecture/dna/monitors_and_windows_dna.md
+docs/architecture/dna/rebuild_from_dna.md
+docs/architecture/dna/architecture_dna_manifest.json
+```
+
+The DNA layer fixes the two main contours:
+
+```text
+Unconscious contour:
+    M1 → M5 → M11 → M13/M4 → M2 → M5 → M3 guard
+
+Conscious contour:
+    M1/M5 → M10 → M9 → M7 → M15 → M12/M14/M13/M4 → M3 / M5 seed bus
+```
+
+### 3. Code DNA
+
+These describe implementation-level reconstruction: public APIs, runtime wiring, config, UI, training targets, reference traces, and generation order.
+
+```text
+docs/architecture/dna/codegen/README.md
+docs/architecture/dna/codegen/module_api_specs.md
+docs/architecture/dna/codegen/runtime_wiring_dna.md
+docs/architecture/dna/codegen/file_inventory_dna_template.json
+docs/architecture/dna/codegen/config_dna.md
+docs/architecture/dna/codegen/ui_dna.md
+docs/architecture/dna/codegen/training_dna.md
+docs/architecture/dna/codegen/reference_traces_dna.md
+docs/architecture/dna/codegen/code_generation_order.md
+docs/architecture/dna/codegen/codegen_manifest.json
+```
+
+Core reconstruction principle:
+
+```text
+1. imitate trained module outputs
+2. verify wiring/contracts/downstream behavior
+3. replace imitators with real trained modules
+4. compare real latents/content with prototype/imit latents/content
 ```
 
 ---
