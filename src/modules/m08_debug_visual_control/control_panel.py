@@ -65,11 +65,11 @@ MODULE_TAB_BUTTONS = {
         "btn_save_pcd",
         "btn_static_dynamic",
     ],
-    "m2": ["btn_event_code"],
+    "m2": ["btn_event_code", "btn_m2_scenario_imit"],
     "m3": [],
     "m6": [],
     "m7": ["btn_inner"],
-    "m8": ["btn_module_debug", "btn_module_lab", "btn_sleep_replay_monitor", "btn_replay_quality_monitor", "btn_m5_learning_quality"],
+    "m8": ["btn_module_debug", "btn_module_lab", "btn_sleep_replay_monitor", "btn_replay_quality_monitor", "btn_m5_learning_quality", "btn_m5_latent_prototype", "btn_m1_object_slot_imit"],
     "m14": ["btn_latent"],
 }
 
@@ -130,6 +130,15 @@ def main() -> None:
             self.open3d_slot_viewer_proc = None
             self.module_lab_window = None
             self.module_lab_text = None
+            self.m1_object_slot_imit_window = None
+            self.m1_object_slot_imit_labels = {}
+            self.m1_object_slot_imit_raw = None
+            self.m2_scenario_imit_window = None
+            self.m2_scenario_imit_labels = {}
+            self.m2_scenario_imit_raw = None
+            self.m5_latent_prototype_window = None
+            self.m5_latent_prototype_labels = {}
+            self.m5_latent_prototype_raw = None
             self.m5_learning_quality_window = None
             self.m5_learning_quality_labels = {}
             self.m5_learning_quality_raw = None
@@ -205,6 +214,9 @@ def main() -> None:
             self.btn_train = QtWidgets.QPushButton()
             self.btn_module_debug = QtWidgets.QPushButton()
             self.btn_module_lab = QtWidgets.QPushButton("Run Module Lab")
+            self.btn_m1_object_slot_imit = QtWidgets.QPushButton("M1 Object Slot Imit")
+            self.btn_m2_scenario_imit = QtWidgets.QPushButton("M2 Scenario Imit")
+            self.btn_m5_latent_prototype = QtWidgets.QPushButton("M5 Latent Prototypes")
             self.btn_m5_learning_quality = QtWidgets.QPushButton("M5 Learning Quality")
             self.btn_replay_quality_monitor = QtWidgets.QPushButton("Replay Quality Monitor")
             self.btn_sleep_replay_monitor = QtWidgets.QPushButton("Sleep Replay Monitor")
@@ -275,7 +287,10 @@ def main() -> None:
             self.btn_start_viewer.setMinimumHeight(42)
             self.btn_module_debug_pyqt.setMinimumHeight(42)
             self.btn_module_lab.setMinimumHeight(42)
+            self.btn_m1_object_slot_imit.setMinimumHeight(42)
+            self.btn_m2_scenario_imit.setMinimumHeight(42)
             self.btn_m5_learning_quality.setMinimumHeight(42)
+            self.btn_m5_latent_prototype.setMinimumHeight(42)
             self.btn_replay_quality_monitor.setMinimumHeight(42)
             self.btn_sleep_replay_monitor.setMinimumHeight(42)
             self.btn_agent_actions_pyqt.setMinimumHeight(42)
@@ -307,6 +322,8 @@ def main() -> None:
             self.btn_sleep_replay_monitor.setToolTip("Open live sleep/replay monitor for M1/M11/M13/M4/M2/M5/M3")
             self.btn_module_lab.setToolTip("Run M8 module lab contracts/scenarios inside the runner via IPC")
             self.btn_m5_learning_quality.setToolTip("Show M5 learning baseline: loss trends, seed response, latent/object stability proxies")
+            self.btn_m5_latent_prototype.setToolTip("Inject simulated learned cube/tetrahedron latents into M5 via FocusFeedbackBoundary")
+            self.btn_m2_scenario_imit.setToolTip("Inject cube/tetra M2 scenario Gaussian states into Open3D RPC slots")
             self.btn_replay_quality_monitor.setToolTip("Show replay quality/integration metrics: selected episode, identity, pressure/relief deltas")
             self.btn_module_debug_pyqt.setToolTip("Open or close the registry-backed PyQt module debug window")
             self.btn_save_ply.setToolTip("Export the current internal 3D object model as a PLY file")
@@ -459,9 +476,12 @@ def main() -> None:
             self.btn_sleep_replay.clicked.connect(self.toggle_sleep_replay_mode)
             self.btn_module_debug.clicked.connect(lambda: self.toggle("module_debug"))
             self.btn_module_lab.clicked.connect(self.open_m8_module_lab_window)
+            self.btn_m1_object_slot_imit.clicked.connect(self.open_m1_object_slot_imit_window)
+            self.btn_m2_scenario_imit.clicked.connect(self.open_m2_scenario_imit_window)
             self.btn_sleep_replay_monitor.clicked.connect(self.open_sleep_replay_monitor_window)
             self.btn_replay_quality_monitor.clicked.connect(self.open_replay_quality_monitor_window)
             self.btn_m5_learning_quality.clicked.connect(self.open_m5_learning_quality_window)
+            self.btn_m5_latent_prototype.clicked.connect(self.open_m5_latent_prototype_window)
             self.btn_module_debug_pyqt.clicked.connect(self.open_pyqt_module_debug)
             self.btn_agent_actions_pyqt.clicked.connect(self.open_pyqt_agent_actions)
             self.btn_latent.clicked.connect(lambda: self.toggle("latent_semantic"))
@@ -727,6 +747,24 @@ def main() -> None:
             self.m5_learning_quality_raw = None
             self.refresh_ui()
 
+        def _clear_m5_latent_prototype_window_refs(self):
+            self.m5_latent_prototype_window = None
+            self.m5_latent_prototype_labels = {}
+            self.m5_latent_prototype_raw = None
+            self.refresh_ui()
+
+        def _clear_m1_object_slot_imit_window_refs(self):
+            self.m1_object_slot_imit_window = None
+            self.m1_object_slot_imit_labels = {}
+            self.m1_object_slot_imit_raw = None
+            self.refresh_ui()
+
+        def _clear_m2_scenario_imit_window_refs(self):
+            self.m2_scenario_imit_window = None
+            self.m2_scenario_imit_labels = {}
+            self.m2_scenario_imit_raw = None
+            self.refresh_ui()
+
         def _clear_module_lab_window_refs(self):
             self.module_lab_window = None
             self.module_lab_text = None
@@ -909,6 +947,16 @@ def main() -> None:
                 "Module Lab",
             )
             self._style_plain_status_button(
+                self.btn_m1_object_slot_imit,
+                self._window_visible(getattr(self, "m1_object_slot_imit_window", None)),
+                "M1 Object Slot Imit",
+            )
+            self._style_plain_status_button(
+                self.btn_m2_scenario_imit,
+                self._window_visible(getattr(self, "m2_scenario_imit_window", None)),
+                "M2 Scenario Imit",
+            )
+            self._style_plain_status_button(
                 self.btn_sleep_replay_monitor,
                 self._window_visible(getattr(self, "sleep_replay_monitor_window", None)),
                 "Sleep Replay Monitor",
@@ -922,6 +970,11 @@ def main() -> None:
                 self.btn_m5_learning_quality,
                 self._window_visible(getattr(self, "m5_learning_quality_window", None)),
                 "M5 Learning Quality",
+            )
+            self._style_plain_status_button(
+                self.btn_m5_latent_prototype,
+                self._window_visible(getattr(self, "m5_latent_prototype_window", None)),
+                "M5 Latent Prototypes",
             )
             self._style_plain_status_button(
                 self.btn_module_debug_pyqt,
@@ -941,6 +994,9 @@ def main() -> None:
             self.refresh_sleep_replay_monitor_window()
             self.refresh_replay_quality_monitor_window()
             self.refresh_m5_learning_quality_window()
+            self.refresh_m5_latent_prototype_window()
+            self.refresh_m1_object_slot_imit_window()
+            self.refresh_m2_scenario_imit_window()
 
         def _sleep_replay_monitor_value(self, section: str, key: str, default=""):
             monitor = {}
@@ -1029,7 +1085,7 @@ def main() -> None:
             except Exception:
                 pass
 
-            dialog = QtWidgets.QDialog(self)
+            dialog = QtWidgets.QDialog()
             dialog.setWindowTitle("M8 Sleep Replay Monitor")
             dialog.resize(880, 720)
             dialog.setStyleSheet(
@@ -1240,7 +1296,7 @@ def main() -> None:
             except Exception:
                 pass
 
-            dialog = QtWidgets.QDialog(self)
+            dialog = QtWidgets.QDialog()
             dialog.setWindowTitle("M8 Replay Quality Monitor")
             dialog.resize(920, 760)
             dialog.setStyleSheet(
@@ -1411,7 +1467,7 @@ def main() -> None:
             except Exception:
                 pass
 
-            dialog = QtWidgets.QDialog(self)
+            dialog = QtWidgets.QDialog()
             dialog.setWindowTitle("M8 M5 Learning Quality Baseline")
             dialog.resize(940, 760)
             dialog.setStyleSheet(
@@ -1520,6 +1576,540 @@ def main() -> None:
             dialog.finished.connect(lambda _code: self._clear_m5_learning_quality_window_refs())
 
             self.refresh_m5_learning_quality_window()
+            dialog.show()
+            self.refresh_ui()
+
+        def request_m1_object_slot_imit(
+            self,
+            kind: str,
+            *,
+            slot: int | None = None,
+            cube_slot: int = 1,
+            tetra_slot: int = 2,
+            selected_slot: int | None = None,
+            duration: int = 220,
+            alpha: float = 0.5,
+        ):
+            if not self.state.connected:
+                self.status.setText("STATUS IPC: no signal")
+                self.refresh_ui()
+                return
+            payload = {
+                "kind": str(kind),
+                "duration": int(duration),
+                "alpha": float(alpha),
+                "auto_select_slot": True,
+                "source": "m8_m1_object_slot_imit_window",
+            }
+            if slot is not None:
+                payload["slot"] = int(slot)
+            if selected_slot is not None:
+                payload["selected_slot"] = int(selected_slot)
+            if str(kind) == "cube_tetra":
+                payload.update({
+                    "cube_slot": int(cube_slot),
+                    "tetra_slot": int(tetra_slot),
+                    "selected_slot": int(selected_slot if selected_slot is not None else tetra_slot),
+                })
+            ok = self.send(make_action_message("m1_object_slot_imit_inject", **payload))
+            self.status.setText(
+                f"M1 object slot imit requested: {kind}" if ok else "M1 object slot imit request failed"
+            )
+            self.refresh_ui()
+
+        def _m1_object_slot_imit_value(self, key: str, default=""):
+            data = {}
+            if isinstance(getattr(self, "last_status", None), dict):
+                data = self.last_status.get("m1_object_slot_imit", {}) or {}
+            if not isinstance(data, dict):
+                return default
+            return data.get(key, default)
+
+        def refresh_m1_object_slot_imit_window(self):
+            labels = getattr(self, "m1_object_slot_imit_labels", {}) or {}
+            if not labels:
+                return
+            try:
+                if not self.m1_object_slot_imit_window or not self.m1_object_slot_imit_window.isVisible():
+                    return
+            except Exception:
+                return
+
+            data = {}
+            if isinstance(getattr(self, "last_status", None), dict):
+                data = self.last_status.get("m1_object_slot_imit", {}) or {}
+            if not isinstance(data, dict):
+                data = {}
+
+            header = labels.get("__header__")
+            if header is not None:
+                header.setText(
+                    f"step={data.get('global_step', 0)} | active={int(bool(data.get('active', False)))} | "
+                    f"kind={data.get('kind', '')} | selected_slot={data.get('selected_slot', 0)}"
+                )
+
+            for key, label in labels.items():
+                if key.startswith("__"):
+                    continue
+                label.setText(self._fmt_monitor_value(data.get(key, "")))
+
+            raw = getattr(self, "m1_object_slot_imit_raw", None)
+            if raw is not None:
+                try:
+                    raw.setPlainText(json.dumps(data, ensure_ascii=False, indent=2))
+                except Exception:
+                    raw.setPlainText(str(data))
+
+        def open_m1_object_slot_imit_window(self):
+            try:
+                if self.m1_object_slot_imit_window is not None and self.m1_object_slot_imit_window.isVisible():
+                    window = self.m1_object_slot_imit_window
+                    window.close()
+                    self._clear_m1_object_slot_imit_window_refs()
+                    return
+            except Exception:
+                pass
+
+            dialog = QtWidgets.QDialog()
+            dialog.setWindowTitle("M8 M1 Object Slot Latent Imitator")
+            dialog.resize(820, 620)
+            dialog.setStyleSheet(
+                "QDialog { background:#0C121B; color:#DCE8F8; }"
+                "QLabel { color:#DCE8F8; background:transparent; }"
+                "QGroupBox { background:#101722; border:1px solid #243145; border-radius:12px; "
+                "margin-top:12px; padding:10px; color:#B7C5DA; font-weight:800; }"
+                "QGroupBox::title { subcontrol-origin: margin; left:10px; padding:0 6px; }"
+                "QPlainTextEdit { background:#07101A; color:#DCE8F8; border:1px solid #2B3A50; "
+                "border-radius:10px; padding:8px; font-family:Consolas, monospace; font-size:11px; }"
+                "QPushButton { background:#1D2A3B; color:white; border:1px solid #37507A; "
+                "border-radius:10px; padding:8px 12px; font-weight:800; }"
+            )
+
+            main = QtWidgets.QVBoxLayout(dialog)
+            main.setContentsMargins(14, 14, 14, 14)
+            main.setSpacing(10)
+
+            title = QtWidgets.QLabel(
+                "Simulated M1 object-slot latents: fill target ObjectSlotMemory slots and select Inner Object 3D slot."
+            )
+            title.setWordWrap(True)
+            title.setStyleSheet("font-weight:900; color:#D2A8FF;")
+            main.addWidget(title)
+
+            header = QtWidgets.QLabel("")
+            header.setStyleSheet("font-weight:900; color:#FFD36D;")
+            main.addWidget(header)
+
+            row = QtWidgets.QHBoxLayout()
+            btn_fill = QtWidgets.QPushButton("Fill cube slot1 + tetra slot2")
+            btn_cube = QtWidgets.QPushButton("Cube → slot1")
+            btn_tetra = QtWidgets.QPushButton("Tetra → slot2")
+            btn_morph = QtWidgets.QPushButton("Morph → slot3")
+            btn_clear = QtWidgets.QPushButton("Clear")
+            for b in [btn_fill, btn_cube, btn_tetra, btn_morph, btn_clear]:
+                b.setMinimumHeight(36)
+                row.addWidget(b)
+            main.addLayout(row)
+
+            labels = {"__header__": header}
+            box = QtWidgets.QGroupBox("Current M1 object-slot imit")
+            grid = QtWidgets.QGridLayout(box)
+            rows = [
+                ("active", "active"),
+                ("kind", "kind"),
+                ("remaining", "remaining"),
+                ("selected_slot", "selected_slot"),
+                ("items", "items"),
+                ("last_slots", "last_slots"),
+                ("last_names", "last_names"),
+                ("selected_slot_z_norm", "selected_slot_z_norm"),
+                ("selected_slot_confidence", "selected_slot_confidence"),
+                ("slot_metrics", "slot_metrics"),
+                ("layout", "layout"),
+                ("target", "target"),
+                ("source", "source"),
+                ("note", "note"),
+            ]
+            for r, (label_text, key) in enumerate(rows):
+                k = QtWidgets.QLabel(label_text)
+                k.setStyleSheet("color:#8FA4BF; font-weight:800;")
+                v = QtWidgets.QLabel("")
+                v.setStyleSheet("color:#FFFFFF; font-weight:900;")
+                v.setWordWrap(True)
+                v.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+                grid.addWidget(k, r, 0)
+                grid.addWidget(v, r, 1)
+                labels[key] = v
+            main.addWidget(box)
+
+            raw = QtWidgets.QPlainTextEdit()
+            raw.setReadOnly(True)
+            raw.setMinimumHeight(180)
+            main.addWidget(raw)
+
+            close_row = QtWidgets.QHBoxLayout()
+            close_row.addStretch(1)
+            btn_close = QtWidgets.QPushButton("Close")
+            close_row.addWidget(btn_close)
+            main.addLayout(close_row)
+
+            self.m1_object_slot_imit_window = dialog
+            self.m1_object_slot_imit_labels = labels
+            self.m1_object_slot_imit_raw = raw
+
+            btn_fill.clicked.connect(lambda: self.request_m1_object_slot_imit("cube_tetra", cube_slot=1, tetra_slot=2, selected_slot=2))
+            btn_cube.clicked.connect(lambda: self.request_m1_object_slot_imit("cube", slot=1, selected_slot=1))
+            btn_tetra.clicked.connect(lambda: self.request_m1_object_slot_imit("tetrahedron", slot=2, selected_slot=2))
+            btn_morph.clicked.connect(lambda: self.request_m1_object_slot_imit("morph", slot=3, selected_slot=3, alpha=0.5))
+            btn_clear.clicked.connect(lambda: self.request_m1_object_slot_imit("clear", duration=1))
+            btn_close.clicked.connect(dialog.close)
+            dialog.finished.connect(lambda _code: self._clear_m1_object_slot_imit_window_refs())
+
+            self.refresh_m1_object_slot_imit_window()
+            dialog.show()
+            self.refresh_ui()
+
+        def request_m2_scenario_imit(self, kind: str, *, slot: int | None = None, density: int = 1, alpha: float = 0.5):
+            if not self.state.connected:
+                self.status.setText("STATUS IPC: no signal")
+                self.refresh_ui()
+                return
+            payload = {
+                "kind": str(kind),
+                "density": int(density),
+                "alpha": float(alpha),
+                "source": "m8_m2_scenario_imit_window",
+            }
+            if slot is not None:
+                payload["slot"] = int(slot)
+            action = "m2_scenario_imit_clear" if str(kind) == "clear" else "m2_scenario_imit_inject"
+            ok = self.send(make_action_message(action, **payload))
+            self.status.setText(
+                f"M2 scenario imit requested: {kind}" if ok else "M2 scenario imit request failed"
+            )
+            self.refresh_ui()
+
+        def refresh_m2_scenario_imit_window(self):
+            labels = getattr(self, "m2_scenario_imit_labels", {}) or {}
+            if not labels:
+                return
+            try:
+                if not self.m2_scenario_imit_window or not self.m2_scenario_imit_window.isVisible():
+                    return
+            except Exception:
+                return
+
+            data = {}
+            if isinstance(getattr(self, "last_status", None), dict):
+                data = self.last_status.get("m2_scenario_imit", {}) or {}
+            if not isinstance(data, dict):
+                data = {}
+
+            rpc = data.get("rpc", {}) if isinstance(data.get("rpc", {}), dict) else {}
+            streamer = data.get("streamer", {}) if isinstance(data.get("streamer", {}), dict) else {}
+            slots = streamer.get("slots", {}) if isinstance(streamer.get("slots", {}), dict) else {}
+
+            header = labels.get("__header__")
+            if header is not None:
+                header.setText(
+                    f"step={data.get('global_step', 0)} | active={int(bool(data.get('active', False)))} | "
+                    f"kind={data.get('kind', '')} | rpc={data.get('host', '127.0.0.1')}:{data.get('port', 8771)}"
+                )
+
+            values = {
+                "active": data.get("active", False),
+                "kind": data.get("kind", ""),
+                "items": data.get("items", []),
+                "target": data.get("target", ""),
+                "source": data.get("source", ""),
+                "rpc_updated": rpc.get("updated", False),
+                "rpc_started": rpc.get("started", streamer.get("started", False)),
+                "slot_0_points": rpc.get("slot_0_points", (slots.get("0", {}) or {}).get("raw_points", 0)),
+                "slot_1_points": rpc.get("slot_1_points", (slots.get("1", {}) or {}).get("raw_points", 0)),
+                "slot_0_name": (slots.get("0", {}) or {}).get("target_name", ""),
+                "slot_1_name": (slots.get("1", {}) or {}).get("target_name", ""),
+                "layout": data.get("layout", ""),
+            }
+            for key, label in labels.items():
+                if key.startswith("__"):
+                    continue
+                label.setText(self._fmt_monitor_value(values.get(key, "")))
+
+            raw = getattr(self, "m2_scenario_imit_raw", None)
+            if raw is not None:
+                try:
+                    raw.setPlainText(json.dumps(data, ensure_ascii=False, indent=2))
+                except Exception:
+                    raw.setPlainText(str(data))
+
+        def open_m2_scenario_imit_window(self):
+            try:
+                if self.m2_scenario_imit_window is not None and self.m2_scenario_imit_window.isVisible():
+                    window = self.m2_scenario_imit_window
+                    window.close()
+                    self._clear_m2_scenario_imit_window_refs()
+                    return
+            except Exception:
+                pass
+
+            dialog = QtWidgets.QDialog()
+            dialog.setWindowTitle("M8 M2 Scenario Imitator for Open3D RPC")
+            dialog.resize(860, 620)
+            dialog.setStyleSheet(
+                "QDialog { background:#0C121B; color:#DCE8F8; }"
+                "QLabel { color:#DCE8F8; background:transparent; }"
+                "QGroupBox { background:#101722; border:1px solid #243145; border-radius:12px; "
+                "margin-top:12px; padding:10px; color:#B7C5DA; font-weight:800; }"
+                "QGroupBox::title { subcontrol-origin: margin; left:10px; padding:0 6px; }"
+                "QPlainTextEdit { background:#07101A; color:#DCE8F8; border:1px solid #2B3A50; "
+                "border-radius:10px; padding:8px; font-family:Consolas, monospace; font-size:11px; }"
+                "QPushButton { background:#1D2A3B; color:white; border:1px solid #37507A; "
+                "border-radius:10px; padding:8px 12px; font-weight:800; }"
+            )
+
+            main = QtWidgets.QVBoxLayout(dialog)
+            main.setContentsMargins(14, 14, 14, 14)
+            main.setSpacing(10)
+
+            title = QtWidgets.QLabel(
+                "M2 scenario imit: publish deterministic cube/tetra Gaussian states to Slot4D JSON-RPC for Open3D RPC."
+            )
+            title.setWordWrap(True)
+            title.setStyleSheet("font-weight:900; color:#D2A8FF;")
+            main.addWidget(title)
+
+            header = QtWidgets.QLabel("")
+            header.setStyleSheet("font-weight:900; color:#FFD36D;")
+            main.addWidget(header)
+
+            row = QtWidgets.QHBoxLayout()
+            btn_fill = QtWidgets.QPushButton("Cube slot0 + Tetra slot1")
+            btn_cube = QtWidgets.QPushButton("Cube → RPC slot0")
+            btn_tetra = QtWidgets.QPushButton("Tetra → RPC slot1")
+            btn_morph = QtWidgets.QPushButton("Morph → RPC slot1")
+            btn_clear = QtWidgets.QPushButton("Clear")
+            for b in [btn_fill, btn_cube, btn_tetra, btn_morph, btn_clear]:
+                b.setMinimumHeight(36)
+                row.addWidget(b)
+            main.addLayout(row)
+
+            labels = {"__header__": header}
+            box = QtWidgets.QGroupBox("Current M2 scenario imit / Open3D RPC feed")
+            grid = QtWidgets.QGridLayout(box)
+            rows = [
+                ("active", "active"),
+                ("kind", "kind"),
+                ("items", "items"),
+                ("rpc_started", "rpc_started"),
+                ("rpc_updated", "rpc_updated"),
+                ("slot_0_points", "slot_0_points"),
+                ("slot_0_name", "slot_0_name"),
+                ("slot_1_points", "slot_1_points"),
+                ("slot_1_name", "slot_1_name"),
+                ("layout", "layout"),
+                ("target", "target"),
+                ("source", "source"),
+            ]
+            for r, (label_text, key) in enumerate(rows):
+                k = QtWidgets.QLabel(label_text)
+                k.setStyleSheet("color:#8FA4BF; font-weight:800;")
+                v = QtWidgets.QLabel("")
+                v.setStyleSheet("color:#FFFFFF; font-weight:900;")
+                v.setWordWrap(True)
+                v.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+                grid.addWidget(k, r, 0)
+                grid.addWidget(v, r, 1)
+                labels[key] = v
+            main.addWidget(box)
+
+            raw = QtWidgets.QPlainTextEdit()
+            raw.setReadOnly(True)
+            raw.setMinimumHeight(180)
+            main.addWidget(raw)
+
+            close_row = QtWidgets.QHBoxLayout()
+            close_row.addStretch(1)
+            btn_close = QtWidgets.QPushButton("Close")
+            close_row.addWidget(btn_close)
+            main.addLayout(close_row)
+
+            self.m2_scenario_imit_window = dialog
+            self.m2_scenario_imit_labels = labels
+            self.m2_scenario_imit_raw = raw
+
+            btn_fill.clicked.connect(lambda: self.request_m2_scenario_imit("cube_tetra", density=1))
+            btn_cube.clicked.connect(lambda: self.request_m2_scenario_imit("cube", slot=0, density=1))
+            btn_tetra.clicked.connect(lambda: self.request_m2_scenario_imit("tetrahedron", slot=1, density=1))
+            btn_morph.clicked.connect(lambda: self.request_m2_scenario_imit("morph", slot=1, density=1, alpha=0.5))
+            btn_clear.clicked.connect(lambda: self.request_m2_scenario_imit("clear"))
+            btn_close.clicked.connect(dialog.close)
+            dialog.finished.connect(lambda _code: self._clear_m2_scenario_imit_window_refs())
+
+            self.refresh_m2_scenario_imit_window()
+            dialog.show()
+            self.refresh_ui()
+
+        def request_m5_latent_prototype(self, kind: str, gate: float = 0.85, duration: int = 120, alpha: float = 0.5):
+            if not self.state.connected:
+                self.status.setText("STATUS IPC: no signal")
+                self.refresh_ui()
+                return
+            ok = self.send(make_action_message(
+                "m5_latent_prototype_inject",
+                kind=str(kind),
+                gate=float(gate),
+                duration=int(duration),
+                alpha=float(alpha),
+                source="m8_m5_latent_prototype_window",
+            ))
+            self.status.setText(
+                f"M5 latent prototype requested: {kind}" if ok else "M5 latent prototype request failed"
+            )
+            self.refresh_ui()
+
+        def _m5_latent_prototype_value(self, key: str, default=""):
+            data = {}
+            if isinstance(getattr(self, "last_status", None), dict):
+                data = self.last_status.get("m5_latent_prototype", {}) or {}
+            if not isinstance(data, dict):
+                return default
+            return data.get(key, default)
+
+        def refresh_m5_latent_prototype_window(self):
+            labels = getattr(self, "m5_latent_prototype_labels", {}) or {}
+            if not labels:
+                return
+            try:
+                if not self.m5_latent_prototype_window or not self.m5_latent_prototype_window.isVisible():
+                    return
+            except Exception:
+                return
+
+            data = {}
+            if isinstance(getattr(self, "last_status", None), dict):
+                data = self.last_status.get("m5_latent_prototype", {}) or {}
+            if not isinstance(data, dict):
+                data = {}
+
+            header = labels.get("__header__")
+            if header is not None:
+                header.setText(
+                    f"step={data.get('global_step', 0)} | active={int(bool(data.get('active', False)))} | "
+                    f"kind={data.get('kind', '')} | remaining={data.get('remaining', 0)}"
+                )
+
+            for key, label in labels.items():
+                if key.startswith("__"):
+                    continue
+                label.setText(self._fmt_monitor_value(data.get(key, "")))
+
+            raw = getattr(self, "m5_latent_prototype_raw", None)
+            if raw is not None:
+                try:
+                    raw.setPlainText(json.dumps(data, ensure_ascii=False, indent=2))
+                except Exception:
+                    raw.setPlainText(str(data))
+
+        def open_m5_latent_prototype_window(self):
+            try:
+                if self.m5_latent_prototype_window is not None and self.m5_latent_prototype_window.isVisible():
+                    window = self.m5_latent_prototype_window
+                    window.close()
+                    self._clear_m5_latent_prototype_window_refs()
+                    return
+            except Exception:
+                pass
+
+            dialog = QtWidgets.QDialog()
+            dialog.setWindowTitle("M8 M5 Latent Prototype Simulator")
+            dialog.resize(820, 620)
+            dialog.setStyleSheet(
+                "QDialog { background:#0C121B; color:#DCE8F8; }"
+                "QLabel { color:#DCE8F8; background:transparent; }"
+                "QGroupBox { background:#101722; border:1px solid #243145; border-radius:12px; "
+                "margin-top:12px; padding:10px; color:#B7C5DA; font-weight:800; }"
+                "QGroupBox::title { subcontrol-origin: margin; left:10px; padding:0 6px; }"
+                "QPlainTextEdit { background:#07101A; color:#DCE8F8; border:1px solid #2B3A50; "
+                "border-radius:10px; padding:8px; font-family:Consolas, monospace; font-size:11px; }"
+                "QPushButton { background:#1D2A3B; color:white; border:1px solid #37507A; "
+                "border-radius:10px; padding:8px 12px; font-weight:800; }"
+            )
+
+            main = QtWidgets.QVBoxLayout(dialog)
+            main.setContentsMargins(14, 14, 14, 14)
+            main.setSpacing(10)
+
+            title = QtWidgets.QLabel("Simulated learned M5 latents: cube / tetrahedron / morph. Diagnostic only; not real trained weights.")
+            title.setWordWrap(True)
+            title.setStyleSheet("font-weight:900; color:#D2A8FF;")
+            main.addWidget(title)
+
+            header = QtWidgets.QLabel("")
+            header.setStyleSheet("font-weight:900; color:#FFD36D;")
+            main.addWidget(header)
+
+            row = QtWidgets.QHBoxLayout()
+            btn_cube = QtWidgets.QPushButton("Inject cube latent")
+            btn_tetra = QtWidgets.QPushButton("Inject tetrahedron latent")
+            btn_morph = QtWidgets.QPushButton("Inject cube↔tetra morph")
+            btn_clear = QtWidgets.QPushButton("Clear")
+            for b in [btn_cube, btn_tetra, btn_morph, btn_clear]:
+                b.setMinimumHeight(36)
+                row.addWidget(b)
+            main.addLayout(row)
+
+            labels = {"__header__": header}
+
+            box = QtWidgets.QGroupBox("Current simulated M5 prototype")
+            grid = QtWidgets.QGridLayout(box)
+            rows = [
+                ("active", "active"),
+                ("kind", "kind"),
+                ("gate", "gate"),
+                ("seed_norm", "seed_norm"),
+                ("remaining", "remaining"),
+                ("cube_similarity", "cube_similarity"),
+                ("tetra_similarity", "tetra_similarity"),
+                ("layout", "layout"),
+                ("target_m5_boundary", "target_m5_boundary"),
+                ("source", "source"),
+                ("note", "note"),
+            ]
+            for r, (label_text, key) in enumerate(rows):
+                k = QtWidgets.QLabel(label_text)
+                k.setStyleSheet("color:#8FA4BF; font-weight:800;")
+                v = QtWidgets.QLabel("")
+                v.setStyleSheet("color:#FFFFFF; font-weight:900;")
+                v.setWordWrap(True)
+                v.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+                grid.addWidget(k, r, 0)
+                grid.addWidget(v, r, 1)
+                labels[key] = v
+            main.addWidget(box)
+
+            raw = QtWidgets.QPlainTextEdit()
+            raw.setReadOnly(True)
+            raw.setMinimumHeight(180)
+            main.addWidget(raw)
+
+            close_row = QtWidgets.QHBoxLayout()
+            close_row.addStretch(1)
+            btn_close = QtWidgets.QPushButton("Close")
+            close_row.addWidget(btn_close)
+            main.addLayout(close_row)
+
+            self.m5_latent_prototype_window = dialog
+            self.m5_latent_prototype_labels = labels
+            self.m5_latent_prototype_raw = raw
+
+            btn_cube.clicked.connect(lambda: self.request_m5_latent_prototype("cube", 0.90, 160, 0.0))
+            btn_tetra.clicked.connect(lambda: self.request_m5_latent_prototype("tetrahedron", 0.90, 160, 1.0))
+            btn_morph.clicked.connect(lambda: self.request_m5_latent_prototype("morph", 0.85, 160, 0.5))
+            btn_clear.clicked.connect(lambda: self.request_m5_latent_prototype("clear", 0.0, 1, 0.5))
+            btn_close.clicked.connect(dialog.close)
+            dialog.finished.connect(lambda _code: self._clear_m5_latent_prototype_window_refs())
+
+            self.refresh_m5_latent_prototype_window()
             dialog.show()
             self.refresh_ui()
 
@@ -1985,7 +2575,7 @@ def main() -> None:
             except Exception:
                 pass
 
-            dialog = QtWidgets.QDialog(self)
+            dialog = QtWidgets.QDialog()
             dialog.setWindowTitle("M8 Module Lab")
             dialog.resize(820, 620)
             dialog.setStyleSheet(

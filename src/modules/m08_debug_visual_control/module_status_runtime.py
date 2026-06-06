@@ -3,6 +3,12 @@ from __future__ import annotations
 import time
 import torch.optim as optim
 
+from src.modules.m08_debug_visual_control.m1_object_slot_imit_status import build_m1_object_slot_imit_status
+
+from src.modules.m08_debug_visual_control.m2_scenario_imit_status import build_m2_scenario_imit_status
+
+from src.modules.m08_debug_visual_control.m5_latent_prototype_status import build_m5_latent_prototype_status
+
 from src.modules.m08_debug_visual_control.m5_learning_quality_status import build_m5_learning_quality_status
 
 from src.modules.m08_debug_visual_control.replay_quality_monitor_status import build_replay_quality_monitor_status
@@ -135,6 +141,9 @@ class ModuleStatusRuntimeMixin:
                 "last_train_loss": float(getattr(self, "last_train_loss", 0.0) or 0.0),
                 "last_train_error": str(getattr(self, "last_train_error", "")),
                 "last_module_lab_result": dict(getattr(self, "last_module_lab_result", {}) or {}),
+                "m1_object_slot_imit": build_m1_object_slot_imit_status(self),
+                "m2_scenario_imit": build_m2_scenario_imit_status(self),
+                "m5_latent_prototype": build_m5_latent_prototype_status(self),
                 "m5_learning_quality": build_m5_learning_quality_status(self),
                 "replay_quality_monitor": build_replay_quality_monitor_status(self),
                 "sleep_replay_monitor": build_sleep_replay_monitor_status(self),

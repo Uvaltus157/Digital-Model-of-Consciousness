@@ -816,6 +816,14 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
             "dynamic_source": "static_frame_no_write",
             "slot_update_allowed": False,
         }
+        if hasattr(self, "get_m1_imit_inner_object_proposals"):
+            m1_imit = self.get_m1_imit_inner_object_proposals(scene)
+            if isinstance(m1_imit, dict) and torch.is_tensor(m1_imit.get("proposals")):
+                self._inner_object_proposal_target_slots = list(m1_imit.get("target_slots", []))
+                self._inner_object_proposal_kinds = list(m1_imit.get("proposal_kinds", []))
+                self._inner_object_proposal_target_names = list(m1_imit.get("target_names", []))
+                self._inner_object_dynamic_debug = {"dynamic_ready": True, "dynamic_source": "m1_object_slot_imit", "slot_update_allowed": True, "m1_imit_active": True, "m1_imit_details": m1_imit.get("details", [])}
+                return m1_imit["proposals"]
         if not bool(getattr(self, "video_sensor_enabled", True)):
             return scene.unsqueeze(1)
         dynamic_score, scene_novelty, interaction = self._dynamic_sensory_input_score(obs, scene)
@@ -960,24 +968,13 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
         Run inner object system with progressive semantic slot policy.
 
         If dream:
-            use dream_step path.
+            use dream_step path unless an explicit M1 imit proposal targets
+            ObjectSlotMemory slots.
 
         If awake:
             proposal 0 -> slot 0 = whole scene image
             proposal 1 -> next semantic slot, only if a semantic event exists
         """
-        if dream_mode:
-            return self.inner_object_system(
-                prev_state,
-                vision,
-                tactile,
-                body,
-                hand,
-                leg,
-                freeze_memory_update=False,
-                dream_mode=True,
-            )
-
         if vision.ndim == 2:
             vision = vision.unsqueeze(1)
 
@@ -986,7 +983,7 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
         proposal_target_names = list(getattr(self, "_inner_object_proposal_target_names", []))
 
         # Hard guard: static_frame / dynamic_scene / one-frame crop must not update slots.
-        allowed_kinds = {"dynamic_object", "dynamic_event", "dream_replay"}
+        allowed_kinds = {"dynamic_object", "dynamic_event", "dream_replay", "m1_imit_dynamic_object"}
         if target_slots:
             keep = []
             for i, _slot in enumerate(target_slots):
@@ -1003,6 +1000,18 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
                 proposal_kinds = [str(proposal_kinds[i]) for i in keep]
                 proposal_target_names = [str(proposal_target_names[i]) for i in keep if i < len(proposal_target_names)]
 
+        has_m1_imit_target = any(str(kind) == "m1_imit_dynamic_object" for kind in proposal_kinds)
+        if dream_mode and not has_m1_imit_target:
+            return self.inner_object_system(
+                prev_state,
+                vision,
+                tactile,
+                body,
+                hand,
+                leg,
+                freeze_memory_update=False,
+                dream_mode=True,
+            )
 
         # No dynamic sensory input -> no semantic write.
         # Read and decode existing memory only.
@@ -1075,7 +1084,41 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
             v_i = vision[:, pi, :]
             target_slot = int(target_slots[pi]) if pi < len(target_slots) else 0
 
-            fused = self.inner_object_system.fusion(v_i, tactile, body, hand, leg)
+            source = str(proposal_kinds[pi]) if pi < len(proposal_kinds) else "dynamic_object"
+            target_name_for_recon = str(proposal_target_names[pi]) if pi < len(proposal_target_names) else str(getattr(self, "_inner_object_dynamic_debug", {}).get("dynamic_target_name", "dynamic_object"))
+
+            if source == "m1_imit_dynamic_object":
+                # M1 imit proposal is already a z_obj-like latent.
+                # Do NOT pass it through fusion(...), because fusion expects raw
+                # sensory summaries and can make the target slot stay empty.
+                latent_dim = int(getattr(self.cfg.object_image, "latent_dim", 128))
+                z_update = v_i
+                if torch.is_tensor(z_update) and int(z_update.shape[-1]) != latent_dim:
+                    z_update = pad_or_trim(z_update, latent_dim)
+
+                bsz = int(z_update.shape[0]) if torch.is_tensor(z_update) and z_update.ndim >= 2 else 1
+                vision_strength = torch.ones(bsz, 1, device=z_update.device, dtype=z_update.dtype)
+                touch_strength = torch.zeros(bsz, 1, device=z_update.device, dtype=z_update.dtype)
+                fused = {
+                    "z_update": z_update,
+                    "vision_strength": vision_strength,
+                    "touch_strength": touch_strength,
+                    "touch_activity": touch_strength,
+                    "vision_activity": vision_strength,
+                }
+            else:
+                fused = self.inner_object_system.fusion(v_i, tactile, body, hand, leg)
+
+            if source == "m1_imit_dynamic_object":
+                try:
+                    print(
+                        "[inner_object][slot_write_attempt] "
+                        f"pi={pi} source={source} target_slot={target_slot} "
+                        f"v_shape={tuple(v_i.shape)} v_norm={float(v_i.detach().float().norm().cpu().item()):.4f}"
+                    )
+                except Exception:
+                    pass
+
             slot = self._memory_update_forced_slot(
                 state,
                 fused["z_update"],
@@ -1083,8 +1126,19 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
                 fused["touch_strength"],
                 target_slot,
             )
-            source = str(proposal_kinds[pi]) if pi < len(proposal_kinds) else "dynamic_object"
-            target_name_for_recon = str(proposal_target_names[pi]) if pi < len(proposal_target_names) else str(getattr(self, "_inner_object_dynamic_debug", {}).get("dynamic_target_name", "dynamic_object"))
+            if source == "m1_imit_dynamic_object":
+                try:
+                    z_slots = slot.get("z_obj_slots")
+                    c_slots = slot.get("confidence_slots")
+                    if torch.is_tensor(z_slots) and torch.is_tensor(c_slots):
+                        print(
+                            "[inner_object][slot_write_done] "
+                            f"target_slot={target_slot} "
+                            f"z_norm={float(z_slots[:, target_slot, :].detach().float().norm().cpu().item()):.4f} "
+                            f"conf={float(c_slots[:, target_slot, :].detach().float().mean().cpu().item()):.4f}"
+                        )
+                except Exception:
+                    pass
             if hasattr(self, "log_tetra_slot_write"):
                 self.log_tetra_slot_write(target_slot, source, v_i, slot)
             self._slot_observation_reconstruction_step(target_slot, target_name_for_recon, source)
@@ -1129,6 +1183,10 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
             dbg = getattr(self, "_inner_object_dynamic_debug", {}) or {}
             decoded["long_dynamic_ready"] = torch.tensor([[float(bool(dbg.get("dynamic_ready", False)))]], device=last_slot["z_obj"].device, dtype=last_slot["z_obj"].dtype)
             decoded["long_dynamic_slot_update_allowed"] = torch.tensor([[float(bool(dbg.get("slot_update_allowed", False)))]], device=last_slot["z_obj"].device, dtype=last_slot["z_obj"].dtype)
+            if source == "m1_imit_dynamic_object":
+                decoded["debug_imit_fallback_shape"] = True
+                decoded["debug_imit_source"] = "m1_object_slot_imit"
+                decoded["debug_imit_shape_kind"] = target_name_for_recon
         except Exception:
             pass
 
@@ -2430,7 +2488,16 @@ class ObjectImageryRuntimeMixin(StaticDynamicCodeDebugRuntimeMixin, DynamicObjec
                 return
 
             snap = {}
-            for k in ["point_cloud", "point_conf", "voxel_occ", "color_rgb", "confidence"]:
+            for k in [
+                "point_cloud",
+                "point_conf",
+                "voxel_occ",
+                "color_rgb",
+                "confidence",
+                "debug_imit_fallback_shape",
+                "debug_imit_source",
+                "debug_imit_shape_kind",
+            ]:
                 if k in obj:
                     v = obj[k]
                     if hasattr(v, "detach"):

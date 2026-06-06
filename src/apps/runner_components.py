@@ -110,6 +110,10 @@ def inner_object_open3d_viewer_kwargs(cfg: Any) -> Dict[str, Any]:
         "use_internal_color": open3d_cfg.use_internal_color,
         "max_slots": open3d_cfg.max_slots,
         "slot_spacing": open3d_cfg.slot_spacing,
+        "show_slot_snapshots": getattr(open3d_cfg, "show_slot_snapshots", False),
+        "view_zoom": getattr(open3d_cfg, "view_zoom", 0.42),
+        "view_z_near": getattr(open3d_cfg, "view_z_near", 0.01),
+        "view_z_far": getattr(open3d_cfg, "view_z_far", 100.0),
         "export_dir": open3d_cfg.export_dir,
     }
 

@@ -22,6 +22,11 @@ Buttons that launch a separate process or a separate monitor window must:
   purple base styling;
 - never be treated as runner-dependent action buttons.
 
+Detached monitor/tool windows must be independent top-level windows, not child
+dialogs of the main control panel. In PyQt this means creating them without the
+main control widget as parent, so minimizing the main panel does not minimize
+or hide the detached window.
+
 The green state is an active visibility/process indicator, not an "available"
 indicator. A button must not be green merely because the feature exists or
 because the runner is connected.
@@ -35,6 +40,8 @@ These M8 buttons follow this contract:
 - `Sleep Replay Monitor`
 - `Replay Quality Monitor`
 - `M5 Learning Quality`
+- `M5 Latent Prototypes`
+- `M1 Object Slot Imit`
 
 Any new button that opens a detached diagnostics process, detached monitor, or
 standalone tool window must follow the same contract by default.

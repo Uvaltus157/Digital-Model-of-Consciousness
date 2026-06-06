@@ -258,6 +258,30 @@ class ActionRuntimeMixin:
                 self.request_dream_probe(payload)
             else:
                 print("[dream_probe] ignored: DreamProbeRuntimeMixin is not installed")
+        elif action in ("m5_latent_prototype_inject", "m5_latent_prototype_clear"):
+            print(f"[m5_latent_prototype][ipc] action={action} payload={payload}")
+            if hasattr(self, "request_m5_latent_prototype"):
+                if action == "m5_latent_prototype_clear":
+                    payload = {"kind": "clear", **dict(payload or {})}
+                self.request_m5_latent_prototype(payload)
+            else:
+                print("[m5_latent_prototype] ignored: M5LatentPrototypeRuntimeMixin is not installed")
+        elif action in ("m1_object_slot_imit_inject", "m1_object_slot_imit_clear"):
+            print(f"[m1_object_slot_imit][ipc] action={action} payload={payload}")
+            if hasattr(self, "request_m1_object_slot_latents"):
+                if action == "m1_object_slot_imit_clear":
+                    payload = {"kind": "clear", **dict(payload or {})}
+                self.request_m1_object_slot_latents(payload)
+            else:
+                print("[m1_object_slot_imit] ignored: M1ObjectSlotLatentImitRuntimeMixin is not installed")
+        elif action in ("m2_scenario_imit_inject", "m2_scenario_imit_clear"):
+            print(f"[m2_scenario_imit][ipc] action={action} payload={payload}")
+            if hasattr(self, "request_m2_scenario_imit"):
+                if action == "m2_scenario_imit_clear":
+                    payload = {"kind": "clear", **dict(payload or {})}
+                self.request_m2_scenario_imit(payload)
+            else:
+                print("[m2_scenario_imit] ignored: M2ScenarioImitRuntimeMixin is not installed")
         elif action == "module_lab_run":
             try:
                 from src.modules.m08_debug_visual_control.module_lab_runtime import run_module_lab_from_payload

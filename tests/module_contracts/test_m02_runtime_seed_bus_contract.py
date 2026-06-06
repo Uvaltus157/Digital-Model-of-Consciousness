@@ -61,3 +61,22 @@ def test_m02_runtime_seed_bus_contract():
     # main stage is disabled by default in this contract.
     seed2, gate2 = runtime.get_m5_focus_seed(stage="main")
     assert seed2 is None and gate2 is None
+
+
+def test_m5_latent_prototype_seed_has_priority_over_m2_seed():
+    runtime = DummyEventDreamRuntime()
+    out = make_unconscious_loop_out()
+    runtime.compute_event_dream_replay({}, out)
+
+    prototype_seed = torch.ones(1, 256) * 0.25
+    prototype_gate = torch.tensor([[0.9]], dtype=torch.float32)
+
+    def prototype_focus_seed(stage="model_step"):
+        assert stage == "pre_observe"
+        return prototype_seed, prototype_gate
+
+    runtime.get_m5_latent_prototype_focus_seed = prototype_focus_seed
+
+    seed, gate = runtime.get_m5_focus_seed(stage="pre_observe")
+    assert seed is prototype_seed
+    assert gate is prototype_gate

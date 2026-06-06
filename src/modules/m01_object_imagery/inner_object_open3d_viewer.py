@@ -23,8 +23,12 @@ class InnerObjectOpen3DViewerV2Config:
     use_internal_color: bool = True
     max_slots: int = 4
     slot_spacing: float = 2.6
+    show_slot_snapshots: bool = False
+    view_zoom: float = 0.42
+    view_z_near: float = 0.01
+    view_z_far: float = 100.0
     export_dir: str = "exports/inner_object_3d"
-    show_long_dynamic_debug: bool = True
+    show_long_dynamic_debug: bool = False
     debug_panel_x: float = -1.80
     debug_panel_y: float = 1.40
     debug_panel_z: float = 0.0
@@ -85,22 +89,27 @@ class InnerObjectOpen3DViewerV2:
         self.current_pc = self.o3d.geometry.PointCloud()
         self.current_vox = self.o3d.geometry.PointCloud()
         self.axis = self.o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.6, origin=[0, 0, 0])
-        self.debug_text_pc = self.o3d.geometry.PointCloud()
+        if bool(getattr(self.cfg, "show_long_dynamic_debug", False)):
+            self.debug_text_pc = self.o3d.geometry.PointCloud()
+        else:
+            self.debug_text_pc = None
 
         self.vis.add_geometry(self.current_pc)
         self.vis.add_geometry(self.current_vox)
         self.vis.add_geometry(self.axis)
-        self.vis.add_geometry(self.debug_text_pc)
+        if self.debug_text_pc is not None:
+            self.vis.add_geometry(self.debug_text_pc)
 
         self.slot_pcs = []
         self.slot_voxs = []
-        for _ in range(int(self.cfg.max_slots)):
-            pc = self.o3d.geometry.PointCloud()
-            vox = self.o3d.geometry.PointCloud()
-            self.slot_pcs.append(pc)
-            self.slot_voxs.append(vox)
-            self.vis.add_geometry(pc)
-            self.vis.add_geometry(vox)
+        if bool(getattr(self.cfg, "show_slot_snapshots", False)):
+            for _ in range(int(self.cfg.max_slots)):
+                pc = self.o3d.geometry.PointCloud()
+                vox = self.o3d.geometry.PointCloud()
+                self.slot_pcs.append(pc)
+                self.slot_voxs.append(vox)
+                self.vis.add_geometry(pc)
+                self.vis.add_geometry(vox)
 
         try:
             opt = self.vis.get_render_option()
@@ -108,6 +117,7 @@ class InnerObjectOpen3DViewerV2:
             opt.background_color = np.array([0.04, 0.05, 0.07], dtype=np.float64)
         except Exception:
             pass
+        self._apply_view()
 
         self.created = True
         return True
@@ -154,7 +164,76 @@ class InnerObjectOpen3DViewerV2:
             return col.astype(np.float32)
         return np.array([0.35, 0.65, 1.0], dtype=np.float32)
 
+    def _debug_imit_kind(self, obj: Dict) -> str:
+        kind = str(obj.get("debug_imit_shape_kind", "") or "").lower().strip()
+        if kind in ("tetra", "tetrahedron", "pyramid"):
+            return "tetrahedron"
+        if kind in ("morph", "cube_tetra"):
+            return "morph"
+        return "cube" if kind in ("cube", "box", "cuboid", "hexahedron") else ""
+
+    def _line_points(self, a: np.ndarray, b: np.ndarray, n: int = 18) -> np.ndarray:
+        t = np.linspace(0.0, 1.0, max(2, int(n)), dtype=np.float32)[:, None]
+        return (1.0 - t) * a[None, :] + t * b[None, :]
+
+    def _debug_imit_primitive_points(self, kind: str) -> np.ndarray:
+        kind = self._debug_imit_kind({"debug_imit_shape_kind": kind})
+        if kind == "tetrahedron":
+            verts = np.asarray(
+                [
+                    [0.0, 0.0, 0.85],
+                    [0.80, 0.0, -0.45],
+                    [-0.40, 0.70, -0.45],
+                    [-0.40, -0.70, -0.45],
+                ],
+                dtype=np.float32,
+            )
+            edges = [(0, 1), (0, 2), (0, 3), (1, 2), (2, 3), (3, 1)]
+            return np.concatenate([self._line_points(verts[i], verts[j], 24) for i, j in edges], axis=0)
+
+        cube_vals = [-0.65, 0.65]
+        cube_verts = np.asarray([[x, y, z] for x in cube_vals for y in cube_vals for z in cube_vals], dtype=np.float32)
+        cube_edges = []
+        for i, a in enumerate(cube_verts):
+            for j, b in enumerate(cube_verts):
+                if j <= i:
+                    continue
+                if int(np.sum(np.abs(a - b) > 1e-6)) == 1:
+                    cube_edges.append((i, j))
+        cube = np.concatenate([self._line_points(cube_verts[i], cube_verts[j], 18) for i, j in cube_edges], axis=0)
+
+        if kind == "morph":
+            tetra = self._debug_imit_primitive_points("tetrahedron")
+            n = min(cube.shape[0], tetra.shape[0])
+            return np.concatenate([0.55 * cube[:n] + 0.45 * tetra[:n], cube[::3], tetra[::3]], axis=0)
+        return cube
+
+    def _debug_imit_geometry(self, obj: Dict, offset: np.ndarray, fade: float):
+        kind = self._debug_imit_kind(obj)
+        if not kind:
+            return None
+        pts = self._debug_imit_primitive_points(kind).astype(np.float32) + offset[None, :]
+        if kind == "tetrahedron":
+            base = np.array([1.0, 0.58, 0.20], dtype=np.float32)
+        elif kind == "morph":
+            base = np.array([0.85, 0.45, 1.0], dtype=np.float32)
+        else:
+            base = np.array([0.20, 0.85, 1.0], dtype=np.float32)
+        colors = np.repeat((base * float(fade))[None, :], pts.shape[0], axis=0)
+        return pts, np.clip(colors, 0.0, 1.0)
+
     def _geometry_from_obj(self, obj: Dict, offset=None, fade: float = 1.0):
+        if offset is None:
+            offset = np.zeros(3, dtype=np.float32)
+        else:
+            offset = np.asarray(offset, dtype=np.float32)
+
+        if bool(obj.get("debug_imit_fallback_shape", False)):
+            fallback = self._debug_imit_geometry(obj, offset, fade)
+            if fallback is not None:
+                pts, pt_colors = fallback
+                return pts, pt_colors, np.zeros((0, 3), dtype=np.float32), np.zeros((0, 3), dtype=np.float32)
+
         pts = self._tensor_to_numpy(obj["point_cloud"])
         if pts.ndim == 3:
             pts = pts[0]
@@ -165,8 +244,6 @@ class InnerObjectOpen3DViewerV2:
             conf = conf[0]
         conf = np.clip(conf.reshape(-1, 1), 0.0, 1.0)
 
-        if offset is None:
-            offset = np.zeros(3, dtype=np.float32)
         pts = pts.astype(np.float32) + offset[None, :]
 
         base_color = self._base_color(obj)
@@ -331,7 +408,9 @@ class InnerObjectOpen3DViewerV2:
         return np.asarray(pts, dtype=np.float32), np.asarray(colors, dtype=np.float32)
 
     def _update_long_dynamic_debug_panel(self, obj: Dict):
-        if not bool(getattr(self.cfg, "show_long_dynamic_debug", True)):
+        if getattr(self, "debug_text_pc", None) is None:
+            return
+        if not bool(getattr(self.cfg, "show_long_dynamic_debug", False)):
             if getattr(self, "debug_text_pc", None) is not None:
                 self._set_pc(self.debug_text_pc, np.zeros((0, 3), dtype=np.float32), np.zeros((0, 3), dtype=np.float32))
             return
@@ -343,6 +422,22 @@ class InnerObjectOpen3DViewerV2:
         geom.points = self.o3d.utility.Vector3dVector(points.astype(np.float64))
         geom.colors = self.o3d.utility.Vector3dVector(colors.astype(np.float64))
 
+    def _apply_view(self):
+        if self.vis is None:
+            return
+        try:
+            ctr = self.vis.get_view_control()
+            ctr.set_lookat([0.0, 0.0, 0.0])
+            ctr.set_front([0.55, -0.75, 0.35])
+            ctr.set_up([0.0, 0.0, 1.0])
+            ctr.set_zoom(float(getattr(self.cfg, "view_zoom", 0.42)))
+            if hasattr(ctr, "set_constant_z_near"):
+                ctr.set_constant_z_near(float(getattr(self.cfg, "view_z_near", 0.01)))
+            if hasattr(ctr, "set_constant_z_far"):
+                ctr.set_constant_z_far(float(getattr(self.cfg, "view_z_far", 100.0)))
+        except Exception:
+            pass
+
     def update(self, current_obj: Dict, slot_snapshots: Optional[List[Dict]] = None):
         if not self._ensure():
             return
@@ -352,21 +447,22 @@ class InnerObjectOpen3DViewerV2:
         self._set_pc(self.current_pc, pts, cols)
         self._set_pc(self.current_vox, vpts, vcols)
 
-        snaps = slot_snapshots or []
-        snaps = snaps[: int(self.cfg.max_slots)]
-        for i in range(int(self.cfg.max_slots)):
-            if i < len(snaps):
-                snap = snaps[i]
-                offset = np.array([(i + 1) * float(self.cfg.slot_spacing), 0.0, 0.0], dtype=np.float32)
-                fade = max(0.35, 0.85 - 0.12 * i)
-                spts, scols, svpts, svcols = self._geometry_from_obj(snap, offset=offset, fade=fade)
-            else:
-                spts = np.zeros((0, 3), dtype=np.float32)
-                scols = np.zeros((0, 3), dtype=np.float32)
-                svpts = np.zeros((0, 3), dtype=np.float32)
-                svcols = np.zeros((0, 3), dtype=np.float32)
-            self._set_pc(self.slot_pcs[i], spts, scols)
-            self._set_pc(self.slot_voxs[i], svpts, svcols)
+        if bool(getattr(self.cfg, "show_slot_snapshots", False)):
+            snaps = slot_snapshots or []
+            snaps = snaps[: len(self.slot_pcs)]
+            for i, (pc, vox) in enumerate(zip(self.slot_pcs, self.slot_voxs)):
+                if i < len(snaps):
+                    snap = snaps[i]
+                    offset = np.array([(i + 1) * float(self.cfg.slot_spacing), 0.0, 0.0], dtype=np.float32)
+                    fade = max(0.35, 0.85 - 0.12 * i)
+                    spts, scols, svpts, svcols = self._geometry_from_obj(snap, offset=offset, fade=fade)
+                else:
+                    spts = np.zeros((0, 3), dtype=np.float32)
+                    scols = np.zeros((0, 3), dtype=np.float32)
+                    svpts = np.zeros((0, 3), dtype=np.float32)
+                    svcols = np.zeros((0, 3), dtype=np.float32)
+                self._set_pc(pc, spts, scols)
+                self._set_pc(vox, svpts, svcols)
 
         self.vis.update_geometry(self.current_pc)
         self.vis.update_geometry(self.current_vox)

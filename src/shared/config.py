@@ -137,6 +137,10 @@ class InnerObjectOpen3DConfig:
     use_internal_color: bool = True
     max_slots: int = 10
     slot_spacing: float = 2.6
+    show_slot_snapshots: bool = False
+    view_zoom: float = 0.42
+    view_z_near: float = 0.01
+    view_z_far: float = 100.0
     export_dir: str = "exports/inner_object_3d"
     snapshot_conf_threshold: float = 0.56
     min_steps_between_snapshots: int = 24

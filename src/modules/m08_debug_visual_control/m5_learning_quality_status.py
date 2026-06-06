@@ -97,6 +97,7 @@ def build_m5_learning_quality_status(system: Any) -> Dict[str, Any]:
     focus_feedback = _dict(out.get("focus_feedback"))
     attention = _dict(out.get("attention"))
     event_dream = _dict(out.get("event_dream_replay"))
+    latent_prototype = _dict(out.get("m5_latent_prototype"))
     object_decoder = _dict(getattr(system, "latest_object_decoder_stats", {}) or {})
     long_memory = _dict(getattr(system, "latest_long_dynamic_memory_stats", {}) or {})
     replay_quality = _dict(getattr(system, "_replay_quality_monitor_state", {}) or {})
@@ -155,6 +156,9 @@ def build_m5_learning_quality_status(system: Any) -> Dict[str, Any]:
     obs_embed = out.get("obs_embed", out.get("latent"))
     seed_gate = _scalar(event_dream.get("next_focus_context_seed_gate", event_dream.get("replay_gate")), 0.0)
     seed_norm = _norm(event_dream.get("next_focus_context_seed", event_dream.get("replay_context")), 0.0)
+    if seed_norm <= 0.0 and latent_prototype:
+        seed_gate = _scalar(latent_prototype.get("next_focus_context_seed_gate", latent_prototype.get("gate")), 0.0)
+        seed_norm = _norm(latent_prototype.get("next_focus_context_seed"), 0.0)
     focus_norm = _norm(focus_context, 0.0)
     workspace_norm = _norm(workspace, 0.0)
     obs_embed_norm = _norm(obs_embed, 0.0)

@@ -65,10 +65,15 @@ class EventDreamReplayRuntimeMixin:
         """Common M5 FocusFeedbackBoundary seed bus.
 
         Priority:
-          1. M2 dream/replay seed in sleep mode.
-          2. M15 conscious loop seed when available.
+          1. M5 latent prototype simulator seed when active.
+          2. M2 dream/replay seed in sleep mode.
+          3. M15 conscious loop seed when available.
         Both enter M5 through the same focus_context_seed/gate inputs.
         """
+        if hasattr(self, "get_m5_latent_prototype_focus_seed"):
+            seed, gate = self.get_m5_latent_prototype_focus_seed(stage=stage)
+            if torch.is_tensor(seed):
+                return seed, gate
         seed, gate = self.get_event_dream_focus_seed(stage=stage)
         if torch.is_tensor(seed):
             return seed, gate

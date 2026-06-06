@@ -79,6 +79,10 @@ object_image_open3d:
   use_internal_color: true
   max_slots: 10
   slot_spacing: 2.6
+  show_slot_snapshots: false
+  view_zoom: 0.42
+  view_z_near: 0.01
+  view_z_far: 100.0
   export_dir: "exports/inner_object_3d"
   snapshot_conf_threshold: 0.56
   min_steps_between_snapshots: 24
