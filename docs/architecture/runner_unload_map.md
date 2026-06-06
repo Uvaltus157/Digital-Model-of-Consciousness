@@ -21,7 +21,7 @@ runner.py
 → src/apps/runner_entry.py
 → src/apps/runner_config.py
 → src/apps/runner_system_factory.py
-→ src/apps/runner.py / UnifiedSystemV510 compatibility wrapper
+→ src/apps/runner.py / UnifiedSystem runtime wrapper
 → src/apps/runner_unified_init.py
 → src/apps/runner_loop.py
 ```
@@ -41,25 +41,25 @@ CWMS_LEGACY_RUNNER=1 python runner.py --config-path config --config-name runner
 It keeps this public import path stable:
 
 ```python
-from src.apps.runner import UnifiedSystemV510
+from src.apps.runner import UnifiedSystem
 ```
 
 It no longer owns the old monolithic responsibilities. The class now binds its main hooks to extracted helpers:
 
 ```text
-UnifiedSystemV510.__init__
+UnifiedSystem.__init__
 → src/apps/runner_unified_init.py
 
-UnifiedSystemV510.run
+UnifiedSystem.run
 → src/apps/runner_loop.py
 
-UnifiedSystemV510.resolve_module_training_flags_from_config
+UnifiedSystem.resolve_module_training_flags_from_config
 → src/apps/runner_training_flags.py
 
-UnifiedSystemV510._force_hover_flight_runtime_config
+UnifiedSystem._force_hover_flight_runtime_config
 → src/apps/runner_hover_config.py
 
-UnifiedSystemV510.rebuild_optimizer_from_trainable_modules
+UnifiedSystem.rebuild_optimizer_from_trainable_modules
 → src/apps/runner_optimizer.py
 ```
 
@@ -70,7 +70,7 @@ UnifiedSystemV510.rebuild_optimizer_from_trainable_modules
 | `src/apps/runner_entry.py` | Hydra entrypoint only |
 | `src/apps/runner_config.py` | Hydra/OmegaConf filtering, structured config merge, resolved config rendering |
 | `src/apps/runner_system_factory.py` | Construction sequence: instantiate system, normalize runtime/startup state, ensure services, apply mode |
-| `src/apps/runner_unified_init.py` | Extracted `UnifiedSystemV510.__init__` |
+| `src/apps/runner_unified_init.py` | Extracted `UnifiedSystem.__init__` |
 | `src/apps/runner_loop.py` | Outer life loop, train thread, MuJoCo viewer sync, shutdown/save/close sequence |
 | `src/apps/runner_teachers.py` | Inner-speech teacher module resolution and loading |
 | `src/apps/runner_training_flags.py` | Module train/passive flag resolution from `module_debug.module_modes` |
@@ -99,7 +99,7 @@ UnifiedSystemV510.rebuild_optimizer_from_trainable_modules
 print("Resolved config:\n" + render_resolved_runner_config(cfg_raw))
 cfg_obj = build_runner_config(cfg_raw)
 
-system = build_unified_system(cfg_obj, UnifiedSystemV510)
+system = build_unified_system(cfg_obj, UnifiedSystem)
 system.run()
 ```
 
@@ -171,7 +171,7 @@ camera/action/object visualizer window toggles
 
 1. Do not restore the old monolithic `src/apps/runner.py`.
 2. Preserve `python runner.py --config-path config --config-name runner` as the main launch command.
-3. Preserve `from src.apps.runner import UnifiedSystemV510`.
+3. Preserve `from src.apps.runner import UnifiedSystem`.
 4. Do not change checkpoint format during runner cleanup.
 5. Do not change optimizer param group semantics without a specific traceback and compatibility note.
 6. Keep helper modules lightweight where possible; avoid MuJoCo/Open3D/PyQt imports at module import time unless unavoidable.

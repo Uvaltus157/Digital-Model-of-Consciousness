@@ -3,6 +3,10 @@ from __future__ import annotations
 import time
 import torch.optim as optim
 
+from src.modules.m08_debug_visual_control.m5_learning_quality_status import build_m5_learning_quality_status
+
+from src.modules.m08_debug_visual_control.replay_quality_monitor_status import build_replay_quality_monitor_status
+
 from src.modules.m08_debug_visual_control.sleep_replay_monitor_status import build_sleep_replay_monitor_status
 
 
@@ -131,6 +135,8 @@ class ModuleStatusRuntimeMixin:
                 "last_train_loss": float(getattr(self, "last_train_loss", 0.0) or 0.0),
                 "last_train_error": str(getattr(self, "last_train_error", "")),
                 "last_module_lab_result": dict(getattr(self, "last_module_lab_result", {}) or {}),
+                "m5_learning_quality": build_m5_learning_quality_status(self),
+                "replay_quality_monitor": build_replay_quality_monitor_status(self),
                 "sleep_replay_monitor": build_sleep_replay_monitor_status(self),
                 "object_decoder_stats": dict(getattr(self, "latest_object_decoder_stats", {})),
                 "long_dynamic_memory_learning": dict(getattr(self, "latest_long_dynamic_memory_stats", {})),

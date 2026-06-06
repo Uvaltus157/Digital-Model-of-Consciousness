@@ -69,7 +69,7 @@ MODULE_TAB_BUTTONS = {
     "m3": [],
     "m6": [],
     "m7": ["btn_inner"],
-    "m8": ["btn_module_debug", "btn_module_lab", "btn_sleep_replay_monitor"],
+    "m8": ["btn_module_debug", "btn_module_lab", "btn_sleep_replay_monitor", "btn_replay_quality_monitor", "btn_m5_learning_quality"],
     "m14": ["btn_latent"],
 }
 
@@ -130,6 +130,12 @@ def main() -> None:
             self.open3d_slot_viewer_proc = None
             self.module_lab_window = None
             self.module_lab_text = None
+            self.m5_learning_quality_window = None
+            self.m5_learning_quality_labels = {}
+            self.m5_learning_quality_raw = None
+            self.replay_quality_monitor_window = None
+            self.replay_quality_monitor_labels = {}
+            self.replay_quality_monitor_raw = None
             self.sleep_replay_monitor_window = None
             self.sleep_replay_monitor_labels = {}
             self.sleep_replay_monitor_raw = None
@@ -199,6 +205,8 @@ def main() -> None:
             self.btn_train = QtWidgets.QPushButton()
             self.btn_module_debug = QtWidgets.QPushButton()
             self.btn_module_lab = QtWidgets.QPushButton("Run Module Lab")
+            self.btn_m5_learning_quality = QtWidgets.QPushButton("M5 Learning Quality")
+            self.btn_replay_quality_monitor = QtWidgets.QPushButton("Replay Quality Monitor")
             self.btn_sleep_replay_monitor = QtWidgets.QPushButton("Sleep Replay Monitor")
             self.btn_module_debug_pyqt = QtWidgets.QPushButton("PyQt Module Debug")
             self.btn_agent_actions_pyqt = QtWidgets.QPushButton("PyQt Agent Actions Imit")
@@ -267,6 +275,8 @@ def main() -> None:
             self.btn_start_viewer.setMinimumHeight(42)
             self.btn_module_debug_pyqt.setMinimumHeight(42)
             self.btn_module_lab.setMinimumHeight(42)
+            self.btn_m5_learning_quality.setMinimumHeight(42)
+            self.btn_replay_quality_monitor.setMinimumHeight(42)
             self.btn_sleep_replay_monitor.setMinimumHeight(42)
             self.btn_agent_actions_pyqt.setMinimumHeight(42)
             self.btn_sleep_replay.setMinimumHeight(42)
@@ -296,6 +306,8 @@ def main() -> None:
             self.btn_module_lab.setToolTip("Run module lab contracts/scenarios and show latest result")
             self.btn_sleep_replay_monitor.setToolTip("Open live sleep/replay monitor for M1/M11/M13/M4/M2/M5/M3")
             self.btn_module_lab.setToolTip("Run M8 module lab contracts/scenarios inside the runner via IPC")
+            self.btn_m5_learning_quality.setToolTip("Show M5 learning baseline: loss trends, seed response, latent/object stability proxies")
+            self.btn_replay_quality_monitor.setToolTip("Show replay quality/integration metrics: selected episode, identity, pressure/relief deltas")
             self.btn_module_debug_pyqt.setToolTip("Open or close the registry-backed PyQt module debug window")
             self.btn_save_ply.setToolTip("Export the current internal 3D object model as a PLY file")
             self.btn_save_pcd.setToolTip("Export the current internal 3D object model as a PCD file")
@@ -448,6 +460,8 @@ def main() -> None:
             self.btn_module_debug.clicked.connect(lambda: self.toggle("module_debug"))
             self.btn_module_lab.clicked.connect(self.open_m8_module_lab_window)
             self.btn_sleep_replay_monitor.clicked.connect(self.open_sleep_replay_monitor_window)
+            self.btn_replay_quality_monitor.clicked.connect(self.open_replay_quality_monitor_window)
+            self.btn_m5_learning_quality.clicked.connect(self.open_m5_learning_quality_window)
             self.btn_module_debug_pyqt.clicked.connect(self.open_pyqt_module_debug)
             self.btn_agent_actions_pyqt.clicked.connect(self.open_pyqt_agent_actions)
             self.btn_latent.clicked.connect(lambda: self.toggle("latent_semantic"))
@@ -578,8 +592,6 @@ def main() -> None:
                 self.btn_object_open3d,
                 self.btn_train,
                 self.btn_module_debug,
-                self.btn_module_lab,
-                self.btn_sleep_replay_monitor,
                 self.btn_latent,
                 self.btn_save_ply,
                 self.btn_save_pcd,
@@ -690,6 +702,35 @@ def main() -> None:
                     "color:#FF8FA3; background:transparent; border:none; "
                     "font-weight:900; padding:2px 4px;"
                 )
+
+        def _window_visible(self, window) -> bool:
+            try:
+                return bool(window is not None and window.isVisible())
+            except Exception:
+                return False
+
+        def _clear_sleep_replay_monitor_window_refs(self):
+            self.sleep_replay_monitor_window = None
+            self.sleep_replay_monitor_labels = {}
+            self.sleep_replay_monitor_raw = None
+            self.refresh_ui()
+
+        def _clear_replay_quality_monitor_window_refs(self):
+            self.replay_quality_monitor_window = None
+            self.replay_quality_monitor_labels = {}
+            self.replay_quality_monitor_raw = None
+            self.refresh_ui()
+
+        def _clear_m5_learning_quality_window_refs(self):
+            self.m5_learning_quality_window = None
+            self.m5_learning_quality_labels = {}
+            self.m5_learning_quality_raw = None
+            self.refresh_ui()
+
+        def _clear_module_lab_window_refs(self):
+            self.module_lab_window = None
+            self.module_lab_text = None
+            self.refresh_ui()
 
         def _reset_to_default(self):
             self.state = LocalPanelState()
@@ -838,7 +879,7 @@ def main() -> None:
                 blocker = QtCore.QSignalBlocker(cb)
                 cb.setChecked(bool(checked))
                 del blocker
-            self._style_plain_status_button(self.btn_sleep_replay, self._sleep_mode_active(), "Сон / replay mode")
+            self._style_button(self.btn_sleep_replay, self._sleep_mode_active(), "Сон / replay mode")
             self._style_button(self.btn_actions, s.actions, "Action outputs")
             
             self._style_button(self.btn_object_image, s.object_image, "Inner Object Visualizer")
@@ -862,8 +903,26 @@ def main() -> None:
             )
             self._style_train_button(self.btn_train, s.training)
             self._style_button(self.btn_module_debug, s.module_debug, "Module debug")
-            self._style_plain_status_button(self.btn_module_lab, False, "Module Lab")
-            self._style_plain_status_button(self.btn_sleep_replay_monitor, self._sleep_mode_active(), "Sleep Replay Monitor")
+            self._style_plain_status_button(
+                self.btn_module_lab,
+                self._window_visible(getattr(self, "module_lab_window", None)),
+                "Module Lab",
+            )
+            self._style_plain_status_button(
+                self.btn_sleep_replay_monitor,
+                self._window_visible(getattr(self, "sleep_replay_monitor_window", None)),
+                "Sleep Replay Monitor",
+            )
+            self._style_plain_status_button(
+                self.btn_replay_quality_monitor,
+                self._window_visible(getattr(self, "replay_quality_monitor_window", None)),
+                "Replay Quality Monitor",
+            )
+            self._style_plain_status_button(
+                self.btn_m5_learning_quality,
+                self._window_visible(getattr(self, "m5_learning_quality_window", None)),
+                "M5 Learning Quality",
+            )
             self._style_plain_status_button(
                 self.btn_module_debug_pyqt,
                 self._pyqt_window_alive(self.module_debug_proc, self.module_debug_external_alive),
@@ -880,6 +939,8 @@ def main() -> None:
             self._set_runner_controls_enabled(s.connected)
             self.refresh_module_lab_window()
             self.refresh_sleep_replay_monitor_window()
+            self.refresh_replay_quality_monitor_window()
+            self.refresh_m5_learning_quality_window()
 
         def _sleep_replay_monitor_value(self, section: str, key: str, default=""):
             monitor = {}
@@ -961,8 +1022,9 @@ def main() -> None:
         def open_sleep_replay_monitor_window(self):
             try:
                 if self.sleep_replay_monitor_window is not None and self.sleep_replay_monitor_window.isVisible():
-                    self.sleep_replay_monitor_window.raise_()
-                    self.sleep_replay_monitor_window.activateWindow()
+                    window = self.sleep_replay_monitor_window
+                    window.close()
+                    self._clear_sleep_replay_monitor_window_refs()
                     return
             except Exception:
                 pass
@@ -1111,11 +1173,355 @@ def main() -> None:
             btn_probe_mixed.clicked.connect(lambda: self.request_sleep_replay_probe("mixed", 0.75, 80))
             btn_probe_clear.clicked.connect(lambda: self.request_sleep_replay_probe("clear", 0.0, 1))
             btn_close.clicked.connect(dialog.close)
-            dialog.finished.connect(lambda _code: setattr(self, "sleep_replay_monitor_labels", {}))
-            dialog.finished.connect(lambda _code: setattr(self, "sleep_replay_monitor_raw", None))
+            dialog.finished.connect(lambda _code: self._clear_sleep_replay_monitor_window_refs())
 
             self.refresh_sleep_replay_monitor_window()
             dialog.show()
+            self.refresh_ui()
+
+        def _replay_quality_value(self, section: str, key: str, default=""):
+            monitor = {}
+            if isinstance(getattr(self, "last_status", None), dict):
+                monitor = self.last_status.get("replay_quality_monitor", {}) or {}
+            if not isinstance(monitor, dict):
+                return default
+            if section == "_root":
+                return monitor.get(key, default)
+            sec = monitor.get(section, {})
+            if isinstance(sec, dict):
+                return sec.get(key, default)
+            return default
+
+        def refresh_replay_quality_monitor_window(self):
+            labels = getattr(self, "replay_quality_monitor_labels", {}) or {}
+            if not labels:
+                return
+            try:
+                if not self.replay_quality_monitor_window or not self.replay_quality_monitor_window.isVisible():
+                    return
+            except Exception:
+                return
+
+            monitor = {}
+            if isinstance(getattr(self, "last_status", None), dict):
+                monitor = self.last_status.get("replay_quality_monitor", {}) or {}
+            if not isinstance(monitor, dict):
+                monitor = {}
+
+            header = labels.get("__header__")
+            if header is not None:
+                step = monitor.get("global_step", self.last_status.get("global_step", 0) if isinstance(self.last_status, dict) else 0)
+                verdict = monitor.get("verdict", "")
+                q = monitor.get("quality_score", 0.0)
+                ema = monitor.get("quality_ema", 0.0)
+                header.setText(f"step={step} | verdict={verdict} | quality={self._fmt_monitor_value(q)} | ema={self._fmt_monitor_value(ema)}")
+
+            for name, label in labels.items():
+                if name.startswith("__"):
+                    continue
+                section, key = name.split(".", 1)
+                value = self._replay_quality_value(section, key, "")
+                label.setText(self._fmt_monitor_value(value))
+
+            raw = getattr(self, "replay_quality_monitor_raw", None)
+            if raw is not None:
+                try:
+                    raw.setPlainText(json.dumps(monitor, ensure_ascii=False, indent=2))
+                except Exception:
+                    raw.setPlainText(str(monitor))
+
+        def open_replay_quality_monitor_window(self):
+            try:
+                if self.replay_quality_monitor_window is not None and self.replay_quality_monitor_window.isVisible():
+                    window = self.replay_quality_monitor_window
+                    window.close()
+                    self._clear_replay_quality_monitor_window_refs()
+                    return
+            except Exception:
+                pass
+
+            dialog = QtWidgets.QDialog(self)
+            dialog.setWindowTitle("M8 Replay Quality Monitor")
+            dialog.resize(920, 760)
+            dialog.setStyleSheet(
+                "QDialog { background:#0C121B; color:#DCE8F8; }"
+                "QLabel { color:#DCE8F8; background:transparent; }"
+                "QGroupBox { background:#101722; border:1px solid #243145; border-radius:12px; "
+                "margin-top:12px; padding:10px; color:#B7C5DA; font-weight:800; }"
+                "QGroupBox::title { subcontrol-origin: margin; left:10px; padding:0 6px; }"
+                "QPlainTextEdit { background:#07101A; color:#DCE8F8; border:1px solid #2B3A50; "
+                "border-radius:10px; padding:8px; font-family:Consolas, monospace; font-size:11px; }"
+                "QPushButton { background:#1D2A3B; color:white; border:1px solid #37507A; "
+                "border-radius:10px; padding:8px 12px; font-weight:800; }"
+            )
+
+            main = QtWidgets.QVBoxLayout(dialog)
+            main.setContentsMargins(14, 14, 14, 14)
+            main.setSpacing(10)
+
+            title = QtWidgets.QLabel("Replay Quality Monitor: selected episode/identity + pressure/relief/coherence changes")
+            title.setWordWrap(True)
+            title.setStyleSheet("font-weight:900; color:#D2A8FF;")
+            main.addWidget(title)
+
+            header = QtWidgets.QLabel("")
+            header.setStyleSheet("font-weight:900; color:#FFD36D;")
+            main.addWidget(header)
+
+            labels = {"__header__": header}
+
+            def add_box(title_text, rows):
+                box = QtWidgets.QGroupBox(title_text)
+                grid = QtWidgets.QGridLayout(box)
+                grid.setHorizontalSpacing(12)
+                grid.setVerticalSpacing(6)
+                for r, (label_text, name) in enumerate(rows):
+                    k = QtWidgets.QLabel(label_text)
+                    k.setStyleSheet("color:#8FA4BF; font-weight:800;")
+                    v = QtWidgets.QLabel("")
+                    v.setStyleSheet("color:#FFFFFF; font-weight:900;")
+                    v.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+                    grid.addWidget(k, r, 0)
+                    grid.addWidget(v, r, 1)
+                    labels[name] = v
+                return box
+
+            row1 = QtWidgets.QHBoxLayout()
+            row1.setSpacing(10)
+            row1.addWidget(add_box("Replay selection", [
+                ("verdict", "_root.verdict"),
+                ("quality_score", "_root.quality_score"),
+                ("quality_ema", "_root.quality_ema"),
+                ("source", "_root.replay_source"),
+                ("identity", "_root.selected_identity_token"),
+                ("episode", "_root.selected_episode_summary"),
+            ]))
+            row1.addWidget(add_box("M2 replay dynamics", [
+                ("replay_gate", "m2.replay_gate"),
+                ("should_replay", "m2.should_replay"),
+                ("event_salience", "m2.event_salience"),
+                ("dream_pressure", "m2.dream_pressure"),
+                ("Δ pressure", "m2.dream_pressure_delta"),
+                ("pressure trend", "m2.dream_pressure_trend"),
+            ]))
+            main.addLayout(row1)
+
+            row2 = QtWidgets.QHBoxLayout()
+            row2.setSpacing(10)
+            row2.addWidget(add_box("Affect integration", [
+                ("stress", "affect.stress"),
+                ("Δ stress", "affect.stress_delta"),
+                ("relief", "affect.relief"),
+                ("Δ relief", "affect.relief_delta"),
+                ("coherence", "affect.coherence"),
+                ("Δ coherence", "affect.coherence_delta"),
+                ("expected_affect_delta", "affect.expected_affect_delta"),
+            ]))
+            row2.addWidget(add_box("Memory / identity support", [
+                ("M13 relevance", "m13.relevance"),
+                ("M13 episodes", "m13.episodes"),
+                ("M4 gate", "m4.dynamic_memory_gate"),
+                ("M4 stability", "m4.identity_stability"),
+                ("M4 novelty", "m4.identity_novelty"),
+                ("M5 seed_gate", "m5.seed_gate"),
+                ("M5 seed_norm", "m5.seed_norm"),
+            ]))
+            main.addLayout(row2)
+
+            raw = QtWidgets.QPlainTextEdit()
+            raw.setReadOnly(True)
+            raw.setMinimumHeight(240)
+            main.addWidget(raw)
+
+            close_row = QtWidgets.QHBoxLayout()
+            close_row.addStretch(1)
+            btn_close = QtWidgets.QPushButton("Close")
+            close_row.addWidget(btn_close)
+            main.addLayout(close_row)
+
+            self.replay_quality_monitor_window = dialog
+            self.replay_quality_monitor_labels = labels
+            self.replay_quality_monitor_raw = raw
+            btn_close.clicked.connect(dialog.close)
+            dialog.finished.connect(lambda _code: self._clear_replay_quality_monitor_window_refs())
+
+            self.refresh_replay_quality_monitor_window()
+            dialog.show()
+            self.refresh_ui()
+
+        def _m5_learning_quality_value(self, section: str, key: str, default=""):
+            monitor = {}
+            if isinstance(getattr(self, "last_status", None), dict):
+                monitor = self.last_status.get("m5_learning_quality", {}) or {}
+            if not isinstance(monitor, dict):
+                return default
+            if section == "_root":
+                return monitor.get(key, default)
+            sec = monitor.get(section, {})
+            if isinstance(sec, dict):
+                return sec.get(key, default)
+            return default
+
+        def refresh_m5_learning_quality_window(self):
+            labels = getattr(self, "m5_learning_quality_labels", {}) or {}
+            if not labels:
+                return
+            try:
+                if not self.m5_learning_quality_window or not self.m5_learning_quality_window.isVisible():
+                    return
+            except Exception:
+                return
+
+            monitor = {}
+            if isinstance(getattr(self, "last_status", None), dict):
+                monitor = self.last_status.get("m5_learning_quality", {}) or {}
+            if not isinstance(monitor, dict):
+                monitor = {}
+
+            header = labels.get("__header__")
+            if header is not None:
+                step = monitor.get("global_step", self.last_status.get("global_step", 0) if isinstance(self.last_status, dict) else 0)
+                train_steps = monitor.get("train_steps", 0)
+                verdict = monitor.get("verdict", "")
+                q = monitor.get("learning_quality", 0.0)
+                ema = monitor.get("learning_quality_ema", 0.0)
+                header.setText(f"step={step} | train_steps={train_steps} | verdict={verdict} | q={self._fmt_monitor_value(q)} | ema={self._fmt_monitor_value(ema)}")
+
+            for name, label in labels.items():
+                if name.startswith("__"):
+                    continue
+                section, key = name.split(".", 1)
+                value = self._m5_learning_quality_value(section, key, "")
+                label.setText(self._fmt_monitor_value(value))
+
+            raw = getattr(self, "m5_learning_quality_raw", None)
+            if raw is not None:
+                try:
+                    raw.setPlainText(json.dumps(monitor, ensure_ascii=False, indent=2))
+                except Exception:
+                    raw.setPlainText(str(monitor))
+
+        def open_m5_learning_quality_window(self):
+            try:
+                if self.m5_learning_quality_window is not None and self.m5_learning_quality_window.isVisible():
+                    window = self.m5_learning_quality_window
+                    window.close()
+                    self._clear_m5_learning_quality_window_refs()
+                    return
+            except Exception:
+                pass
+
+            dialog = QtWidgets.QDialog(self)
+            dialog.setWindowTitle("M8 M5 Learning Quality Baseline")
+            dialog.resize(940, 760)
+            dialog.setStyleSheet(
+                "QDialog { background:#0C121B; color:#DCE8F8; }"
+                "QLabel { color:#DCE8F8; background:transparent; }"
+                "QGroupBox { background:#101722; border:1px solid #243145; border-radius:12px; "
+                "margin-top:12px; padding:10px; color:#B7C5DA; font-weight:800; }"
+                "QGroupBox::title { subcontrol-origin: margin; left:10px; padding:0 6px; }"
+                "QPlainTextEdit { background:#07101A; color:#DCE8F8; border:1px solid #2B3A50; "
+                "border-radius:10px; padding:8px; font-family:Consolas, monospace; font-size:11px; }"
+                "QPushButton { background:#1D2A3B; color:white; border:1px solid #37507A; "
+                "border-radius:10px; padding:8px 12px; font-weight:800; }"
+            )
+
+            main = QtWidgets.QVBoxLayout(dialog)
+            main.setContentsMargins(14, 14, 14, 14)
+            main.setSpacing(10)
+
+            title = QtWidgets.QLabel("M5 Learning Quality Baseline: loss trends, seed response, latent/object stability proxies")
+            title.setWordWrap(True)
+            title.setStyleSheet("font-weight:900; color:#D2A8FF;")
+            main.addWidget(title)
+
+            header = QtWidgets.QLabel("")
+            header.setStyleSheet("font-weight:900; color:#FFD36D;")
+            main.addWidget(header)
+
+            labels = {"__header__": header}
+
+            def add_box(title_text, rows):
+                box = QtWidgets.QGroupBox(title_text)
+                grid = QtWidgets.QGridLayout(box)
+                grid.setHorizontalSpacing(12)
+                grid.setVerticalSpacing(6)
+                for r, (label_text, name) in enumerate(rows):
+                    k = QtWidgets.QLabel(label_text)
+                    k.setStyleSheet("color:#8FA4BF; font-weight:800;")
+                    v = QtWidgets.QLabel("")
+                    v.setStyleSheet("color:#FFFFFF; font-weight:900;")
+                    v.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+                    grid.addWidget(k, r, 0)
+                    grid.addWidget(v, r, 1)
+                    labels[name] = v
+                return box
+
+            row1 = QtWidgets.QHBoxLayout()
+            row1.setSpacing(10)
+            row1.addWidget(add_box("Training / baseline", [
+                ("verdict", "_root.verdict"),
+                ("learning_quality", "_root.learning_quality"),
+                ("learning_quality_ema", "_root.learning_quality_ema"),
+                ("training_enabled", "_root.training_enabled"),
+                ("cfg_train_enabled", "_root.cfg_train_enabled"),
+                ("last_train_reason", "_root.last_train_reason"),
+                ("last_train_error", "_root.last_train_error"),
+            ]))
+            row1.addWidget(add_box("M5 losses", [
+                ("train_loss", "m5_loss.train_loss"),
+                ("Δ train_loss", "m5_loss.train_loss_delta"),
+                ("train trend", "m5_loss.train_loss_trend"),
+                ("prediction_error", "m5_loss.prediction_error"),
+                ("Δ prediction", "m5_loss.prediction_error_delta"),
+                ("reconstruction_error", "m5_loss.reconstruction_error"),
+                ("Δ reconstruction", "m5_loss.reconstruction_error_delta"),
+            ]))
+            main.addLayout(row1)
+
+            row2 = QtWidgets.QHBoxLayout()
+            row2.setSpacing(10)
+            row2.addWidget(add_box("M5 latent / seed response", [
+                ("latent_coherence", "m5_latent.latent_coherence"),
+                ("Δ coherence", "m5_latent.latent_coherence_delta"),
+                ("focus_norm", "m5_latent.focus_norm"),
+                ("workspace_norm", "m5_latent.workspace_norm"),
+                ("obs_embed_norm", "m5_latent.obs_embed_norm"),
+                ("seed_gate", "m5_seed_response.seed_gate"),
+                ("seed_norm", "m5_seed_response.seed_norm"),
+                ("feedback_gate", "m5_seed_response.feedback_gate"),
+                ("seed_response", "m5_seed_response.seed_response"),
+            ]))
+            row2.addWidget(add_box("Object / identity proxy", [
+                ("object_recon", "object_identity_proxy.object_recon"),
+                ("Δ object_recon", "object_identity_proxy.object_recon_delta"),
+                ("identity_stability", "object_identity_proxy.identity_stability"),
+                ("Δ stability", "object_identity_proxy.identity_stability_delta"),
+                ("identity_novelty", "object_identity_proxy.identity_novelty"),
+                ("Δ novelty", "object_identity_proxy.identity_novelty_delta"),
+            ]))
+            main.addLayout(row2)
+
+            raw = QtWidgets.QPlainTextEdit()
+            raw.setReadOnly(True)
+            raw.setMinimumHeight(240)
+            main.addWidget(raw)
+
+            close_row = QtWidgets.QHBoxLayout()
+            close_row.addStretch(1)
+            btn_close = QtWidgets.QPushButton("Close")
+            close_row.addWidget(btn_close)
+            main.addLayout(close_row)
+
+            self.m5_learning_quality_window = dialog
+            self.m5_learning_quality_labels = labels
+            self.m5_learning_quality_raw = raw
+            btn_close.clicked.connect(dialog.close)
+            dialog.finished.connect(lambda _code: self._clear_m5_learning_quality_window_refs())
+
+            self.refresh_m5_learning_quality_window()
+            dialog.show()
+            self.refresh_ui()
 
         def toggle(self, field: str):
             if not self.state.connected:
@@ -1572,8 +1978,9 @@ def main() -> None:
         def open_m8_module_lab_window(self):
             try:
                 if self.module_lab_window is not None and self.module_lab_window.isVisible():
-                    self.module_lab_window.raise_()
-                    self.module_lab_window.activateWindow()
+                    window = self.module_lab_window
+                    window.close()
+                    self._clear_module_lab_window_refs()
                     return
             except Exception:
                 pass
@@ -1648,10 +2055,11 @@ def main() -> None:
             btn_all.clicked.connect(lambda: self.request_m8_module_lab("all"))
             btn_close.clicked.connect(dialog.close)
 
-            dialog.finished.connect(lambda _code: setattr(self, "module_lab_text", None))
+            dialog.finished.connect(lambda _code: self._clear_module_lab_window_refs())
 
             self.refresh_module_lab_window()
             dialog.show()
+            self.refresh_ui()
 
         def action(self, action: str):
             if not self.state.connected:
