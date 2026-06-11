@@ -1,0 +1,52 @@
+{
+  "schema": "dmoc.architecture.graphs.v2",
+  "root": "docs/architecture/graphs",
+  "policy": {
+    "edges_top_level_only": true,
+    "clusters_contain_nodes_only": true,
+    "nn_nodes_light_red": true,
+    "description_contains_long_text": true
+  },
+  "renamed": [
+    {
+      "from": "docs/architecture/graphs/module_m1_object_imagery.dot",
+      "to": "docs/architecture/graphs/module_m1_code.dot",
+      "reason": "The old file is the code/current-implementation graph, while module_m1_architecture.dot is the target architecture graph."
+    }
+  ],
+  "graphs": [
+    {
+      "path": "docs/architecture/graphs/unconscious_contour_architecture.dot",
+      "kind": "architecture"
+    },
+    {
+      "path": "docs/architecture/graphs/unconscious_contour_runtime_life_step.dot",
+      "kind": "runtime_order"
+    },
+    {
+      "path": "docs/architecture/graphs/module_m1_architecture.dot",
+      "kind": "target_module_architecture",
+      "module": "M1"
+    },
+    {
+      "path": "docs/architecture/graphs/module_m1_code.dot",
+      "kind": "current_code_structure",
+      "module": "M1"
+    },
+    {
+      "path": "docs/architecture/graphs/module_m2_event_dream_replay.dot",
+      "kind": "module_internal_structure",
+      "module": "M2"
+    },
+    {
+      "path": "docs/architecture/graphs/module_m4_long_dynamic_memory.dot",
+      "kind": "module_internal_structure",
+      "module": "M4"
+    },
+    {
+      "path": "docs/architecture/graphs/module_m5_seed_bus.dot",
+      "kind": "module_internal_structure",
+      "module": "M5"
+    }
+  ]
+}

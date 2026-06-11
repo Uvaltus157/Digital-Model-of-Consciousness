@@ -1,0 +1,18 @@
+digraph G {
+  graph [layout=neato, splines=true, overlap=false];
+
+  "proto" [label="priority #1\nM5 latent prototype seed\nget_m5_latent_prototype_focus_seed", color="#2c7a4b", fillcolor="#f9fff9", style="filled", penwidth="2.0", fontsize="10", shape="ellipse", width="1.889", height="0.889", pos="-20.00,-0.00!"];
+  "m2" [label="priority #2\nM2 event/dream replay seed\n_event_dream_next_focus_seed/gate", color="#967a11", fillcolor="#fff7d8", shape="ellipse", width="1.889", height="0.889", pos="200.00,-0.00!"];
+  "m15" [label="priority #3\nM15 conscious loop seed\nget_conscious_loop_focus_seed", color="#9a9a9a", fillcolor="#f8f8f8", style="rounded,filled,dashed", shape="ellipse", width="1.889", height="0.889", pos="420.00,-0.00!"];
+  "none" [label="priority #4\nno seed", color="#6f7785", shape="ellipse", width="1.889", height="0.889", pos="640.00,-0.00!"];
+  "bus" [label="get_m5_focus_seed(stage)\nreturns seed, gate", penwidth="2.0", fontsize="10", shape="ellipse", width="1.889", height="0.889", pos="300.00,-140.00!"];
+  "boundary" [label="FocusFeedbackBoundary\nworkspace_seed + preconscious_seed", penwidth="2.0", fontsize="10", shape="ellipse", width="1.889", height="0.889", pos="40.00,-240.00!"];
+  "model" [label="model_step(...)\nfocus_context / workspace_out", penwidth="2.0", fontsize="10", shape="ellipse", width="1.889", height="0.889", pos="240.00,-300.00!"];
+
+  "proto" -> "bus";
+  "m2" -> "bus";
+  "m15" -> "bus";
+  "none" -> "bus";
+  "bus" -> "boundary" [label="seed/gate", xdot_curve="-0.03", penwidth="2.0", fontsize="9"];
+  "boundary" -> "model" [label="boundary input"];
+}

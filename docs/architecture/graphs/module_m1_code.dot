@@ -1,0 +1,236 @@
+digraph G {
+  graph [layout=neato, splines=true, overlap=false];
+
+  subgraph "cluster_contract" {
+    label="0. Кодовый контракт M1";
+    color="#a38925";
+    fillcolor="#fffbea";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "m1_code_contract" [label="M1 code contract", description="Кодовый контракт текущего M1.\n\nФайл отражает текущую реализацию, а не целевую архитектуру.\n\nГлавные источники кода:\nsrc/modules/m01_object_imagery/runtime.py\nsrc/modules/m01_object_imagery/models/object_inner_imagery_3d.py\nsrc/modules/m01_object_imagery/imit/m1_object_slot_latent_runtime.py\n\nM1 создаёт out['inner_object'] и отдаёт его дальше в M4/M5/M8.", color="#a38925", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="-1060.00,220.00!"];
+    "m1_renamed_from" [label="Renamed from", description="Этот файл заменяет старый:\nmodule_m1_object_imagery.dot\n\nНовое имя:\nmodule_m1_code.dot\n\nПричина:\nстарое имя смешивало кодовую и архитектурную схемы.\nТеперь кодовая схема и целевая архитектура разделены.", color="#a38925", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="-860.00,220.00!"];
+    "m1_related_arch" [label="Architecture pair", description="Парная архитектурная схема:\nmodule_m1_architecture.dot\n\nОна показывает целевую структуру M1:\nVision/Tactile/Proprio encoders\nMultimodal Fusion\nObject Fusion / Binding\nDynamic Slot Routing\n3DGS Head\n4D Deformation\nи другие архитектурные NN-блоки.", color="#a38925", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="-640.00,220.00!"];
+  }
+
+  subgraph "cluster_runtime" {
+    label="1. Runtime shell";
+    color="#255c99";
+    fillcolor="#e8f1ff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "object_imagery_runtime" [label="ObjectImageryRuntimeMixin", description="Главный runtime mixin M1.\n\nСодержит:\nсенсорные gates\nsafe obs path\nevent code visualizer\nevent latent memory\nprogressive semantic memory\ndynamic object slot policy\nlong dynamic object memory helper\nproposal builder\nforced slot updates\ninner-object debug/output logic.", color="#255c99", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="600.00,440.00!"];
+    "inherited_mixins" [label="Inherited mixins", description="ObjectImageryRuntimeMixin наследует несколько runtime-путей:\n\nStaticDynamicCodeDebugRuntimeMixin\nDynamicObjectPassportRuntimeMixin\nPassportDebugRuntimeMixin\nInnerScenarioMindRuntimeMixin\nInnerActionDecoderRuntimeMixin\nInnerOutcomeEvaluatorRuntimeMixin\nInnerTrustGateRuntimeMixin\nInnerRealActionTraceRuntimeMixin\n\nЭто кодовая композиция M1 runtime.", color="#607080", fillcolor="#f1f3f5", shape="ellipse", width="1.889", height="0.889", pos="800.00,440.00!"];
+    "compute_inner_object" [label="compute_inner_object_image", description="Основной runtime-вход M1.\n\nПолучает obs/out из life_step.\nГотовит данные, вызывает proposal builder / InnerObjectRepresentation3DSystem и формирует out['inner_object'].\n\nЭто кодовый entrypoint M1.", color="#255c99", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="-40.00,300.00!"];
+  }
+
+  subgraph "cluster_sensor_safety" {
+    label="2. Sensor safety";
+    color="#526aa8";
+    fillcolor="#eef3ff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "input_obs" [label="obs input", description="Входной obs для M1.\n\nМожет содержать:\nleft/right/depth\ntactile/contact\npose/body_state\nobject_state\nscripted scenario status\nprev motor/action traces.", color="#98a4b5", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="200.00,60.00!"];
+    "input_sensor_enabled" [label="_input_sensor_enabled", description="Центральный query-функционал M1 для video/contact/imu gates.\n\nИспользуется, чтобы debug preview / teacher logic не обходили sleep/partial-cut gates.", color="#526aa8", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="420.00,60.00!"];
+    "safe_obs" [label="_safe_obs_for_inner_object_viz", description="Создаёт безопасную копию obs.\n\nЕсли video OFF:\nleft/right/depth zeroed\nobject_state=None\n\nЕсли contact OFF:\ntactile/contact zeroed\n\nЕсли imu OFF:\npose/imu/vestibular zeroed\npose=None.", color="#526aa8", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="640.00,60.00!"];
+    "depth_focus_hints" [label="Depth focus hints", description="Дополнительные hints из scripted scenario.\n\nМожет добавить:\ndepth_focus_depth\ndepth_focus_half_range\ndepth_focus_label\n\nИспользуется для inspection сценариев.", color="#526aa8", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="840.00,60.00!"];
+  }
+
+  subgraph "cluster_feature_helpers" {
+    label="3. Feature helpers";
+    color="#255c99";
+    fillcolor="#e8f1ff";
+    style="filled,rounded";
+    penwidth="2.0";
+    "summarize_vision" [label="summarize_vision_tensors", description="Кодовая функция из object_inner_imagery_3d.py.\n\nБерёт left/right/depth и строит vision summary.\n\nДля каждого из left/right/depth берёт:\nmean\nstd\nmin\nmax\n\nИтого vision_dim=12.", color="#255c99", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="0.00,-280.00!"];
+    "pad_or_trim" [label="pad_or_trim", description="Кодовая helper-функция.\n\nВыравнивает размер векторов под ожидаемый dim.\nЕсли больше — обрезает.\nЕсли меньше — дополняет нулями.", color="#255c99", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="200.00,-280.00!"];
+    "scene_summary" [label="scene summary", description="Сводный статический sensory summary.\n\nВажно:\nэто ещё не объектная идентичность.\nЭто компактная картина сцены, из которой дальше могут строиться proposals.", color="#255c99", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="420.00,-280.00!"];
+  }
+
+  subgraph "cluster_semantic_state" {
+    label="4. Progressive semantic memory state";
+    color="#11689b";
+    fillcolor="#dff0ff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="125.00";
+    xdot_pad_top="15.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="25.00";
+    fontsize="10";
+    "ensure_semantic_state" [label="_ensure_progressive_semantic_memory_state", description="Создаёт runtime-only state для progressive semantic slot formation.\n\nСостояния:\n_semantic_next_slot\n_semantic_current_slot\n_semantic_event_was_active\n_semantic_last_discovery_step\n_semantic_scene_reference\n_semantic_scene_slot_created\n_semantic_dynamic_seen_count\n_dynamic_object_slot_by_target\n_dynamic_slot_target_by_slot\n_dynamic_protected_slots\n_dynamic_next_free_slot.", color="#11689b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1440.00,-100.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "scene_novelty" [label="_scene_novelty_score", description="Считает отличие текущего scene_prop от предыдущей scene reference.\n\nЭто не object identity.\nЭто сигнал: текущая sensory image достаточно изменилась, чтобы стать кандидатом semantic event.", color="#11689b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1680.00,-140.00!"];
+    "interaction_score" [label="_interaction_activity_score", description="Считает embodied interaction.\n\nИспользует:\ntactile activity\nprev_hand_motor\nprev_embodied_action\n\nВыход: interaction score.", color="#11689b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="920.00,-200.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "dynamic_sensory_score" [label="_dynamic_sensory_input_score", description="Объединяет:\nscene novelty\ninteraction activity\nIMU/body activity\n\nВозвращает:\ntotal_dynamic_score\nscene_novelty\ninteraction_score.", color="#11689b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1000.00,-320.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "target_motion_allowed" [label="_dynamic_target_motion_allowed", description="Кодовая gate-логика.\n\nОтличает движение объекта от движения камеры/тела в scripted probes.\n\nЕсли камера движется вокруг статичного target, это не должно создать dynamic object slot.", color="#11689b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1320.00,-260.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "target_slot_index" [label="_dynamic_target_slot_index", description="Кодовая policy выбора slot для dynamic target.\n\nknown target → same slot\nnew target → next free protected slot\nprotected slots не перезаписываются чужим target.", color="#11689b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1540.00,-240.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "semantic_slot_allocator" [label="_allocate_or_keep_semantic_slot", description="Аллокатор semantic event slot.\n\nRising edge event создаёт новый slot.\nПока event продолжается, уточняется тот же slot.\nКогда event закончился, новые slots не создаются.", color="#11689b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1420.00,-340.00!", penwidth="2.0", fontsize="10", style="filled"];
+  }
+
+  subgraph "cluster_long_dynamic" {
+    label="5. M1-side long dynamic object memory";
+    color="#11689b";
+    fillcolor="#eaf7ff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "ensure_long_memory" [label="_ensure_long_dynamic_object_memory", description="Lazy initialization of LongDynamicObjectMemory.\n\nСоздаёт self.long_dynamic_object_memory из:\nsrc.modules.m04_long_dynamic_memory.models.long_dynamic_object_memory\n\nПри возможности добавляет параметры в optimizer/module gate.", color="#11689b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="-180.00,-540.00!"];
+    "long_context_vector" [label="_long_dynamic_context_vector", description="Строит 6-мерный context:\n\ndynamic_score\nscene_novelty\ninteraction\nbody_state activity\ntactile activity\nhand activity.", color="#11689b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="20.00,-540.00!"];
+    "depth_motion_score" [label="_long_dynamic_depth_motion_score", description="Считает изменение depth frame-to-frame.\n\nИспользуется как один из сигналов реальной динамики объекта.", color="#11689b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="240.00,-540.00!"];
+    "long_dynamic_nn" [label="NN: LongDynamicObjectMemory", description="Нейросетевой M1-side dynamic memory.\n\nВход:\nz_static\ncontext\nprevious state\ndynamic_active\n\nВыход:\nz_dynamic\nconfidence\nstate\ndiag.\n\nСветло-красный фон: NN.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="340.00,-640.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "long_ready_gate" [label="strict ready gate", description="Строгая проверка готовности dynamic object.\n\nREADY требует:\nmin steps\nmin active steps\nstable ready streak\nconfidence threshold\nmotion_ok by dz/pixel/depth.\n\nСтатичная картинка не должна писать slot.", color="#11689b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="660.00,-540.00!"];
+    "dynamic_debug_packet" [label="_inner_object_dynamic_debug", description="Debug packet по dynamic object.\n\nСодержит:\ndynamic_input_active\ndynamic_target_name\ndynamic_ready\ndynamic_source\nslot_update_allowed\ndynamic_score\nscene_novelty\ninteraction\ndiag values.", color="#607080", fillcolor="#f1f3f5", shape="ellipse", width="1.889", height="0.889", pos="-180.00,-680.00!"];
+  }
+
+  subgraph "cluster_proposals" {
+    label="6. Proposal builder";
+    color="#255c99";
+    fillcolor="#e8f1ff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "build_proposals" [label="build_inner_object_vision_proposals", description="Кодовая функция построения proposals.\n\nStatic frame never writes a slot.\nDynamic input accumulates in LongDynamicObjectMemory.\nOnly ready z_dynamic_object can update memory.\n\nЕсли активен M1 imit, proposals берутся от imit path.", color="#255c99", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1380.00,-780.00!"];
+    "proposal_metadata" [label="proposal metadata", description="Runtime metadata lists:\n\n_inner_object_proposal_target_slots\n_inner_object_proposal_kinds\n_inner_object_proposal_target_names\n\nОни управляют forced-slot update path.", color="#255c99", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1600.00,-780.00!"];
+    "m1_imit_nn" [label="NN: M1 object slot imit", description="M1ObjectSlotLatentImitRuntimeMixin.\n\nDebug path:\nget_m1_imit_inner_object_proposals(scene).\n\nМожет вернуть proposals + target_slots + proposal_kinds + target_names.\n\nПомечен NN, потому что создаёт latent object proposal.", color="#bb3333", fillcolor="#ffd6d6", style="filled,rounded,dashed", shape="ellipse", width="1.889", height="0.889", pos="1820.00,-780.00!"];
+  }
+
+  subgraph "cluster_inner_system" {
+    label="7. InnerObjectRepresentation3DSystem";
+    color="#255c99";
+    fillcolor="#e8f1ff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="25.00";
+    xdot_pad_top="35.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="25.00";
+    fontsize="10";
+    "inner_system" [label="InnerObjectRepresentation3DSystem", description="Кодовый контейнер M1 NN-системы.\n\nСодержит:\nself.fusion = VisualTactileObjectFusion\nself.memory = ObjectSlotMemory\nself.decoder_2d = ObjectImaginationHead2D\nself.decoder_3d = Object3DHead.", color="#255c99", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="640.00,-960.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "fusion_nn" [label="NN: VisualTactileObjectFusion", description="Текущий fusion NN в коде.\n\nВход concat:\nvision + tactile + body + hand + leg.\n\nСеть:\nLinear → SiLU → LayerNorm → Linear → SiLU → Linear → LayerNorm.\n\nВыход:\nz_update\nvision_strength\ntouch_strength\nvision_activity\ntouch_activity.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="40.00,-1020.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "slot_memory_nn" [label="NN: ObjectSlotMemory", description="Текущая multi-slot object memory.\n\nNN parts:\nupdate_gate\nconf_head.\n\nState:\nz_obj_slots\nconfidence_slots\nmemory_stability_slots\nslot_age\nactive_slot_index\nslot_binding\nslot_similarity.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="260.00,-1160.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "sticky_routing" [label="sticky routing", description="Кодовая slot identity routing policy.\n\nПравила:\nпредпочитать previous active slot\nswitch only if better by margin\nallocate emptiest slot for new object\nforce_slot_index for proposal-slot lock.", color="#255c99", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="460.00,-1140.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "multi_object_loop" [label="multi-object loop", description="Если vision имеет shape [B,P,vision_dim], код проходит по proposals.\n\nДля каждого pi:\nfusion(vision[:,pi], tactile, body, hand, leg)\nmemory(..., force_slot_index=pi if proposal_slot_lock).", color="#255c99", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="640.00,-1120.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "decoder_2d_nn" [label="NN: ObjectImaginationHead2D", description="Текущий 2D decoder.\n\nВыходы:\nrgb\ndepth\nmask\nshape_logits\ncolor_rgb\nsize\nhardness\nstability\nnovelty\naffordance.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="860.00,-1180.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "decoder_3d_nn" [label="NN: Object3DHead", description="Текущий 3D decoder.\n\nВыходы:\npoint_cloud\npoint_conf\nvoxel_occ.\n\nВажно: это кодовый 3D head, не целевой 3DGS Head.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="-20.00,-1240.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "dream_step_nn" [label="NN: dream_step latent dynamics", description="Кодовый dream_step(state).\n\nВ full sleep:\nno sensory fusion/write\ninternal latent dynamics continue\nidentity preserving\noptional occupied-slot cycling.\n\nПомечен NN как latent dynamics block.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="200.00,-1300.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "decoded_inner_object" [label="decoded inner object", description="Итоговый object dict от InnerObjectRepresentation3DSystem.\n\nСодержит:\nz_obj\nconfidence\nz_obj_slots\nconfidence_slots\nmemory_stability\nslot_age\nactive_slot_index\n2D fields\n3D fields\ndream fields.", color="#255c99", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="440.00,-1280.00!", penwidth="2.0", fontsize="10", style="filled"];
+  }
+
+  subgraph "cluster_event_debug" {
+    label="8. Event memory / debug";
+    color="#967a11";
+    fillcolor="#fff7d8";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "event_memory_nn" [label="NN: EventLatentSentenceMemory", description="Кодовый event latent memory.\n\nСоздаётся через _ensure_event_latent_memory().\n\nencode_step наблюдает:\nz_before(slot) → z_after(slot)\n+ action/contact/vision/touch context\n\nМожет записывать event_code_sentence.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="420.00,-1560.00!"];
+    "event_visualizer" [label="EventCodeVisualizerV2", description="Debug window второго уровня.\n\nПоказывает:\nslot vocabulary\nevent code sentences\nevent memory state\nobject/event code view.", color="#967a11", fillcolor="#fffdf0", shape="ellipse", width="1.889", height="0.889", pos="620.00,-1560.00!"];
+    "static_dynamic_debug" [label="Static/Dynamic debug", description="StaticDynamicCodeDebugRuntimeMixin.\n\nЛогирует и показывает:\nstatic/dynamic code\ndynamic object slot policy\nslot protection state\nM1 dynamic diagnostics.", color="#607080", fillcolor="#f1f3f5", shape="ellipse", width="1.889", height="0.889", pos="-220.00,-1700.00!"];
+    "passport_debug" [label="Passport debug", description="PassportDebugRuntimeMixin + DynamicObjectPassportRuntimeMixin hooks.\n\nПоказывает/обновляет passport-related state, связанный с inner_object.", color="#a46413", fillcolor="#fff2d9", shape="ellipse", width="1.889", height="0.889", pos="-20.00,-1700.00!"];
+  }
+
+  subgraph "cluster_outputs" {
+    label="9. Outputs";
+    color="#2c7a4b";
+    fillcolor="#e7f8ed";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "out_inner_object" [label="out['inner_object']", description="Главный выход M1.\n\nПакет получает:\nlife_step\nM4\nM8\nM11/M2 indirect paths\nreplay/debug systems.\n\nЭто кодовый object dict, не только z_obj.", color="#2c7a4b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="160.00,-1980.00!"];
+    "to_m4" [label="To M4", description="M1 → M4.\n\nПередаёт:\nz_obj\nslot state\nactive slot\nconfidence\nmemory_stability\nidentity evidence.", color="#a46413", fillcolor="#fff2d9", shape="ellipse", width="1.889", height="0.889", pos="380.00,-1980.00!"];
+    "to_m5" [label="To M5", description="M1 → M5.\n\nПередаёт semantic/object/world summary.\n\nЭто единственный смысловой сенсорный вход в M5.", color="#2c7a4b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="580.00,-1980.00!"];
+    "to_m8" [label="To M8", description="M1 → M8.\n\nПередаёт:\ninner object preview\nslot status\ndynamic debug\nevent code visualizer data\npassport debug data.", color="#607080", fillcolor="#f1f3f5", shape="ellipse", width="1.889", height="0.889", pos="-260.00,-2120.00!"];
+  }
+
+
+  "m1_code_contract" -> "m1_renamed_from" [label="renamed"];
+  "m1_renamed_from" -> "m1_related_arch" [label="paired with"];
+  "object_imagery_runtime" -> "inherited_mixins" [label="inherits"];
+  "inherited_mixins" -> "compute_inner_object" [label="runtime methods"];
+  "compute_inner_object" -> "input_obs" [label="obs"];
+  "input_obs" -> "input_sensor_enabled" [label="sensor flags"];
+  "input_sensor_enabled" -> "safe_obs" [label="mask rules"];
+  "safe_obs" -> "depth_focus_hints" [label="optional hints"];
+  "safe_obs" -> "summarize_vision" [label="left/right/depth"];
+  "summarize_vision" -> "pad_or_trim" [label="vision vector"];
+  "pad_or_trim" -> "scene_summary" [label="aligned scene"];
+  "safe_obs" -> "scene_summary" [label="tactile/body/hand/leg"];
+  "scene_summary" -> "ensure_semantic_state" [label="ensure state", xdot_curve="-0.12", penwidth="2.0", fontsize="9"];
+  "ensure_semantic_state" -> "scene_novelty" [label="scene reference"];
+  "scene_novelty" -> "dynamic_sensory_score" [label="scene_novelty"];
+  "interaction_score" -> "dynamic_sensory_score" [label="interaction"];
+  "dynamic_sensory_score" -> "target_motion_allowed" [label="raw dynamic"];
+  "target_motion_allowed" -> "target_slot_index" [label="allowed target"];
+  "dynamic_sensory_score" -> "semantic_slot_allocator" [label="semantic event"];
+  "scene_summary" -> "ensure_long_memory" [label="z_static"];
+  "dynamic_sensory_score" -> "long_context_vector" [label="score inputs"];
+  "safe_obs" -> "depth_motion_score" [label="depth frames"];
+  "ensure_long_memory" -> "long_dynamic_nn" [label="memory ready"];
+  "long_context_vector" -> "long_dynamic_nn" [label="context"];
+  "long_dynamic_nn" -> "long_ready_gate" [label="z_dynamic/confidence/diag"];
+  "depth_motion_score" -> "long_ready_gate" [label="depth motion"];
+  "long_ready_gate" -> "dynamic_debug_packet" [label="ready/blocked", xdot_curve="-0.24", penwidth="2.0", fontsize="9", xdot_tail_anchor="11.44,31.55", xdot_head_anchor="56.44,17.85"];
+  "long_ready_gate" -> "build_proposals" [label="z_dynamic if ready"];
+  "target_slot_index" -> "proposal_metadata" [label="target slot"];
+  "semantic_slot_allocator" -> "proposal_metadata" [label="event slot"];
+  "m1_imit_nn" -> "build_proposals" [label="imit proposal", style="dashed"];
+  "m1_imit_nn" -> "proposal_metadata" [label="imit metadata", style="dashed"];
+  "build_proposals" -> "proposal_metadata" [label="slots/kinds/names"];
+  "build_proposals" -> "inner_system" [label="proposal tensors"];
+  "inner_system" -> "fusion_nn" [label="contains"];
+  "inner_system" -> "slot_memory_nn" [label="contains"];
+  "inner_system" -> "decoder_2d_nn" [label="contains"];
+  "inner_system" -> "decoder_3d_nn" [label="contains"];
+  "fusion_nn" -> "slot_memory_nn" [label="z_update + strengths"];
+  "slot_memory_nn" -> "sticky_routing" [label="candidate slots"];
+  "sticky_routing" -> "decoded_inner_object" [label="slot output"];
+  "build_proposals" -> "multi_object_loop" [label="if [B,P,D]"];
+  "multi_object_loop" -> "fusion_nn" [label="proposal pi"];
+  "slot_memory_nn" -> "decoder_2d_nn" [label="z_obj"];
+  "slot_memory_nn" -> "decoder_3d_nn" [label="z_obj"];
+  "decoder_2d_nn" -> "decoded_inner_object" [label="2D fields"];
+  "decoder_3d_nn" -> "decoded_inner_object" [label="3D fields"];
+  "slot_memory_nn" -> "dream_step_nn" [label="state in sleep", style="dashed"];
+  "dream_step_nn" -> "decoded_inner_object" [label="dream decoded", style="dashed"];
+  "decoded_inner_object" -> "event_memory_nn" [label="z_after/event"];
+  "event_memory_nn" -> "event_visualizer" [label="event code"];
+  "dynamic_debug_packet" -> "static_dynamic_debug" [label="dynamic debug"];
+  "decoded_inner_object" -> "passport_debug" [label="passport hooks"];
+  "decoded_inner_object" -> "out_inner_object" [label="object dict"];
+  "event_memory_nn" -> "out_inner_object" [label="event fields"];
+  "static_dynamic_debug" -> "out_inner_object" [label="debug fields"];
+  "passport_debug" -> "out_inner_object" [label="passport fields"];
+  "out_inner_object" -> "to_m4" [label="z_obj / slot state"];
+  "out_inner_object" -> "to_m5" [label="semantic summary"];
+  "out_inner_object" -> "to_m8" [label="status / preview"];
+}

@@ -1,0 +1,86 @@
+digraph G {
+  // DMoC DOT template.
+  //
+  // Rules:
+  // - clusters contain only nodes
+  // - all node -> node edges are written at top level
+  // - NN nodes start with "NN:" and use fillcolor="#ffd6d6"
+  // - short label, long description
+
+  graph [
+    layout=dot,
+    rankdir=TB,
+    compound=false,
+    splines=polyline,
+    overlap=false,
+    concentrate=false,
+    bgcolor="#f7f8fb",
+    pad="0.65",
+    nodesep="0.65",
+    ranksep="1.05",
+    outputorder=edgesfirst,
+    fontname="Arial",
+    fontsize="18",
+    labelloc="t",
+    label="DMoC — graph title"
+  ];
+
+  node [
+    shape="box",
+    style="filled,rounded",
+    fontname="Arial",
+    fontsize="10",
+    penwidth="2.0",
+    margin="0.11,0.075",
+    color="#27364a",
+    fillcolor="#ffffff"
+  ];
+
+  edge [
+    fontname="Arial",
+    fontsize="9",
+    penwidth="3.2",
+    arrowsize="0.95",
+    color="#1f2a38"
+  ];
+
+  subgraph cluster_example {
+    label="Example module";
+    color="#255c99";
+    fillcolor="#e8f1ff";
+    style="filled,rounded";
+    penwidth="2.0";
+
+    input_node [
+      label="Input node",
+      description="Long Russian description.",
+      color="#255c99",
+      fillcolor="#ffffff"
+    ];
+
+    nn_node [
+      label="NN: Neural node",
+      description="Long Russian description of the neural module.",
+      color="#bb3333",
+      fillcolor="#ffd6d6"
+    ];
+
+    output_node [
+      label="Output node",
+      description="Long Russian description.",
+      color="#255c99",
+      fillcolor="#ffffff"
+    ];
+  }
+
+  // All edges are top-level.
+  input_node -> nn_node [
+    label="visible edge",
+    color="#255c99"
+  ];
+
+  nn_node -> output_node [
+    label="visible edge",
+    color="#255c99"
+  ];
+}

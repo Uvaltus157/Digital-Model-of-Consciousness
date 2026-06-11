@@ -1,0 +1,266 @@
+digraph G {
+  graph [layout=neato, splines=true, overlap=false];
+
+  subgraph "cluster_rules" {
+    label="0. Правила архитектуры";
+    color="#a38925";
+    fillcolor="#fffbea";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "rules_loop" [label="Главный цикл", description="Основной бессознательный контур:\n\nInput → M1 → M5 → M11/M13/M4 → M2 → M5 → M3 → World.\n\nСырые сенсоры не идут в M5 напрямую.\nM5 получает только смысловой output M1 и seed через FocusFeedbackBoundary.", color="#a38925", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="-1520.00,720.00!"];
+    "rules_m5_input" [label="Запрет Input→M5", description="Архитектурное правило:\n\nInput/M6 не подаётся напрямую в M5 как смысловой вход.\n\nПравильно:\nInput → M1 → M5.\n\nRaw obs может сохраняться в replay buffer только как trace storage.", color="#ef2929", fillcolor="#ffecec", shape="ellipse", width="1.889", height="0.889", pos="-1320.00,720.00!"];
+    "rules_nn" [label="NN nodes", description="Все нейросетевые модули помечены как NN и имеют светло-красный фон.\n\nfillcolor=\"#ffd6d6\".\n\nЕсли блок пока реализован как runtime/controller вокруг NN, но является нейровычислительным слоем архитектуры, он тоже помечен NN.", color="#dd6666", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="-1100.00,720.00!"];
+  }
+
+  subgraph "cluster_input" {
+    label="1. Input / сенсорный слой";
+    color="#526aa8";
+    fillcolor="#eef3ff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "world_obs" [label="World observation", description="Сырой пакет наблюдения.\n\nПоля:\nleft/right camera\ndepth\npose/body_state\ntactile/contact\nobject_state\nreward/done.\n\nЭто вход в M6/M1, но не смысловой вход в M5.", color="#98a4b5", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="220.00,740.00!"];
+    "m6_sensor_gate" [label="M6 sensory gates", description="M6 SleepSensorsMixin.\n\ngate_observation_for_sleep(obs).\n\nМожет ослабить/выключить:\nvideo\ncontact/tactile\nIMU/body stream.\n\nДальше поток идёт в M1.", color="#526aa8", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="420.00,740.00!"];
+    "input_contract" [label="Input contract", description="Контракт входного слоя.\n\nСырые сенсоры после M6-gate идут в M1.\nM5 получает только semantic summary от M1.\n\nПрямой raw Input→M5 запрещён.", color="#a38925", fillcolor="#fffbea", shape="ellipse", width="1.889", height="0.889", pos="-420.00,600.00!"];
+  }
+
+  subgraph "cluster_m1" {
+    label="2. M1 Object Imagery / внутренний объект";
+    color="#255c99";
+    fillcolor="#e8f1ff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="15.00";
+    xdot_pad_right="85.00";
+    xdot_pad_bottom="25.00";
+    fontsize="10";
+    "m1_runtime" [label="M1 runtime", description="ObjectImageryRuntimeMixin.\n\nRuntime entry:\ncompute_inner_object_image(obs,out).\n\nСоздаёт out['inner_object'].\nЭто смысловой шлюз сенсорного потока.", color="#255c99", fillcolor="#ffffff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-720.00,400.00!"];
+    "m1_safe_obs" [label="Safe obs", description="_safe_obs_for_inner_object_viz(obs).\n\nУчитывает video/contact/imu flags.\nЗануляет выключенные сенсоры, чтобы debug/teacher path не обходил сон.", color="#526aa8", fillcolor="#eef3ff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-540.00,380.00!"];
+    "m1_feature_build" [label="Feature build", description="summarize_vision_tensors + pad_or_trim.\n\nСтроит признаки:\nvision summary\ntactile features\nbody features\nhand features\nleg features.", color="#255c99", fillcolor="#ffffff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-380.00,360.00!"];
+    "m1_dynamic_gate" [label="Dynamic gates", description="Динамический gate M1.\n\nВключает:\n_scene_novelty_score\n_interaction_activity_score\n_dynamic_sensory_input_score\n_dynamic_target_motion_allowed\n_dynamic_target_slot_index.", color="#11689b", fillcolor="#dff0ff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-220.00,320.00!"];
+    "m1_long_dynamic_nn" [label="NN: LongDynamicObjectMemory", description="M1-side LongDynamicObjectMemory.\n\nНакопляет z_dynamic_object из z_static и context.\n\nREADY требует реальной динамики:\ndz/pixel/depth motion\nmin steps\nconfidence\nstable ready streak.", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-960.00,280.00!"];
+    "m1_proposals" [label="Object proposals", description="build_inner_object_vision_proposals(obs).\n\nStatic frame не пишет slot.\nDynamic-ready создаёт z_dynamic_object proposal.\nM1 imit может создать debug proposal.", color="#255c99", fillcolor="#ffffff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-760.00,200.00!"];
+    "m1_fusion_nn" [label="NN: VisualTactileObjectFusion", description="Нейросетевой fusion-encoder.\n\nВход:\nvision + tactile + body + hand + leg.\n\nВыход:\nz_update\nvision_strength\ntouch_strength\nvision_activity\ntouch_activity.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="-560.00,160.00!"];
+    "m1_slot_memory_nn" [label="NN: ObjectSlotMemory", description="Нейросетевая multi-slot object memory.\n\nХранит:\nz_obj_slots\nconfidence_slots\nmemory_stability_slots\nslot_age\nactive_slot_index.\n\nИмеет update_gate/conf_head/sticky routing.", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-380.00,100.00!"];
+    "m1_decoder2d_nn" [label="NN: ObjectImaginationHead2D", description="2D decoder из z_obj.\n\nВыходы:\nrgb\ndepth\nmask\nshape_logits\ncolor_rgb\nsize\nhardness\nstability\nnovelty\naffordance.", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-180.00,20.00!"];
+    "m1_decoder3d_nn" [label="NN: Object3DHead", description="3D decoder из z_obj.\n\nВыходы:\npoint_cloud\npoint_conf\nvoxel_occ.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="-980.00,-0.00!"];
+    "m1_inner_object" [label="Inner object", description="Итоговый decoded inner object.\n\nСодержит:\nz_obj\nslot state\nconfidence\n2D fields\n3D fields\ndream fields\nM4/passport/debug/event fields.", color="#255c99", fillcolor="#ffffff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-760.00,-20.00!"];
+    "m1_event_memory_nn" [label="NN: EventLatentSentenceMemory", description="Латентная память событий.\n\nКодирует переход:\nz_before(slot) → z_after(slot)\n+ action/contact/vision/touch context.\n\nМожет создавать event_code_sentence.", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-540.00,-60.00!"];
+    "m1_outputs" [label="M1 outputs", description="Выходы M1.\n\nTo M5:\nsemantic/object/world summary.\n\nTo M4:\nz_obj / slot state / identity evidence.\n\nTo M8:\ninner object preview / slot status / debug.", color="#2c7a4b", fillcolor="#e7f8ed", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-540.00,-180.00!"];
+    "m1_imit_nn" [label="NN: M1 slot imit", description="M1ObjectSlotLatentImitRuntimeMixin.\n\nDebug z_obj proposal path.\nПишет через ObjectSlotMemory, не в обход.", color="#bb3333", fillcolor="#ffd6d6", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-1000.00,140.00!", penwidth="2.0", fontsize="10"];
+  }
+
+  subgraph "cluster_m5" {
+    label="3. M5 World Model / Workspace";
+    color="#2c7a4b";
+    fillcolor="#e7f8ed";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="25.00";
+    xdot_pad_top="48.00";
+    xdot_pad_right="132.00";
+    xdot_pad_bottom="25.00";
+    fontsize="10";
+    "m5_contract" [label="M5 input contract", description="M5 принимает:\n\n1. M1 semantic/object/world summary\n2. seed через FocusFeedbackBoundary.\n\nM5 не принимает raw sensory stream напрямую.", color="#2c7a4b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="160.00,-340.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m5_workspace_nn" [label="NN: M5 workspace", description="Нейросетевой world model / attention workspace.\n\nАрхитектурно работает поверх M1 semantic summary.\n\nПроизводит:\nworkspace_out\nfocus_context\nimagined / values\naction fields.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="420.00,-400.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m5_focus" [label="focus_context", description="M5 world/workspace latent.\n\nЭто не raw sensory stream.\nЭто не M1 z_obj.\nЭто собственный workspace context M5.", color="#2c7a4b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="140.00,-540.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m5_error" [label="Prediction context", description="Контекст ошибки/предсказания M5.\n\nИспользуется M11 для affect / salience / curiosity / dream pressure.", color="#2c7a4b", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="940.00,-360.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m5_boundary_nn" [label="NN: FocusFeedbackBoundary", description="Boundary/gating layer для seed в M5.\n\nПолучает seed + gate от Common M5 Seed Bus.\nПодаёт в M5 workspace/focus path.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="800.00,-520.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "seed_bus" [label="Common seed bus", description="get_m5_focus_seed(stage).\n\nПриоритет:\n1. M5 latent prototype seed\n2. M2 event/dream replay seed\n3. M15 conscious loop seed\n4. none.", color="#4457aa", fillcolor="#eef2ff", shape="ellipse", width="1.889", height="0.889", pos="580.00,-620.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m5_imit_nn" [label="NN: M5 prototype imit", description="M5LatentPrototypeRuntimeMixin.\n\nDebug seed source.\nВходит через Common M5 Seed Bus.", color="#bb3333", fillcolor="#ffd6d6", style="filled", shape="ellipse", width="1.889", height="0.889", pos="340.00,-600.00!", penwidth="2.0", fontsize="10"];
+  }
+
+  subgraph "cluster_m4" {
+    label="4. M4 Long Dynamic Memory / Identity";
+    color="#34475d";
+    fillcolor="#ffffff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="85.00";
+    xdot_pad_top="35.00";
+    xdot_pad_right="185.00";
+    xdot_pad_bottom="65.00";
+    fontsize="10";
+    "m4a_nn" [label="NN: M4a object temporal role", description="Архитектурная роль M4a.\n\nПамять объекта во времени.\nПотребляет M1 inner object / z_obj / slot state.\n\nВ текущем коде роль реализуется через LongDynamicMemoryRuntimeMixin / LongDynamicMemory controller.", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-340.00,-1600.00!"];
+    "m4c_passport" [label="M4c passport", description="DynamicObjectPassportManager.\n\nOBJ token / паспорт объекта.\nСвязывает:\nslot ↔ identity\nidentity ↔ episode\nidentity ↔ world context.\n\nНе смешивает raw latents.", color="#a46413", fillcolor="#fff2d9", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-120.00,-1580.00!"];
+    "m4_longmem_nn" [label="NN: LongDynamicMemory", description="LongDynamicMemory controller.\n\nОтслеживает:\nidentity stability\nnovelty\nsimilarity\ndynamic_memory_gate\nreplay_z\nselected sentence / episode summary.", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-60.00,-1460.00!"];
+    "m4b_nn" [label="NN: M4b scenario context", description="Архитектурная роль M4b.\n\nWorld/scenario identity context.\nСтроит dynamic_identity_context из:\nM1 z_obj\npassport.replay_z\nM5 focus_context\nM2 replay_context\nscalar identity tail.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="140.00,-1400.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m4_packet" [label="M4 packet", description="out['long_dynamic_memory'].\n\nСодержит:\ndynamic_identity_context\ndynamic_memory_gate\nidentity_token\nidentity_stability\nidentity_similarity\nidentity_novelty\npassport_count / passport_slot\nselected_sentence\nreplay_z.", color="#34475d", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="320.00,-1460.00!", penwidth="2.0", fontsize="10", style="filled"];
+  }
+
+  subgraph "cluster_m11" {
+    label="5. M11 Affect / Motivational Homeostasis";
+    color="#a43656";
+    fillcolor="#ffe8ef";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "m11_energy_nn" [label="NN: Energy resonator", description="EnergyResonatorRuntimeMixin.\n\nПроизводит:\nout['energy_resonator']\nout['social_affect']\nout['energy_resonator_latent']\nout['other_agent_focus'].", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="1820.00,-560.00!"];
+    "m11_emotion_nn" [label="NN: Emotional drive", description="emotional_drive.compute(out, obs).\n\nПроизводит:\nout['emotion']\nout['affect']\nможет добавить intrinsic reward.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="2040.00,-560.00!"];
+    "m11_affect" [label="Affect context", description="Мотивационный контекст.\n\nСодержит:\nstress\nrelief\ncuriosity\npanic\nvalence\ncoherence.", color="#a43656", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="2240.00,-560.00!"];
+    "m11_dream_pressure" [label="Dream pressure", description="Контекст бессознательного replay.\n\nФормируется из affect/salience/novelty/error.\nИдёт в M2 как давление сна/replay и в M13 как эмоциональная метка.", color="#a43656", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1400.00,-700.00!"];
+  }
+
+  subgraph "cluster_m13" {
+    label="6. M13 Autobiographical Memory";
+    color="#4d6668";
+    fillcolor="#e8f0f0";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="132.00";
+    xdot_pad_top="35.00";
+    xdot_pad_right="125.00";
+    xdot_pad_bottom="28.00";
+    fontsize="10";
+    "m13_retrieval_nn" [label="NN: M13 retrieval", description="AutobiographicalMemoryRuntimeMixin.\n\ncompute_autobiographical_retrieval(obs,out)\nretrieve(out).\n\nИспользует current out, включая M4 identity и M11 affect context.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="1600.00,-1020.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m13_packet" [label="M13 packet", description="out['autobiographical_memory'].\n\nСодержит:\nretrieved_context\nretrieval_relevance\nepisode_count\nsummary\nlast_summary\nstage.", color="#4d6668", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1640.00,-1140.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m13_write" [label="M13 write", description="write_autobiographical_episode(obs,out).\n\nВыполняется ближе к концу life_step.\nПишет episode summaries и memory entries.", color="#4d6668", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1920.00,-1160.00!", penwidth="2.0", fontsize="10", style="filled"];
+  }
+
+  subgraph "cluster_m2" {
+    label="7. M2 Event Dream Replay";
+    color="#967a11";
+    fillcolor="#fff7d8";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="165.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="125.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "m2_runtime" [label="M2 replay runtime", description="EventDreamReplayRuntimeMixin.\n\ncompute_event_dream_replay(obs,out)\nget_event_dream_focus_seed(stage)\n_store_event_dream_m5_seed(packet).", color="#967a11", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1020.00,-940.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m2_core_nn" [label="NN: EventDreamReplay", description="EventDreamReplay.compute(...).\n\nИспользует:\nM13 context\nM4 context\nevent memory\ndream_mode\nM11 affect / dream pressure context.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="720.00,-1000.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m2_packet" [label="M2 packet", description="out['event_dream_replay'].\n\nСодержит:\nreplay_context\nreplay_gate\nshould_replay\ndream_pressure\nevent_salience\nselected_event_kind\nselected_event_sentence\nreplay_source.", color="#967a11", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="480.00,-1080.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m2_seed" [label="M2 seed state", description="_event_dream_next_focus_seed / gate.\n\nЕсли seed_to_m5_boundary=True:\nM2 сохраняет replay_context как следующий M5 boundary seed.", color="#4457aa", fillcolor="#eef2ff", shape="ellipse", width="1.889", height="0.889", pos="380.00,-940.00!", penwidth="2.0", fontsize="10", style="filled"];
+  }
+
+  subgraph "cluster_m3" {
+    label="8. M3 Action Guard";
+    color="#4d4d4d";
+    fillcolor="#ececec";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="25.00";
+    fontsize="10";
+    "m3_action_nn" [label="NN: Action runtime/head", description="ActionRuntimeMixin / action head role.\n\nОбрабатывает action fields от M5:\nmanual overrides\nexploration motor\nbody/hand/leg controls.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="1700.00,140.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m3_guard" [label="Sleep motor guard", description="SleepMotorGuardRuntimeMixin.\n\nВ режиме сна/replay:\nблокирует внешний моторный выход\nподдерживает zero prev_embodied_action и prev_hand_motor.", color="#4d4d4d", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="2040.00,300.00!"];
+    "m3_motor" [label="Motor state", description="Безопасное моторное состояние.\n\nСодержит:\nembodied_targets\nhand_ctrl\nleg_ctrl\nprev_embodied_action\nprev_hand_motor.", color="#4d4d4d", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1200.00,160.00!"];
+  }
+
+  subgraph "cluster_m8" {
+    label="9. M8 Status / Trace";
+    color="#607080";
+    fillcolor="#f1f3f5";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "m8_status" [label="Module status", description="ModuleStatusRuntimeMixin.\n\nStatus bus для M8 UI.\nЧитает module debug/status payloads.", color="#607080", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1120.00,-1940.00!"];
+    "m8_trace" [label="Unconscious trace", description="UnconsciousLoopTraceRuntimeMixin.\n\nТрассирует сигналы бессознательного контура:\nM2\nM13\nM4\nM11\nM5 seed.", color="#607080", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1340.00,-1940.00!"];
+  }
+
+  subgraph "cluster_training" {
+    label="10. Replay buffer / training";
+    color="#6f7785";
+    fillcolor="#ffffff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "replaybuf" [label="Replay buffer", description="replay.add(...).\n\nХранит traces для обучения:\nobs fields\naction fields\nmotor traces\nreward/done\ndepth/object_state.\n\nЭто не архитектурный raw input в M5.", color="#6f7785", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1780.00,-1780.00!"];
+    "training_nn" [label="NN: Training runtime", description="TrainingRuntimeMixin.\n\nИспользует replay buffer и module training flags.\nОбслуживает обучение trainable NN-модулей.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="1980.00,-1780.00!"];
+  }
+
+
+  "rules_loop" -> "rules_m5_input" [label="input rule", color="#a38925"];
+  "rules_m5_input" -> "rules_nn" [label="notation", color="#a38925"];
+  "world_obs" -> "m6_sensor_gate" [label="raw obs", color="#526aa8"];
+  "m6_sensor_gate" -> "input_contract" [label="gated obs", color="#526aa8"];
+  "input_contract" -> "m1_runtime" [label="gated sensory stream", color="#255c99", penwidth="3.4"];
+  "m1_runtime" -> "m1_safe_obs" [label="obs", color="#255c99"];
+  "m1_safe_obs" -> "m1_feature_build" [label="sensor tensors", color="#255c99"];
+  "m1_feature_build" -> "m1_dynamic_gate" [label="scene + interaction", color="#11689b"];
+  "m1_dynamic_gate" -> "m1_long_dynamic_nn" [label="dynamic context", color="#11689b", xdot_curve="0.06", penwidth="2.0", fontsize="9"];
+  "m1_long_dynamic_nn" -> "m1_proposals" [label="z_dynamic_object", color="#11689b"];
+  "m1_imit_nn" -> "m1_proposals" [label="debug proposal", color="#255c99", style="dashed"];
+  "m1_proposals" -> "m1_fusion_nn" [label="proposal tensors", color="#255c99"];
+  "m1_fusion_nn" -> "m1_slot_memory_nn" [label="z_update + strengths", color="#255c99"];
+  "m1_slot_memory_nn" -> "m1_decoder2d_nn" [label="z_obj", color="#255c99"];
+  "m1_slot_memory_nn" -> "m1_decoder3d_nn" [label="z_obj", color="#255c99"];
+  "m1_decoder2d_nn" -> "m1_inner_object" [label="2D fields", color="#255c99"];
+  "m1_decoder3d_nn" -> "m1_inner_object" [label="3D fields", color="#255c99"];
+  "m1_inner_object" -> "m1_event_memory_nn" [label="event transition", color="#967a11"];
+  "m1_event_memory_nn" -> "m1_outputs" [label="event code", color="#967a11"];
+  "m1_inner_object" -> "m1_outputs" [label="semantic object", color="#2c7a4b"];
+  "m1_outputs" -> "m5_contract" [label="semantic M1 output only", color="#2c7a4b", penwidth="3.4", xdot_head_anchor="-67.97,0.98", fontsize="9", xdot_curve="0.16"];
+  "m5_contract" -> "m5_workspace_nn" [label="semantic input", color="#2c7a4b"];
+  "m5_workspace_nn" -> "m5_focus" [label="workspace latent", color="#2c7a4b"];
+  "m5_workspace_nn" -> "m5_error" [label="prediction / novelty", color="#2c7a4b", xdot_curve="-0.14", penwidth="2.0", fontsize="9"];
+  "m5_imit_nn" -> "seed_bus" [label="priority #1", color="#4457aa", style="dashed"];
+  "seed_bus" -> "m5_boundary_nn" [label="seed + gate", color="#4457aa", xdot_tail_anchor="64.58,10.02", penwidth="2.0", fontsize="9", xdot_curve="0.16"];
+  "m5_boundary_nn" -> "m5_workspace_nn" [label="boundary seed", color="#2c7a4b"];
+  "m1_outputs" -> "m4a_nn" [label="z_obj / slot state", color="#11689b", penwidth="3.4"];
+  "m1_outputs" -> "m4c_passport" [label="identity evidence", color="#a46413", penwidth="3.4"];
+  "m4a_nn" -> "m4c_passport" [label="identity hint", color="#a46413"];
+  "m4c_passport" -> "m4_longmem_nn" [label="passport info", color="#a46413"];
+  "m4_longmem_nn" -> "m4b_nn" [label="identity context", color="#6840a1"];
+  "m5_focus" -> "m4b_nn" [label="focus_context", color="#6840a1", penwidth="3.4"];
+  "m2_packet" -> "m4b_nn" [label="replay_context", color="#6840a1", penwidth="3.4"];
+  "m4b_nn" -> "m4_packet" [label="packet", color="#34475d"];
+  "m5_error" -> "m11_energy_nn" [label="prediction / novelty", color="#a43656", penwidth="3.4"];
+  "m11_energy_nn" -> "m11_emotion_nn" [label="social_affect", color="#a43656"];
+  "m11_emotion_nn" -> "m11_affect" [label="emotion / affect", color="#a43656"];
+  "m11_affect" -> "m11_dream_pressure" [label="salience", color="#a43656"];
+  "m11_dream_pressure" -> "m13_retrieval_nn" [label="affect tags", color="#4d6668", penwidth="3.4"];
+  "m4_packet" -> "m13_retrieval_nn" [label="identity context", color="#4d6668", penwidth="3.4", xdot_tail_anchor="59.75,15.29", xdot_curve="0.14", fontsize="9"];
+  "m13_retrieval_nn" -> "m13_packet" [label="memory", color="#4d6668"];
+  "m13_packet" -> "m13_write" [label="later write", color="#4d6668"];
+  "m13_packet" -> "m4c_passport" [label="episode links", color="#a46413", penwidth="3.4", xdot_curve="-0.16", fontsize="9"];
+  "m11_dream_pressure" -> "m2_runtime" [label="dream pressure / salience", color="#967a11", penwidth="3.4"];
+  "m4_packet" -> "m2_runtime" [label="M4 replay context", color="#6840a1", penwidth="3.4"];
+  "m13_packet" -> "m2_runtime" [label="autobiographical context", color="#967a11", penwidth="3.4", xdot_curve="-0.09", fontsize="9"];
+  "m2_runtime" -> "m2_core_nn" [label="compute", color="#967a11"];
+  "m2_core_nn" -> "m2_packet" [label="packet", color="#967a11"];
+  "m2_packet" -> "m2_seed" [label="store seed", color="#4457aa"];
+  "m2_seed" -> "seed_bus" [label="priority #2 replay seed", color="#4457aa", penwidth="3.4", xdot_tail_anchor="-4.48,-31.93", xdot_curve="-0.17", xdot_head_anchor="-47.94,22.70", fontsize="9"];
+  "m5_workspace_nn" -> "m3_action_nn" [label="action fields", color="#4d4d4d", penwidth="3.4", xdot_curve="-0.14", fontsize="9"];
+  "m3_action_nn" -> "m3_guard" [label="candidate", color="#4d4d4d"];
+  "m6_sensor_gate" -> "m3_guard" [label="sleep mode flag", color="#526aa8", style="dashed", penwidth="3.2", xdot_curve="-0.08", fontsize="9"];
+  "m3_guard" -> "m3_motor" [label="safe motor", color="#4d4d4d"];
+  "m3_motor" -> "world_obs" [label="body movement / next observe", color="#6b7788", penwidth="3.4"];
+  "m1_outputs" -> "m8_status" [label="M1 status", color="#607080", style="dotted", penwidth="3.0"];
+  "m4_packet" -> "m8_status" [label="M4 status", color="#607080", style="dotted", penwidth="3.0"];
+  "m11_affect" -> "m8_status" [label="M11 status", color="#607080", style="dotted", penwidth="3.0"];
+  "m13_packet" -> "m8_trace" [label="M13 trace", color="#607080", style="dotted", penwidth="3.0"];
+  "m2_packet" -> "m8_trace" [label="M2 trace", color="#607080", style="dotted", penwidth="3.0", fontsize="9", xdot_curve="0.16"];
+  "m5_boundary_nn" -> "m8_status" [label="M5 seed status", color="#607080", style="dotted", penwidth="3.0"];
+  "m3_guard" -> "m8_status" [label="M3 guard status", color="#607080", style="dotted", penwidth="3.0"];
+  "m8_status" -> "m8_trace" [label="debug visible", color="#607080"];
+  "world_obs" -> "replaybuf" [label="trace storage only", color="#6f7785", style="dotted", penwidth="3.0", fontsize="9", xdot_curve="0.16"];
+  "m3_motor" -> "replaybuf" [label="motor traces", color="#6f7785", style="dotted", penwidth="3.0", fontsize="9", xdot_curve="0.16"];
+  "m13_write" -> "replaybuf" [label="episode write", color="#4d6668", style="dotted", penwidth="3.0"];
+  "replaybuf" -> "training_nn" [label="samples", color="#6f7785"];
+}

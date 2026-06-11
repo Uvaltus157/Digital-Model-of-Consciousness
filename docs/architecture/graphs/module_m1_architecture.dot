@@ -1,0 +1,201 @@
+digraph G {
+  graph [layout=neato, splines=true, overlap=false];
+
+  subgraph "cluster_contract" {
+    label="0. Контракт M1";
+    color="#a38925";
+    fillcolor="#fffbea";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "m1_contract" [label="M1 contract", description="Архитектурный контракт M1.\n\nM1 — единственный смысловой сенсорный шлюз в M5.\n\nM1 получает gated sensory stream от Input/M6, строит внутренний объект и отдаёт:\n1. semantic/object/world summary в M5\n2. z_obj / slot state / identity evidence в M4\n3. status/debug/preview в M8.\n\nM5 не получает raw sensors напрямую.", color="#a38925", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="-920.00,760.00!"];
+    "m1_format_rule" [label="DOT format rule", description="Формат схемы.\n\nClusters содержат только узлы.\nВсе связи вынесены на верхний уровень.\nNN-узлы имеют label с 'NN:' и светло-красный фон #ffd6d6.\nПодробности находятся в description.", color="#a38925", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="-720.00,760.00!"];
+    "m1_nn_rule" [label="NN notation", description="NN — это архитектурный нейровычислительный блок.\n\nЕсли в текущем коде слой ещё реализован как runtime/helper/controller, но архитектурно должен быть отдельным нейромодулем, он всё равно показан как NN в этой архитектурной схеме.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="-500.00,760.00!"];
+  }
+
+  subgraph "cluster_input" {
+    label="1. Вход M1";
+    color="#526aa8";
+    fillcolor="#eef3ff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="25.00";
+    xdot_pad_top="15.00";
+    xdot_pad_right="365.00";
+    xdot_pad_bottom="105.00";
+    fontsize="10";
+    "input_gated_obs" [label="Gated sensory stream", description="Вход M1 после Input/M6.\n\nСодержит:\nleft/right camera\ndepth\npose/body_state\ntactile/contact\nhand/leg state\nprev motor/action traces\nobject_state, если не запрещён gate-логикой.\n\nЭто ещё сырой/полусырой сенсорный поток, но он идёт только в M1.", color="#526aa8", fillcolor="#ffffff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="520.00,800.00!"];
+    "m1_safe_obs" [label="Safe obs", description="M1 safety preprocessing.\n\nАрхитектурная роль:\nне дать debug/teacher path обойти sleep gates.\n\nЕсли video off: image/depth/object_state не должны притворяться видимыми.\nЕсли contact off: tactile/contact зануляется.\nЕсли imu off: pose/body/imu зануляется.", color="#526aa8", fillcolor="#eef3ff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="540.00,660.00!"];
+    "m1_sleep_flags" [label="Sleep flags", description="Флаги состояния сна/replay для M1.\n\nУправляют:\nослаблением сенсорного входа\nзапретом learning from black frames\nпереключением на dream_step\nзаморозкой внешней записи при полном сне.", color="#526aa8", fillcolor="#eef3ff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="-20.00,660.00!"];
+  }
+
+  subgraph "cluster_encoders" {
+    label="2. Энкодеры M1";
+    color="#bb3333";
+    fillcolor="#fff0f0";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "m1_vision_encoder_nn" [label="NN: Vision Encoder", description="Зрительный энкодер M1.\n\nВход:\nleft camera\nright camera\ndepth\noptional focused depth hints\n\nВыход:\nvision embedding / visual scene code.\n\nРоль:\nдать M1 компактное зрительное представление объекта/сцены, которое дальше пойдёт в multimodal fusion и dynamic gates.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="240.00,320.00!"];
+    "m1_tactile_encoder_nn" [label="NN: Tactile Encoder", description="Тактильный энкодер M1.\n\nВход:\ntactile\ncontact\ncontacts\ncontact_sensors\nforce/contact state\n\nВыход:\ntactile/contact embedding.\n\nРоль:\nсвязать ощущение касания с объектом, чтобы объект мог формироваться не только из зрения.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="460.00,320.00!"];
+    "m1_proprio_encoder_nn" [label="NN: IMU / Proprio Encoder", description="Проприоцептивный / IMU энкодер M1.\n\nВход:\npose\nbody_state\nvestibular / imu\ngyro / accel\nprev_hand_motor\nprev_embodied_action\nhand state\nleg state\n\nВыход:\nbody/proprio embedding.\n\nРоль:\nотличать движение тела/камеры от движения внешнего объекта и связывать объект с действием.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="680.00,320.00!"];
+    "m1_action_trace_encoder_nn" [label="NN: Action Trace Encoder", description="Архитектурный энкодер следа действия.\n\nВход:\nprev_embodied_action\nprev_hand_motor\nlast motor command\ncontact timing\n\nВыход:\naction trace embedding.\n\nРоль:\nдать Object Fusion / Binding контекст: объект изменился сам или из-за моего действия.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="880.00,320.00!"];
+  }
+
+  subgraph "cluster_fusion" {
+    label="3. Слияние и связывание объекта";
+    color="#255c99";
+    fillcolor="#e8f1ff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "m1_multimodal_fusion_nn" [label="NN: Multimodal Fusion", description="Мультимодальное слияние M1.\n\nВходы:\nvision embedding\ntactile embedding\nproprio/body embedding\naction trace embedding\nhand/leg context\n\nВыход:\nединый multimodal object-percept vector.\n\nРоль:\nсвести разные сенсорные каналы в общее пространство восприятия объекта. Cенсоры превращаются в z_update,\nэто encoder/fusion-сеть M1, которая делает новый object latent-кандидат", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="400.00,60.00!"];
+    "m1_object_fusion_binding_nn" [label="NN: Object Fusion / Binding", description="Object Fusion / Binding NN.\n\nРоль:\nсвязать признаки в кандидат объекта:\nчто видно\nчто трогается\nчто движется\nчто связано с действием тела\nчто является фоном\nчто является новым объектом\n\nВыход:\nz_update candidate\nvision_strength\ntouch_strength\nbinding evidence\nobjectness / salience.\n\n1. собрать разные сенсорные входы в один object latent\n2. привязать этот latent к правильному object slot\nчто это за объект?\nи в какой слот внутренней памяти его записать?", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="600.00,60.00!"];
+    "m1_binding_evidence" [label="Binding evidence", description="Пакет evidence для slot routing.\n\nСодержит:\nz_update candidate\nobjectness / salience\nvision strength\ntouch strength\nmotion evidence\ninteraction evidence\nconfidence hints.\n\nЭто служебный пакет между binding NN и slot routing.", color="#255c99", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="820.00,60.00!"];
+  }
+
+  subgraph "cluster_dynamic" {
+    label="4. Динамика и обнаружение объекта";
+    color="#11689b";
+    fillcolor="#dff0ff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="15.00";
+    xdot_pad_right="345.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "m1_dynamic_gate" [label="Dynamic gates", description="Служебная динамическая логика M1.\n\nВключает:\nscene novelty\ninteraction activity\nbody/IMU activity\ntarget motion allowed\ntarget name detection\nsemantic event activation.\n\nЭто не NN, а gate/decision layer.", color="#11689b", fillcolor="#ffffff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="760.00,-180.00!"];
+    "m1_long_dynamic_nn" [label="NN: LongDynamicObjectMemory", description="M1-side LongDynamicObjectMemory.\n\nАрхитектурная роль:\nнакапливать объектную динамику во времени.\n\nВход:\nz_static / object percept\ncontext vector\nprevious dynamic state\n\nВыход:\nz_dynamic_object\nconfidence\nready flag\ndiag.", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="640.00,-260.00!"];
+    "m1_ready_gate" [label="Ready gate", description="Строгий gate готовности динамического объекта.\n\nREADY требует:\nреальную динамику dz/pixel/depth\nmin steps\nmin active steps\nstable ready streak\nconfidence threshold.\n\nСтатичная картинка не должна записывать object slot.", color="#11689b", fillcolor="#ffffff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="220.00,-340.00!"];
+    "m1_proposals" [label="Object proposals", description="Кандидаты для записи в object slots.\n\nИсточники:\nz_dynamic_object от LongDynamicObjectMemory\nsemantic event proposal\nM1 imit proposal\nscene summary fallback без записи в slot.\n\nProposal содержит target slot/kind/name metadata.", color="#255c99", fillcolor="#ffffff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="420.00,-360.00!"];
+    "m1_imit_nn" [label="NN: M1 Slot Imit", description="Отладочный латентный имитатор M1.\n\nСоздаёт z_obj proposal для проверки slot pipeline:\ncube\ntetra\nmorph\nother debug shapes.\n\nДолжен идти через normal slot routing/update, не в обход.", color="#bb3333", fillcolor="#ffd6d6", style="filled,rounded,dashed", shape="ellipse", width="1.889", height="0.889", pos="640.00,-380.00!"];
+  }
+
+  subgraph "cluster_slots" {
+    label="5. Slot system - ObjectSlotMemory / память объектов";
+    color="#255c99";
+    fillcolor="#e8f1ff";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="165.00";
+    xdot_pad_top="35.00";
+    xdot_pad_right="133.00";
+    xdot_pad_bottom="25.00";
+    fontsize="10";
+    description="NN: ObjectSlotMemory\n    ├─ Dynamic Slot Routing / Registry\n    ├─ NN: Slot Update / Identity Head\n    ├─ NN: Confidence / Stability Head\n    ├─ Object Slot Bank\n    └─ Active Slot Readout\n\nГде:\n\nObject Slot Bank = память / состояние\nSlot Update / Identity NN = вычисление обновления\nActive Slot Readout = чтение активного слота";
+    "m1_slot_registry" [label="Dynamic Slot Routing / Registry", description="Dynamic Slot Routing / Registry.\n\nРоль:\nвыбрать target slot\nвести target→slot registry\nзащищать занятые dynamic slots\nрешать, писать ли в существующий slot или создать новый\nподдерживать protected slots.\nРешает, когда вообще нужно создать/удержать новый смысловой/dynamic slot и какой target/object должен быть привязан к какому slot\n\nЭто служебный routing/registry слой, не NN.", color="#255c99", fillcolor="#ffffff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="700.00,-640.00!"];
+    "m1_slot_update_identity_nn" [label="NN: Slot Update / Identity", description="Slot Update / Identity NN.\n\nРоль:\nобновить выбранный slot\nсохранить идентичность объекта\nоценить confidence / memory_stability\nвычислить update_gate\nвычислить identity similarity.\n\nэто тот же объект?\nнасколько обновить его внутренний latent?\nсохранять ли старую identity?\nнасколько мы уверены в этом slot?\nаккуратно обновляет выбранный slot\n    сохраняет identity\n    считает confidence\n\nСоответствует нейросетевой части ObjectSlotMemory: update_gate + conf_head. \nХранит латенты и обновляет slots\n хранит:\n          z_obj_slots\n         confidence_slots\n          active_slot_index\n      обновляет:\n          выбранный object slot", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="box", width="2.639", height="0.833", pos="700.00,-720.00!"];
+    "m1_slot_bank" [label="Object slot bank", description="Банк объектных слотов.\n\nХранит:\nz_obj_slots\nconfidence_slots\nmemory_stability_slots\nslot_age\nactive_slot_index\ndream_activation_slots.\n\nЭто состояние памяти M1.\nхранилище состояния слотов внутри ObjectSlotMemory\n\nэто набор ячеек памяти:\n\nslot 0 → z_obj_slots[0], confidence_slots[0], memory_stability_slots[0]\nslot 1 → z_obj_slots[1], confidence_slots[1], memory_stability_slots[1]\nslot 2 → ...", color="#255c99", fillcolor="#ffffff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="100.00,-760.00!"];
+    "m1_active_slot_readout" [label="Active Slot Readout", description="Active Slot Readout.\n\nРоль:\nвыбрать active_slot_index\nпрочитать z_obj\nconfidence\nmemory_stability\nslot_age\nbinding/similarity diagnostics.\n\nЭто слой чтения состояния, не обязательно отдельный NN.", color="#255c99", fillcolor="#ffffff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="340.00,-840.00!"];
+  }
+
+  subgraph "cluster_decoders" {
+    label="6. Декодеры и геометрические головы";
+    color="#bb3333";
+    fillcolor="#fff0f0";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="285.00";
+    xdot_pad_top="75.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="25.00";
+    fontsize="10";
+    "m1_decoders_2d_nn" [label="NN: 2D Decoders", description="2D Decoders NN.\n\nВыходы из z_obj:\nrgb\ndepth\nmask\nshape_logits\ncolor_rgb\nsize\nhardness\nstability\nnovelty\naffordance.\n\nСоответствует ObjectImaginationHead2D и будущим 2D decoder heads.\nпревращает latent в картинку\nz_obj → rgb/depth/mask/attributes", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="240.00,-1080.00!"];
+    "m1_object3d_head_nn" [label="NN: Object3DHead", description="Текущий/совместимый 3D head M1.\n\nВыходы:\npoint_cloud\npoint_conf\nvoxel_occ.\n\nНужен для текущих visualizers и совместимости.\nпревращает latent в 3d\nz_obj → point_cloud / voxel_occ", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="440.00,-1080.00!"];
+    "m1_3dgs_head_nn" [label="NN: 3DGS Head", description="3D Gaussian Splatting Head NN.\n\nАрхитектурная роль:\nдекодировать z_obj в набор 3D Gaussian primitives:\nposition\nscale\nrotation\nopacity\ncolor/features\nconfidence.\n\nЭто целевой слой для более живой внутренней 3D-сцены.", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="640.00,-1080.00!"];
+    "m1_4d_deformation_nn" [label="NN: 4D Deformation", description="4D Deformation NN.\n\nАрхитектурная роль:\nмоделировать изменение 3DGS/object geometry во времени.\n\nВход:\nz_obj\nidentity state\nmotion/action context\ntime/replay phase\n\nВыход:\ndeformation field / delta primitives / temporal update.", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="860.00,-1220.00!"];
+  }
+
+  subgraph "cluster_outputs" {
+    label="7. Dream, event memory, outputs";
+    color="#967a11";
+    fillcolor="#fff7d8";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="45.00";
+    xdot_pad_top="55.00";
+    xdot_pad_right="45.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "m1_dream_step_nn" [label="NN: Dream Step", description="Dream/internal latent dynamics.\n\nВ full sleep:\nнет sensory fusion/write\nвнутренняя latent dynamics продолжается\nidentity сохраняется\nможет циклически посещать занятые slots.\n\nВыход:\ndream_tick\nsleep_dream_mode\ndream_activation\ndream_latent_delta.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="280.00,-1480.00!"];
+    "m1_inner_object" [label="Inner Object", description="Итоговое внутреннее объектное представление.\n\nСодержит:\nz_obj\nslot state\nconfidence\n2D fields\n3D fields\n3DGS fields\n4D deformation state\ndream fields\nevent fields\npassport/debug fields.", color="#255c99", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="500.00,-1480.00!"];
+    "m1_event_memory_nn" [label="NN: EventLatentSentenceMemory", description="Латентная память событий.\n\nКодирует переход:\nz_before(slot) → z_after(slot)\n+ action/contact/vision/touch context.\n\nСоздаёт event_code_sentence и связывает M1 с M2/M13 event memory.", color="#bb3333", fillcolor="#ffd6d6", shape="ellipse", width="1.889", height="0.889", pos="720.00,-1480.00!"];
+    "m1_outputs" [label="M1 Outputs", description="Выходы M1.\n\nTo M5:\nsemantic/object/world summary.\n\nTo M4:\nz_obj / slot state / identity evidence.\n\nTo M8:\ninner object preview / slot status / debug.\n\nTo M2/M13 indirectly:\nevent code / event latent memory.", color="#2c7a4b", fillcolor="#e7f8ed", shape="ellipse", width="1.889", height="0.889", pos="920.00,-1480.00!"];
+  }
+
+  subgraph "cluster_external" {
+    label="8. Внешние потребители M1";
+    color="#607080";
+    fillcolor="#f1f3f5";
+    style="filled";
+    penwidth="2.0";
+    xdot_pad_left="92.00";
+    xdot_pad_top="68.00";
+    xdot_pad_right="52.00";
+    xdot_pad_bottom="45.00";
+    fontsize="10";
+    "external_m5" [label="To M5", description="M1 semantic/object/world summary.\n\nЕдинственный смысловой сенсорный вход в M5.", color="#2c7a4b", fillcolor="#e7f8ed", shape="ellipse", width="1.889", height="0.889", pos="700.00,-1800.00!"];
+    "external_m4" [label="To M4", description="M1 отдаёт в M4:\nz_obj\nslot state\nactive slot\nconfidence\nidentity evidence.\n\nM4 использует это для M4a/M4c/M4b identity flow.", color="#a46413", fillcolor="#fff2d9", shape="ellipse", width="1.889", height="0.889", pos="900.00,-1800.00!"];
+    "external_m8" [label="To M8", description="M1 отдаёт в M8:\ninner object preview\nslot status\nstatic/dynamic debug\npassport/debug fields\nvisualization payloads.", color="#607080", fillcolor="#ffffff", shape="ellipse", width="1.889", height="0.889", pos="1120.00,-1800.00!"];
+    "external_event" [label="To Event Memory", description="M1 event latent / event sentence.\n\nИспользуется M2/M13 контуром через event memory / dream replay logic.", color="#967a11", fillcolor="#fff7d8", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="520.00,-1800.00!"];
+  }
+
+  "m1_slot_update_identity_nn_copy" [label="NN: Confidence / Stability", description="Confidence / Stability\n\nРоль:\nОценивает confidence, stability, update_gate и similarity для slot.\nРешает, насколько безопасно обновлять память объекта и сохранять его identity.\n\nотвечает не за сам объект, а за насколько этому слоту можно доверять.\n\nОна смотрит на текущий кандидат объекта и состояние слота и выдаёт примерно такие оценки:\n\nconfidence\n    насколько slot уверен, что в нём действительно объект\n\nmemory_stability\n    насколько образ объекта устойчив во времени\n\nupdate_strength / update_gate\n    насколько сильно сейчас можно обновить slot\n\nslot_similarity\n    насколько новый вход похож на то, что уже лежало в slot\n\nПростыми словами:\n\nObject Fusion / Binding NN\n    говорит: \"вот кандидат объекта\"\n\nSlot Update / Identity NN\n    говорит: \"как обновить объектный latent\"\n\nConfidence / Stability Head NN\n    говорит: \"верим ли мы этому обновлению?\"\n\nПример:\n\nЕсли объект виден ясно:\nconfidence высокая\nmemory_stability растёт\nslot можно обновлять\n\nЕсли кадр шумный, касания нет, объект пропал:\nconfidence падает\nupdate_gate уменьшается\nslot лучше не перезаписывать мусором\n\nЕсли объект тот же, но немного изменился:\nconfidence остаётся высокой\nmemory_stability сохраняется\nslot уточняется\n\nЕсли появился совсем другой объект:\nsimilarity падает\nrouting может выбрать другой slot", color="#bb3333", fillcolor="#ffd6d6", penwidth="2.0", fontsize="10", style="filled", shape="box", width="2.639", height="0.833", pos="700.00,-800.00!"];
+
+  "m1_contract" -> "m1_format_rule" [label="format", color="#a38925"];
+  "m1_format_rule" -> "m1_nn_rule" [label="NN convention", color="#a38925"];
+  "input_gated_obs" -> "m1_safe_obs" [label="gated obs", color="#526aa8"];
+  "m1_sleep_flags" -> "m1_safe_obs" [label="sleep masks", color="#526aa8", style="dashed"];
+  "m1_safe_obs" -> "m1_vision_encoder_nn" [label="left/right/depth", color="#bb3333", penwidth="2.0", fontsize="9", xdot_curve="0.16"];
+  "m1_safe_obs" -> "m1_tactile_encoder_nn" [label="tactile/contact", color="#bb3333"];
+  "m1_safe_obs" -> "m1_proprio_encoder_nn" [label="pose/body/imu", color="#bb3333"];
+  "m1_safe_obs" -> "m1_action_trace_encoder_nn" [label="prev motor/action", color="#bb3333"];
+  "m1_vision_encoder_nn" -> "m1_multimodal_fusion_nn" [label="vision embedding", color="#bb3333"];
+  "m1_tactile_encoder_nn" -> "m1_multimodal_fusion_nn" [label="tactile embedding", color="#bb3333"];
+  "m1_proprio_encoder_nn" -> "m1_multimodal_fusion_nn" [label="proprio embedding", color="#bb3333"];
+  "m1_action_trace_encoder_nn" -> "m1_multimodal_fusion_nn" [label="action trace", color="#bb3333"];
+  "m1_multimodal_fusion_nn" -> "m1_object_fusion_binding_nn" [label="multimodal vector", color="#bb3333"];
+  "m1_object_fusion_binding_nn" -> "m1_binding_evidence" [label="z_update + binding evidence", color="#255c99"];
+  "m1_binding_evidence" -> "m1_dynamic_gate" [label="objectness / salience", color="#11689b"];
+  "m1_dynamic_gate" -> "m1_long_dynamic_nn" [label="dynamic context", color="#11689b"];
+  "m1_long_dynamic_nn" -> "m1_ready_gate" [label="z_dynamic + confidence", color="#11689b"];
+  "m1_ready_gate" -> "m1_proposals" [label="if ready", color="#11689b"];
+  "m1_imit_nn" -> "m1_proposals" [label="debug proposal", color="#255c99", style="dashed"];
+  "m1_proposals" -> "m1_slot_registry" [label="target slots / kinds / names", color="#255c99"];
+  "m1_binding_evidence" -> "m1_slot_registry" [label="binding evidence", color="#255c99", xdot_curve="-0.36", penwidth="2.0", fontsize="9", xdot_tail_anchor="35.32,27.35"];
+  "m1_slot_registry" -> "m1_slot_update_identity_nn" [label="selected slot", color="#255c99"];
+  "m1_slot_update_identity_nn_copy" -> "m1_slot_bank" [label="updated slot state", color="#255c99", penwidth="2.0", fontsize="9", xdot_curve="0.16", xdot_tail_anchor="-95.00,4.07"];
+  "m1_slot_bank" -> "m1_active_slot_readout" [label="read active slot", color="#255c99"];
+  "m1_active_slot_readout" -> "m1_decoders_2d_nn" [label="z_obj", color="#255c99"];
+  "m1_active_slot_readout" -> "m1_object3d_head_nn" [label="z_obj", color="#255c99"];
+  "m1_active_slot_readout" -> "m1_3dgs_head_nn" [label="z_obj + identity", color="#255c99"];
+  "m1_3dgs_head_nn" -> "m1_4d_deformation_nn" [label="3DGS primitives", color="#255c99"];
+  "m1_decoders_2d_nn" -> "m1_inner_object" [label="2D fields", color="#255c99"];
+  "m1_object3d_head_nn" -> "m1_inner_object" [label="point/voxel fields", color="#255c99"];
+  "m1_3dgs_head_nn" -> "m1_inner_object" [label="3DGS fields", color="#255c99"];
+  "m1_4d_deformation_nn" -> "m1_inner_object" [label="temporal geometry", color="#255c99"];
+  "m1_sleep_flags" -> "m1_dream_step_nn" [label="full sleep", color="#526aa8", style="dashed", penwidth="2.0", fontsize="9", xdot_curve="0.24", xdot_head_anchor="-68.00,0.02", xdot_tail_anchor="-22.17,30.25"];
+  "m1_slot_bank" -> "m1_dream_step_nn" [label="slot state", color="#526aa8", style="dashed"];
+  "m1_dream_step_nn" -> "m1_inner_object" [label="dream object", color="#526aa8", style="dashed"];
+  "m1_inner_object" -> "m1_event_memory_nn" [label="event transition", color="#967a11"];
+  "m1_event_memory_nn" -> "m1_outputs" [label="event code", color="#967a11"];
+  "m1_inner_object" -> "m1_outputs" [label="semantic object", color="#2c7a4b", xdot_curve="-0.38", penwidth="2.0", fontsize="9"];
+  "m1_outputs" -> "external_m5" [label="semantic summary", color="#2c7a4b"];
+  "m1_outputs" -> "external_m4" [label="z_obj / identity evidence", color="#a46413"];
+  "m1_outputs" -> "external_m8" [label="status / preview / debug", color="#607080"];
+  "m1_event_memory_nn" -> "external_event" [label="event latent / sentence", color="#967a11"];
+  "m1_slot_update_identity_nn" -> "m1_slot_update_identity_nn_copy" [tailport="s", headport="n"];
+}

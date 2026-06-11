@@ -1,0 +1,46 @@
+digraph G {
+  graph [layout=neato, splines=true, overlap=false];
+
+  "obs0" [label="World.observe #1\nobs0", penwidth="2.0", fontsize="10", shape="box", width="2.333", height="1.278", pos="-640.00,280.00!"];
+  "sleep0" [label="M6 gate_observation_for_sleep(obs0)", penwidth="2.0", fontsize="10", shape="box", width="3.445", height="1.278", pos="-380.00,240.00!"];
+  "pre" [label="model_step(..., stage='pre_observe')", penwidth="2.0", fontsize="10", shape="box", width="2.139", height="1.472", pos="-117.00,207.00!"];
+  "guard0" [label="M3 \npre_observe motor guard", penwidth="2.0", fontsize="10", shape="box", width="2.611", height="1.278", pos="126.00,134.00!"];
+  "obs1" [label="World.observe #2\nobs", penwidth="2.0", fontsize="10", shape="box", width="2.333", height="1.278", pos="-640.00,60.00!"];
+  "sleep1" [label="M6 gate_observation_for_sleep(obs)", shape="box", width="3.167", height="1.278", pos="-360.00,-0.00!", penwidth="2.0", fontsize="10"];
+  "main" [label="model_step(..., stage='main')", shape="box", width="1.722", height="1.333", pos="-98.00,-8.00!", penwidth="2.0", fontsize="10"];
+  "m1" [label="M1 compute_inner_object_image\nout['inner_object']", shape="box", width="2.889", height="1", pos="136.00,-24.00!", penwidth="2.0", fontsize="10"];
+  "m4" [label="M4 compute_long_dynamic_memory\nout['long_dynamic_memory']", shape="box", width="3.25", height="1.333", pos="437.00,-92.00!", penwidth="2.0", fontsize="10"];
+  "m11a" [label="M11 compute_energy_resonator\nout['social_affect']", shape="box", width="2.611", height="1.278", pos="100.00,-180.00!", penwidth="2.0", fontsize="10"];
+  "selfcore" [label="M9 compute_self_core\nout['self_core']", shape="box", width="2.056", height="1.278", pos="-126.00,-206.00!", penwidth="2.0", fontsize="10"];
+  "guard1" [label="M3 \nmain motor guard", shape="box", width="1.944", height="1.111", pos="-390.00,-240.00!", penwidth="2.0", fontsize="10"];
+  "emotion" [label="emotional_drive.compute\nout['emotion']/out['affect']", shape="box", width="2.611", height="1.278", pos="-620.00,-320.00!", penwidth="2.0", fontsize="10"];
+  "replayadd" [label="replay.add(...)", shape="box", width="1.889", height="0.889", pos="-380.00,-420.00!", penwidth="2.0", fontsize="10"];
+  "probe" [label="DreamProbe optional", shape="box", width="1.889", height="0.889", pos="-160.00,-460.00!", penwidth="2.0", fontsize="10"];
+  "m13" [label="M13 compute_autobiographical_retrieval", shape="box", width="1.889", height="0.889", pos="40.00,-480.00!", penwidth="2.0", fontsize="10"];
+  "m2" [label="M2 compute_event_dream_replay", shape="box", width="1.889", height="0.889", pos="240.00,-500.00!", penwidth="2.0", fontsize="10"];
+  "seed" [label="store next M5 focus seed/gate", shape="box", width="2.056", height="1", pos="446.00,-564.00!", penwidth="2.0", fontsize="10"];
+  "trace" [label="M2/M13/unconscious traces", shape="box", width="1.889", height="0.889", pos="200.00,-640.00!", penwidth="2.0", fontsize="10"];
+  "m12" [label="M12 metacognition later", shape="box", width="1.889", height="0.889", pos="-80.00,-660.00!", penwidth="2.0", fontsize="10"];
+  "tail" [label="write M13 episode\nstats/finalize/global_step++", shape="box", width="1.889", height="0.889", pos="-340.00,-680.00!", penwidth="2.0", fontsize="10"];
+
+  "obs0" -> "sleep0";
+  "sleep0" -> "pre";
+  "pre" -> "guard0";
+  "guard0" -> "obs1" [xdot_curve="0.02", penwidth="2.0", fontsize="9"];
+  "obs1" -> "sleep1" [xdot_curve="0.01", penwidth="2.0", fontsize="9"];
+  "sleep1" -> "main";
+  "main" -> "m1";
+  "m1" -> "m4";
+  "m4" -> "m11a";
+  "m11a" -> "selfcore" [xdot_curve="0.00", penwidth="2.0", fontsize="9"];
+  "selfcore" -> "guard1";
+  "guard1" -> "emotion";
+  "emotion" -> "replayadd";
+  "replayadd" -> "probe";
+  "probe" -> "m13" [xdot_curve="0.02", penwidth="2.0", fontsize="9"];
+  "m13" -> "m2";
+  "m2" -> "seed";
+  "seed" -> "trace";
+  "trace" -> "m12";
+  "m12" -> "tail" [xdot_curve="-0.04", penwidth="2.0", fontsize="9"];
+}

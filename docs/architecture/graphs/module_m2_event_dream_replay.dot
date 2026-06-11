@@ -1,0 +1,22 @@
+digraph G {
+  graph [layout=neato, splines=true, overlap=false];
+
+  "out" [label="current out\n", penwidth="2.0", fontsize="10", shape="ellipse", description="focus_context\nemotion/affect\nlong_dynamic_memory\nautobiographical_memory\nevent memory", width="1.889", height="0.889", pos="-20.00,140.00!"];
+  "runtime" [label="compute_event_dream_replay(obs,out)", penwidth="2.0", fontsize="10", shape="ellipse", description="EventDreamReplayRuntimeMixin", width="2.056", height="1", pos="214.00,104.00!"];
+  "core" [label="EventDreamReplay.compute(...)", penwidth="2.0", fontsize="10", shape="ellipse", description="use_m13_context\nuse_m4_context\nuse_event_memory\ndream_mode", width="2.056", height="1", pos="434.00,84.00!"];
+  "packet" [label="event_dream_replay packet\nreplay_context\nreplay_gate / should_replay\ndream_pressure\nevent_salience\nselected event", penwidth="2.0", fontsize="10", shape="ellipse", width="1.889", height="0.889", pos="640.00,60.00!"];
+  "store" [label="_store_event_dream_m5_seed(packet)\n_event_dream_next_focus_seed\n_event_dream_next_focus_gate\nseed_source", shape="ellipse", width="1.889", height="0.889", pos="840.00,-0.00!"];
+  "bus" [label="M5 seed bus\nget_m5_focus_seed(stage)\npriority #2 if M2 seed exists", color="#4457aa", fillcolor="#eef2ff", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="100.00,-220.00!"];
+  "boundary" [label="M5 FocusFeedbackBoundary\nseed + gate", color="#2c7a4b", fillcolor="#e7f8ed", penwidth="2.0", fontsize="10", style="filled", shape="ellipse", width="1.889", height="0.889", pos="380.00,-240.00!"];
+  "legacy" [label="legacy focus blend\nonly if seed_to_m5_boundary=False", style="filled", fillcolor="#fffdf0", penwidth="2.0", fontsize="10", shape="ellipse", width="1.889", height="0.889", pos="500.00,-40.00!"];
+  "imit" [label="M2ScenarioImitRuntimeMixin\ndebug scenario path", style="filled", fillcolor="#fffdf0", penwidth="2.0", fontsize="10", shape="ellipse", width="1.889", height="0.889", pos="180.00,-40.00!"];
+
+  "out" -> "runtime";
+  "runtime" -> "core";
+  "core" -> "packet";
+  "packet" -> "store";
+  "store" -> "bus" [xdot_curve="-0.05", penwidth="2.0", fontsize="9"];
+  "bus" -> "boundary";
+  "packet" -> "legacy" [style="dashed"];
+  "imit" -> "runtime" [style="dashed"];
+}

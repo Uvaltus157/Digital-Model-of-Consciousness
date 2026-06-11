@@ -1,0 +1,197 @@
+digraph G {
+  graph [layout=neato, splines=true, overlap=false];
+
+  subgraph "cluster_input" {
+    label="Input + M6 sleep gates";
+    color="#526aa8";
+    fillcolor="#eef3ff";
+    style="filled";
+    xdot_pad_left="42.00";
+    xdot_pad_top="67.00";
+    xdot_pad_right="26.00";
+    xdot_pad_bottom="44.00";
+    penwidth="2.0";
+    fontsize="10";
+    "obs" [label="World observation\nleft/right/depth\npose/body_state\ntactile/object_state\nreward/done", color="#98a4b5", shape="box", width="2.417", height="1.472", pos="340.00,820.00!", penwidth="2.0", fontsize="10"];
+    "sleep_gates" [label="M6 SleepSensorsMixin\ngate_observation_for_sleep(obs)\nvideo/contact/IMU mask", color="#526aa8", shape="box", width="3.111", height="1.333", pos="100.00,820.00!", penwidth="2.0", fontsize="10"];
+  }
+
+  subgraph "cluster_m5" {
+    label="M5 World Model / Workspace";
+    color="#2c7a4b";
+    fillcolor="#e7f8ed";
+    style="filled";
+    xdot_pad_left="9.00";
+    xdot_pad_top="24.00";
+    xdot_pad_right="40.00";
+    xdot_pad_bottom="21.00";
+    penwidth="2.0";
+    fontsize="10";
+    "m5_model" [label="model_step(...)\nobs_embed\nworkspace_out\nfocus_context\nimagined / values\naction fields", color="#2c7a4b", shape="box", width="2.778", height="1.556", pos="-100.00,80.00!", penwidth="2.0", fontsize="10"];
+    "m5_focus" [label="focus_context / workspace latent\nnot M1 z_obj", color="#2c7a4b", shape="box", width="3.083", height="1.083", pos="-460.00,-40.00!", penwidth="2.0", fontsize="10"];
+    "m5_boundary" [label="FocusFeedbackBoundary\nsingle seed entry point", color="#2c7a4b", shape="box", width="2.611", height="1", pos="100.00,200.00!", penwidth="2.0", fontsize="10"];
+    "seed_bus" [label="get_m5_focus_seed(stage)\n1 M5 prototype seed\n2 M2 replay seed\n3 M15 conscious seed\n4 none", color="#4457aa", fillcolor="#eef2ff", shape="box", width="2.889", height="1.278", pos="140.00,-40.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m5_imit" [label="M5LatentPrototypeRuntimeMixin\ndebug prototype seed", color="#2c7a4b", fillcolor="#f9fff9", style="filled", shape="box", width="3.167", height="1", pos="-200.00,-80.00!", penwidth="2.0", fontsize="10"];
+  }
+
+  subgraph "cluster_m1" {
+    label="M1 Object Imagery";
+    color="#255c99";
+    fillcolor="#e8f1ff";
+    style="filled";
+    xdot_pad_left="16.00";
+    xdot_pad_top="43.98";
+    xdot_pad_right="39.00";
+    xdot_pad_bottom="20.99";
+    penwidth="2.0";
+    fontsize="10";
+    "m1_runtime" [label="compute_inner_object_image(obs,out)\nObjectImageryRuntimeMixin", color="#255c99", penwidth="2.0", fontsize="10", shape="ellipse", width="2.889", height="1.556", pos="-960.00,160.00!"];
+    "m1_slots" [label="ObjectSlotMemory\nz_obj_slots\nconfidence_slots\nactive_slot_index", color="#255c99", penwidth="2.0", fontsize="10", shape="ellipse", width="2.611", height="1.556", pos="-780.00,-20.00!"];
+    "m1_inner3d" [label="Inner Object 3D\ninternal object view", color="#255c99", shape="ellipse", width="1.889", height="0.889", pos="-980.00,-60.00!", penwidth="2.0", fontsize="10"];
+    "m1_imit" [label="M1ObjectSlotLatentImitRuntimeMixin\ndebug z_obj through slot path", color="#255c99", fillcolor="#f9fcff", style="filled", penwidth="2.0", fontsize="10", shape="ellipse", width="2.889", height="1.556", pos="-1220.00,-40.00!"];
+  }
+
+  subgraph "cluster_m4" {
+    label="M4 Long Dynamic Memory / Passport";
+    color="#34475d";
+    fillcolor="#ffffff";
+    style="filled";
+    xdot_pad_left="129.02";
+    xdot_pad_top="41.00";
+    xdot_pad_right="9.00";
+    xdot_pad_bottom="21.01";
+    penwidth="2.0";
+    fontsize="10";
+    "passport" [label="DynamicObjectPassportManager\nOBJ token\nslot ↔ identity\nidentity over time", color="#a46413", fillcolor="#fff2d9", shape="box", width="2.333", height="1.278", pos="220.00,-960.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "longmem" [label="LongDynamicMemory controller\nidentity stability\nnovelty / similarity\nreplay_z", color="#6840a1", fillcolor="#f0eaff", shape="box", width="2.333", height="1.278", pos="-20.00,-940.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m4_context" [label="dynamic_identity_context\nz_obj + replay_z + focus_context\n+ M2 replay_context + scalar tail", color="#6840a1", fillcolor="#f7f2ff", shape="box", width="2.611", height="1.278", pos="540.00,-920.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m4_packet" [label="out['long_dynamic_memory']", color="#34475d", shape="box", width="2.889", height="0.722", pos="820.00,-980.00!", penwidth="2.0", fontsize="10", description="identity_token\ndynamic_memory_gate\nidentity_* fields\npassport_count/slot\nselected_sentence\nreplay_z"];
+    "roles" [label="M4abc roles in current code\nM4a: M1 z_obj → identity trace\nM4c: passport / OBJ token\nM4b: dynamic_identity_context\nnot separate classes yet", color="#a38925", fillcolor="#fffbea", shape="box", width="2.833", height="1.889", pos="0.00,-1060.00!", penwidth="2.0", fontsize="10", style="filled"];
+  }
+
+  subgraph "cluster_m11" {
+    label="M11 Affect / Homeostasis";
+    color="#a43656";
+    fillcolor="#ffe8ef";
+    style="filled";
+    xdot_pad_left="25.00";
+    xdot_pad_top="48.00";
+    xdot_pad_right="132.00";
+    xdot_pad_bottom="25.00";
+    penwidth="2.0";
+    fontsize="10";
+    "energy" [label="EnergyResonatorRuntimeMixin\nenergy_resonator\nsocial_affect\nenergy_resonator_latent", color="#a43656", shape="ellipse", width="1.889", height="0.889", pos="640.00,120.00!", penwidth="2.0", fontsize="10"];
+    "emotion" [label="emotional_drive.compute(out, obs)\nout['emotion']\nout['affect']", color="#a43656", shape="ellipse", width="1.889", height="0.889", pos="860.00,100.00!", penwidth="2.0", fontsize="10"];
+    "affect" [label="affect / dream pressure context\nstress / relief / curiosity\nsalience", color="#a43656", shape="ellipse", width="1.889", height="0.889", pos="880.00,20.00!", penwidth="2.0", fontsize="10"];
+  }
+
+  subgraph "cluster_m13" {
+    label="M13 Autobiographical Memory";
+    color="#4d6668";
+    fillcolor="#e8f0f0";
+    style="filled";
+    xdot_pad_left="25.00";
+    xdot_pad_top="48.00";
+    xdot_pad_right="232.00";
+    xdot_pad_bottom="25.00";
+    penwidth="2.0";
+    fontsize="10";
+    "m13_retrieve" [label="compute_autobiographical_retrieval(obs,out)\nretrieve(out)", color="#4d6668", shape="ellipse", width="1.889", height="0.889", pos="1480.00,-340.00!", penwidth="2.0", fontsize="10"];
+    "m13_packet" [label="out['autobiographical_memory']\nretrieved_context\nretrieval_relevance\nepisode_count\nsummary", color="#4d6668", shape="ellipse", width="1.889", height="0.889", pos="1280.00,-420.00!", penwidth="2.0", fontsize="10"];
+    "m13_write" [label="write_autobiographical_episode(obs,out)\npost_step_written", color="#4d6668", shape="ellipse", width="1.889", height="0.889", pos="1460.00,-520.00!", penwidth="2.0", fontsize="10"];
+  }
+
+  subgraph "cluster_m2" {
+    label="M2 Event Dream Replay";
+    color="#967a11";
+    fillcolor="#fff7d8";
+    style="filled";
+    xdot_pad_left="19.00";
+    xdot_pad_top="10.00";
+    xdot_pad_right="126.00";
+    xdot_pad_bottom="34.00";
+    penwidth="2.0";
+    fontsize="10";
+    "m2_runtime" [label="compute_event_dream_replay(obs,out)\nEventDreamReplayRuntimeMixin", color="#967a11", shape="box", width="3.722", height="1.278", pos="800.00,-340.00!", penwidth="2.0", fontsize="10"];
+    "m2_core" [label="EventDreamReplay.compute(...)\nuses M13 context\nuses M4 context\nuses event memory", color="#967a11", shape="box", width="3.167", height="1.278", pos="460.00,-320.00!", penwidth="2.0", fontsize="10"];
+    "m2_packet" [label="out['event_dream_replay']", color="#967a11", shape="box", width="2.694", height="0.639", pos="700.00,-580.00!", penwidth="2.0", fontsize="10", description="replay_context\nreplay_gate\nshould_replay\ndream_pressure\nevent_salience\nselected_event_sentence"];
+    "m2_seed" [label="_event_dream_next_focus_seed/gate\npacket target_m5_boundary\nseed_source='m02_event_dream_replay'", color="#4457aa", fillcolor="#eef2ff", shape="box", width="3.167", height="1.278", pos="260.00,-440.00!", penwidth="2.0", fontsize="10", style="filled"];
+    "m2_imit" [label="M2ScenarioImitRuntimeMixin\ndebug scenario path", color="#967a11", fillcolor="#fffdf0", style="filled", shape="box", width="2.833", height="1.056", pos="380.00,-540.00!", penwidth="2.0", fontsize="10"];
+  }
+
+  subgraph "cluster_m3" {
+    label="M3 Action / Motor Guard";
+    color="#4d4d4d";
+    fillcolor="#ececec";
+    style="filled";
+    xdot_pad_left="32.00";
+    xdot_pad_top="74.00";
+    xdot_pad_right="36.00";
+    xdot_pad_bottom="31.00";
+    penwidth="2.0";
+    fontsize="10";
+    "action" [label="ActionRuntimeMixin\naction postprocess\nmanual/exploration overrides", color="#4d4d4d", shape="box", width="2.056", height="1", pos="760.00,-1440.00!", penwidth="2.0", fontsize="10"];
+    "guard" [label="SleepMotorGuardRuntimeMixin\nsleep/replay blocks motor\nzero prev motor support", color="#4d4d4d", shape="box", width="2.333", height="1.278", pos="960.00,-1440.00!", penwidth="2.0", fontsize="10"];
+    "motor" [label="motor state\nembodied_targets\nhand_ctrl\nleg_ctrl\nprev actions", color="#4d4d4d", shape="box", width="2.333", height="1.278", pos="1160.00,-1420.00!", penwidth="2.0", fontsize="10"];
+  }
+
+  subgraph "cluster_m8" {
+    label="M8 Status / Trace";
+    color="#607080";
+    fillcolor="#f1f3f5";
+    style="filled";
+    xdot_pad_left="53.00";
+    xdot_pad_top="47.00";
+    xdot_pad_right="39.00";
+    xdot_pad_bottom="11.00";
+    penwidth="2.0";
+    fontsize="10";
+    "status" [label="ModuleStatusRuntimeMixin\nmodule debug status bus", color="#607080", shape="ellipse", width="2", height="1.194", pos="260.00,-1400.00!", penwidth="2.0", fontsize="10"];
+    "trace" [label="UnconsciousLoopTraceRuntimeMixin\nM2/M13/unconscious traces", color="#607080", shape="ellipse", width="2.056", height="1.278", pos="460.00,-1440.00!", penwidth="2.0", fontsize="10"];
+  }
+
+  subgraph "cluster_training" {
+    label="Replay buffer / training";
+    color="#6f7785";
+    fillcolor="#ffffff";
+    style="filled";
+    xdot_pad_left="32.00";
+    xdot_pad_top="48.00";
+    xdot_pad_right="32.00";
+    xdot_pad_bottom="48.00";
+    penwidth="2.0";
+    fontsize="10";
+    "replaybuf" [label="replay.add(...)\nobs/action/state traces", color="#6f7785", shape="ellipse", width="1.889", height="0.889", pos="1120.00,-1020.00!", penwidth="2.0", fontsize="10"];
+    "training" [label="TrainingRuntimeMixin\nuses replay buffer\nnot M2 replay selector", color="#6f7785", shape="ellipse", width="1.889", height="0.889", pos="1280.00,-1020.00!", penwidth="2.0", fontsize="10"];
+  }
+
+
+  "sleep_gates" -> "m5_model" [label="gated obs", color="#2c7a4b", ltail="cluster_input", lhead="cluster_m5", penwidth="2.0", fontsize="9", xdot_curve="0.16"];
+  "sleep_gates" -> "m1_runtime" [label="gated obs", color="#255c99", ltail="cluster_input", lhead="cluster_m1", penwidth="2.0", fontsize="9", xdot_curve="0.16"];
+  "m5_model" -> "m1_runtime" [label="out + obs", color="#255c99", ltail="cluster_m5", lhead="cluster_m1"];
+  "m5_model" -> "action" [label="action fields", color="#4d4d4d", ltail="cluster_m5", lhead="cluster_m3"];
+  "m1_slots" -> "passport" [label="slot/z_obj identity evidence", color="#a46413", ltail="cluster_m1", lhead="cluster_m4"];
+  "m1_slots" -> "longmem" [label="inner_object.z_obj", color="#6840a1", ltail="cluster_m1", lhead="cluster_m4"];
+  "m5_focus" -> "m4_context" [label="focus_context", color="#6840a1", ltail="cluster_m5", lhead="cluster_m4"];
+  "m2_packet" -> "m4_context" [label="event_dream_replay.replay_context", color="#6840a1", ltail="cluster_m2", lhead="cluster_m4", xdot_curve="-0.14", penwidth="2.0", fontsize="9"];
+  "m4_packet" -> "m13_retrieve" [label="M4 identity context", color="#4d6668", ltail="cluster_m4", lhead="cluster_m13"];
+  "m4_packet" -> "m2_runtime" [label="M4 context", color="#6840a1", ltail="cluster_m4", lhead="cluster_m2"];
+  "m5_model" -> "emotion" [label="values / imagined / reward context", color="#a43656", ltail="cluster_m5", lhead="cluster_m11", penwidth="7.0", fontsize="9", xdot_curve="0.16"];
+  "affect" -> "m13_retrieve" [label="affect context", color="#4d6668", ltail="cluster_m11", lhead="cluster_m13", xdot_tail_anchor="58.22,16.54", penwidth="2.0", fontsize="9", xdot_curve="0.12"];
+  "affect" -> "m2_runtime" [label="dream pressure / salience", color="#967a11", ltail="cluster_m11", lhead="cluster_m2", xdot_tail_anchor="-58.38,16.41", penwidth="7.0", fontsize="9", xdot_curve="0.16"];
+  "m13_packet" -> "m2_runtime" [label="M13 context", color="#967a11", ltail="cluster_m13", lhead="cluster_m2", xdot_head_anchor="134.00,-1.91", penwidth="2.0", fontsize="9", xdot_curve="0.16"];
+  "m13_packet" -> "passport" [label="episode links / event memory", color="#a46413", ltail="cluster_m13", lhead="cluster_m4", xdot_curve="0.36", penwidth="2.0", fontsize="9", xdot_head_anchor="47.33,-46.00", xdot_tail_anchor="-67.70,3.02"];
+  "m2_seed" -> "seed_bus" [label="priority #2 replay seed", color="#4457aa", ltail="cluster_m2", lhead="cluster_m5", penwidth="7.0", fontsize="9", xdot_curve="0.16"];
+  "motor" -> "obs" [label="body movement / next observe", color="#ef2929", ltail="cluster_m3", lhead="cluster_input", xdot_head_anchor="87.00,-8.96", penwidth="2.0", fontsize="9", xdot_curve="0.64", xdot_tail_anchor="66.41,-6.88"];
+  "sleep_gates" -> "guard" [label="sleep mode flag", color="#526aa8", style="dashed", ltail="cluster_input", lhead="cluster_m3", xdot_curve="0.12", penwidth="2.0", fontsize="9"];
+  "m1_slots" -> "status" [label="M1 status", color="#607080", style="dotted", ltail="cluster_m1", lhead="cluster_m8"];
+  "m4_packet" -> "status" [label="M4 status", color="#607080", style="dotted", ltail="cluster_m4", lhead="cluster_m8"];
+  "affect" -> "status" [label="M11 status", color="#607080", style="dotted", ltail="cluster_m11", lhead="cluster_m8"];
+  "m13_packet" -> "trace" [label="M13 trace", color="#607080", style="dotted", ltail="cluster_m13", lhead="cluster_m8", xdot_curve="-0.21", penwidth="2.0", fontsize="9"];
+  "m2_packet" -> "trace" [label="M2 trace", color="#607080", style="dotted", ltail="cluster_m2", lhead="cluster_m8", xdot_curve="-0.19", penwidth="2.0", fontsize="9"];
+  "motor" -> "status" [label="M3 status", color="#607080", style="dotted", ltail="cluster_m3", lhead="cluster_m8", penwidth="2.0", fontsize="9", xdot_curve="0.16", xdot_tail_anchor="-50.87,-21.24"];
+  "seed_bus" -> "status" [label="M5 seed status", color="#607080", style="dotted", ltail="cluster_m5", lhead="cluster_m8", penwidth="2.0", fontsize="9", xdot_curve="0.16"];
+  "obs" -> "replaybuf" [label="obs traces", color="#6f7785", ltail="cluster_input", lhead="cluster_training", xdot_curve="-0.38", penwidth="2.0", fontsize="9"];
+  "motor" -> "replaybuf" [label="motor traces", color="#6f7785", ltail="cluster_m3", lhead="cluster_training"];
+  "m13_write" -> "replaybuf" [label="episode write near tail", color="#4d6668", ltail="cluster_m13", lhead="cluster_training", xdot_curve="-0.08", penwidth="2.0", fontsize="9"];
+}
